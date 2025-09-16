@@ -1,0 +1,15 @@
+{
+  "name": "project-tracker",
+  "version": "1.0.0",
+  "description": "A modern, responsive project management application designed specifically for Equitas Health, combining the power of Tailwind CSS and Bootstrap 5.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "firebase-tools": "^14.16.0"
+  }
+}
