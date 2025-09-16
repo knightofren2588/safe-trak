@@ -214,6 +214,9 @@ class ProjectManager {
             
             // Update connection status after successful data load
             this.showConnectionStatus();
+            
+            // Update the user dropdown after loading users from cloud
+            this.updateUserDropdown();
         } catch (error) {
             console.error('Error loading data from cloud storage:', error);
             // Fallback to local storage
