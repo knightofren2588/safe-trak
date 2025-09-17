@@ -15,6 +15,7 @@ class ProjectManager {
         this.currentCategoryEditId = null;
         this.currentRoleEditId = null;
         this.currentDepartmentEditId = null;
+        this.currentComplianceEditId = null;
         this.hasUserInteracted = localStorage.getItem('safetrack_user_interacted') === 'true'; // Flag to track if user has interacted with the app
         this.init();
     }
@@ -342,31 +343,109 @@ class ProjectManager {
     }
 
     // Compliance Management Methods
+    openComplianceModal(itemId = null) {
+        this.currentComplianceEditId = itemId;
+        const modal = document.getElementById('complianceModal');
+        const modalTitle = document.getElementById('complianceModalTitle');
+        const form = document.getElementById('complianceForm');
+        
+        if (itemId) {
+            // Edit mode
+            const item = this.complianceItems.find(c => c.id === itemId);
+            if (item) {
+                modalTitle.textContent = 'Edit Compliance Item';
+                document.getElementById('complianceTitle').value = item.title;
+                document.getElementById('complianceDescription').value = item.description || '';
+                document.getElementById('complianceType').value = item.type || '';
+                document.getElementById('complianceTrainingDate').value = item.trainingDate || '';
+                document.getElementById('complianceAssignedTo').value = item.assignedTo || '';
+                document.getElementById('compliancePriority').value = item.priority || 'medium';
+            }
+        } else {
+            // Add mode
+            modalTitle.textContent = 'New Compliance Item';
+            form.reset();
+            document.getElementById('compliancePriority').value = 'medium';
+        }
+        
+        // Populate assigned to dropdown
+        this.populateComplianceAssignedTo();
+        
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+
     addComplianceItem() {
-        const title = prompt('Compliance Item Title:');
-        const description = prompt('Description (optional):') || '';
-        const dueDate = prompt('Due Date (YYYY-MM-DD):') || '';
-        const assignedTo = this.currentUser === 'all' ? 'admin' : this.currentUser;
-        
-        if (!title) return;
-        
+        this.openComplianceModal();
+    }
+
+    handleComplianceFormSubmit() {
+        const formData = new FormData(document.getElementById('complianceForm'));
+        const complianceData = {
+            title: formData.get('title'),
+            description: formData.get('description'),
+            type: formData.get('type'),
+            trainingDate: formData.get('trainingDate'),
+            assignedTo: formData.get('assignedTo'),
+            priority: formData.get('priority')
+        };
+
+        if (this.currentComplianceEditId) {
+            this.editComplianceItem(this.currentComplianceEditId, complianceData);
+        } else {
+            this.createComplianceItem(complianceData);
+        }
+    }
+
+    createComplianceItem(complianceData) {
         const complianceItem = {
             id: this.generateComplianceId(),
-            title: title,
-            description: description,
+            ...complianceData,
             status: 'pending',
-            dueDate: dueDate,
-            assignedTo: assignedTo,
             createdBy: this.currentUser === 'all' ? 'admin' : this.currentUser,
             createdAt: new Date().toISOString(),
-            linkedProjects: [] // Can link to related projects
+            linkedProjects: []
         };
         
         this.complianceItems.push(complianceItem);
         this.saveComplianceItems();
         this.renderComplianceTable();
         this.updateComplianceStats();
+        this.closeComplianceModal();
         this.showNotification('Compliance item added successfully!', 'success');
+    }
+
+    editComplianceItem(itemId, complianceData) {
+        const index = this.complianceItems.findIndex(c => c.id === itemId);
+        if (index !== -1) {
+            this.complianceItems[index] = {
+                ...this.complianceItems[index],
+                ...complianceData
+            };
+            this.saveComplianceItems();
+            this.renderComplianceTable();
+            this.updateComplianceStats();
+            this.closeComplianceModal();
+            this.showNotification('Compliance item updated successfully!', 'success');
+        }
+    }
+
+    closeComplianceModal() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('complianceModal'));
+        if (modal) {
+            modal.hide();
+        }
+        this.currentComplianceEditId = null;
+    }
+
+    populateComplianceAssignedTo() {
+        const select = document.getElementById('complianceAssignedTo');
+        if (select) {
+            select.innerHTML = '<option value="">Select Team Member</option>' +
+                this.users.map(user => 
+                    `<option value="${user.id}">${user.name}${user.role ? ` (${user.role})` : ''}</option>`
+                ).join('');
+        }
     }
 
     generateComplianceId() {
@@ -416,36 +495,44 @@ class ProjectManager {
             const assignedUser = this.users.find(u => u.id === item.assignedTo);
             const assignedName = assignedUser ? assignedUser.name : 'Unassigned';
             
-            const isOverdue = item.dueDate && new Date(item.dueDate) < new Date() && item.status !== 'completed';
             const statusIcon = item.status === 'completed' ? 
                 '<i class="fas fa-check-circle text-success fs-5"></i>' : 
                 '<i class="fas fa-clock text-warning fs-5"></i>';
             
-            const dueDateClass = isOverdue ? 'text-danger fw-bold' : '';
-            const dueDateText = item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'No due date';
+            const trainingDateText = item.trainingDate ? new Date(item.trainingDate).toLocaleDateString() : 'Not scheduled';
+            const typeIcon = this.getComplianceTypeIcon(item.type);
             
             return `
-                <tr class="${isOverdue ? 'table-warning' : ''}">
+                <tr>
                     <td class="text-center">
-                        <button onclick="projectManager.toggleComplianceStatus('${item.id}')" class="btn btn-sm btn-link p-0">
+                        <button onclick="projectManager.toggleComplianceStatus('${item.id}')" class="btn btn-sm btn-link p-0" title="Toggle Status">
                             ${statusIcon}
                         </button>
                     </td>
                     <td>
-                        <div>
-                            <strong>${item.title}</strong>
-                            ${item.description ? `<br><small class="text-muted">${item.description}</small>` : ''}
+                        <div class="d-flex align-items-center">
+                            <span class="me-2">${typeIcon}</span>
+                            <div>
+                                <strong>${item.title}</strong>
+                                ${item.description ? `<br><small class="text-muted">${item.description}</small>` : ''}
+                                ${item.type ? `<br><span class="badge bg-secondary">${item.type}</span>` : ''}
+                            </div>
                         </div>
                     </td>
-                    <td class="${dueDateClass}">
-                        ${dueDateText}
-                        ${isOverdue ? '<br><small class="text-danger">OVERDUE</small>' : ''}
+                    <td>
+                        ${trainingDateText}
+                        ${item.status === 'completed' ? '<br><small class="text-success">Completed</small>' : ''}
                     </td>
                     <td>${assignedName}</td>
                     <td>
-                        <button onclick="projectManager.deleteComplianceItem('${item.id}')" class="btn btn-sm btn-outline-danger" title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="btn-group" role="group">
+                            <button onclick="projectManager.openComplianceModal('${item.id}')" class="btn btn-sm btn-outline-primary" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="projectManager.deleteComplianceItem('${item.id}')" class="btn btn-sm btn-outline-danger" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -457,7 +544,7 @@ class ProjectManager {
         const completedCount = this.complianceItems.filter(c => c.status === 'completed').length;
         const totalCount = this.complianceItems.length;
         const overdueCount = this.complianceItems.filter(c => {
-            return c.dueDate && new Date(c.dueDate) < new Date() && c.status !== 'completed';
+            return c.trainingDate && new Date(c.trainingDate) < new Date() && c.status !== 'completed';
         }).length;
         const activeCount = this.complianceItems.filter(c => c.status === 'pending').length;
         const complianceRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -486,14 +573,14 @@ class ProjectManager {
         if (!alertsDiv) return;
 
         const overdue = this.complianceItems.filter(c => {
-            return c.dueDate && new Date(c.dueDate) < new Date() && c.status !== 'completed';
+            return c.trainingDate && new Date(c.trainingDate) < new Date() && c.status !== 'completed';
         });
 
         const dueSoon = this.complianceItems.filter(c => {
-            if (!c.dueDate || c.status === 'completed') return false;
-            const dueDate = new Date(c.dueDate);
+            if (!c.trainingDate || c.status === 'completed') return false;
+            const trainingDate = new Date(c.trainingDate);
             const today = new Date();
-            const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.ceil((trainingDate - today) / (1000 * 60 * 60 * 24));
             return diffDays > 0 && diffDays <= 7;
         });
 
@@ -546,6 +633,20 @@ class ProjectManager {
     loadComplianceItems() {
         const stored = localStorage.getItem('safetrack_compliance');
         return stored ? JSON.parse(stored) : [];
+    }
+
+    getComplianceTypeIcon(type) {
+        const icons = {
+            'training': '<i class="fas fa-graduation-cap text-primary"></i>',
+            'inspection': '<i class="fas fa-search text-info"></i>',
+            'audit': '<i class="fas fa-clipboard-check text-warning"></i>',
+            'drill': '<i class="fas fa-bell text-danger"></i>',
+            'certification': '<i class="fas fa-certificate text-success"></i>',
+            'equipment': '<i class="fas fa-tools text-secondary"></i>',
+            'documentation': '<i class="fas fa-file-alt text-info"></i>',
+            'other': '<i class="fas fa-circle text-muted"></i>'
+        };
+        return icons[type] || icons['other'];
     }
     
     async waitForCloudStorage() {
@@ -873,6 +974,12 @@ class ProjectManager {
         document.getElementById('userForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleUserFormSubmit();
+        });
+
+        // Compliance form
+        document.getElementById('complianceForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleComplianceFormSubmit();
         });
     }
 
@@ -2373,6 +2480,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addComplianceItem = () => {
         if (window.projectManager) {
             window.projectManager.addComplianceItem();
+        }
+    };
+
+    window.openComplianceModal = (itemId) => {
+        if (window.projectManager) {
+            window.projectManager.openComplianceModal(itemId);
         }
     };
 });

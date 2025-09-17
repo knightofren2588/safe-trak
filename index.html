@@ -343,9 +343,9 @@
                                                 <tr>
                                                     <th width="40">Status</th>
                                                     <th>Compliance Item</th>
-                                                    <th width="120">Due Date</th>
+                                                    <th width="140">Date of Training</th>
                                                     <th width="100">Assigned To</th>
-                                                    <th width="80">Actions</th>
+                                                    <th width="100">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="complianceTableBody">
@@ -515,6 +515,70 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-safety" id="submitText">Create Safety Project</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compliance Modal -->
+    <div class="modal fade" id="complianceModal" tabindex="-1" aria-labelledby="complianceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="complianceModalTitle">New Compliance Item</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="complianceForm">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="complianceTitle" class="form-label">Compliance Item Title *</label>
+                                <input type="text" class="form-control" id="complianceTitle" name="title" placeholder="e.g., Monthly Fire Safety Training" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="complianceDescription" class="form-label">Description</label>
+                                <textarea class="form-control" id="complianceDescription" name="description" rows="3" placeholder="Additional details about this compliance requirement"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="complianceType" class="form-label">Compliance Type *</label>
+                                <select class="form-select" id="complianceType" name="type" required>
+                                    <option value="">Select Type</option>
+                                    <option value="training">Safety Training</option>
+                                    <option value="inspection">Safety Inspection</option>
+                                    <option value="audit">Safety Audit</option>
+                                    <option value="drill">Emergency Drill</option>
+                                    <option value="certification">Certification</option>
+                                    <option value="equipment">Equipment Check</option>
+                                    <option value="documentation">Documentation Review</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="complianceTrainingDate" class="form-label">Date of Training/Completion</label>
+                                <input type="date" class="form-control" id="complianceTrainingDate" name="trainingDate">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="complianceAssignedTo" class="form-label">Assigned To</label>
+                                <select class="form-select" id="complianceAssignedTo" name="assignedTo">
+                                    <option value="">Select Team Member</option>
+                                    <!-- Will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="compliancePriority" class="form-label">Priority Level</label>
+                                <select class="form-select" id="compliancePriority" name="priority">
+                                    <option value="low">Low Priority</option>
+                                    <option value="medium" selected>Medium Priority</option>
+                                    <option value="high">High Priority</option>
+                                    <option value="critical">Critical</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Compliance Item</button>
                     </div>
                 </form>
             </div>
