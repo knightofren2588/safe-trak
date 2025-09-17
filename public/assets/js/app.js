@@ -38,7 +38,9 @@ class ProjectManager {
         // if (this.projects.length === 0 && !this.hasUserInteracted) {
         //     this.loadSampleData();
         // }
-        if (this.users.length === 0) {
+        
+        // Only load sample users if no users exist AND user hasn't interacted with the app
+        if (this.users.length === 0 && !this.hasUserInteracted) {
             this.loadSampleUsers();
         }
         
@@ -860,6 +862,10 @@ class ProjectManager {
 
     // User management methods
     addUser(userData) {
+        // Mark that user has interacted with the app
+        this.hasUserInteracted = true;
+        localStorage.setItem('safetrack_user_interacted', 'true');
+        
         // Generate unique user ID
         let userId = userData.name.toLowerCase().replace(/\s+/g, '').substring(0, 10);
         let counter = 1;
@@ -895,6 +901,10 @@ class ProjectManager {
     }
 
     deleteUser(userId) {
+        // Mark that user has interacted with the app
+        this.hasUserInteracted = true;
+        localStorage.setItem('safetrack_user_interacted', 'true');
+        
         // Check if user has projects
         const userProjects = this.projects.filter(p => p.createdBy === userId);
         if (userProjects.length > 0) {
