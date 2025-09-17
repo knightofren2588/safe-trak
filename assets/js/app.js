@@ -268,6 +268,118 @@ END:VCALENDAR`;
         }
     }
 
+    async sendTestEmail() {
+        const email = document.getElementById('reminderEmail').value;
+        const title = document.getElementById('complianceTitle').value || 'Test Compliance Item';
+        const type = document.getElementById('complianceType').value || 'training';
+        const trainingDate = document.getElementById('complianceTrainingDate').value || new Date().toISOString().split('T')[0];
+        
+        if (!email) {
+            alert('Please enter an email address first');
+            return;
+        }
+
+        if (!this.emailService) {
+            alert('Email service not initialized. Please refresh the page and try again.');
+            return;
+        }
+
+        // Create a test compliance item
+        const testItem = {
+            title: title,
+            type: type,
+            trainingDate: trainingDate,
+            reminderEmail: email,
+            priority: 'medium',
+            description: 'This is a test email from SafeTrack to verify the email system is working correctly.',
+            assignedTo: this.currentUser
+        };
+
+        const daysUntil = Math.ceil((new Date(trainingDate) - new Date()) / (1000 * 60 * 60 * 24));
+        
+        try {
+            this.showNotification('Sending test email...', 'info');
+            const success = await this.sendReminderEmail(testItem, daysUntil);
+            if (success) {
+                alert(`Test email sent successfully to ${email}!\n\nCheck your inbox (and spam folder) for the SafeTrack reminder email.`);
+            }
+        } catch (error) {
+            console.error('Test email failed:', error);
+            alert('Test email failed. Check the console for error details.');
+        }
+    }
+
+    async sendEmailNowForItem(itemId) {
+        const item = this.complianceItems.find(c => c.id === itemId);
+        if (!item) return;
+
+        if (!item.reminderEmail) {
+            alert('No email address set for this compliance item. Please edit the item to add an email address.');
+            return;
+        }
+
+        const daysUntil = Math.ceil((new Date(item.trainingDate) - new Date()) / (1000 * 60 * 60 * 24));
+        
+        try {
+            this.showNotification('Sending email reminder...', 'info');
+            const success = await this.sendReminderEmail(item, daysUntil);
+            if (success) {
+                alert(`Email reminder sent successfully to ${item.reminderEmail}!`);
+            }
+        } catch (error) {
+            console.error('Email send failed:', error);
+            alert('Failed to send email. Check console for details.');
+        }
+    }
+
+    async sendAllRemindersNow() {
+        const itemsWithEmail = this.complianceItems.filter(item => 
+            item.reminderEmail && item.status !== 'completed'
+        );
+
+        if (itemsWithEmail.length === 0) {
+            alert('No compliance items with email addresses found.');
+            return;
+        }
+
+        const confirmed = confirm(`Send email reminders for ${itemsWithEmail.length} compliance items now?\n\nThis will send immediate reminders regardless of the scheduled dates.`);
+        if (!confirmed) return;
+
+        this.showNotification(`Sending ${itemsWithEmail.length} email reminders...`, 'info');
+        
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const item of itemsWithEmail) {
+            const daysUntil = Math.ceil((new Date(item.trainingDate) - new Date()) / (1000 * 60 * 60 * 24));
+            
+            try {
+                const success = await this.sendReminderEmail(item, daysUntil);
+                if (success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+                
+                // Small delay to avoid overwhelming the email service
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+                console.error(`Failed to send email for ${item.title}:`, error);
+                failCount++;
+            }
+        }
+
+        const resultMessage = `Email reminders sent!\n\n✅ Successful: ${successCount}\n❌ Failed: ${failCount}`;
+        alert(resultMessage);
+        
+        if (successCount > 0) {
+            this.showNotification(`${successCount} email reminders sent successfully!`, 'success');
+        }
+        if (failCount > 0) {
+            this.showNotification(`${failCount} email reminders failed to send`, 'error');
+        }
+    }
+
     // Authentication methods removed - app works without login
 
     async init() {
@@ -789,6 +901,14 @@ END:VCALENDAR`;
                             <button onclick="projectManager.openComplianceModal('${item.id}')" class="btn btn-sm btn-outline-primary" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </button>
+                            ${item.reminderEmail ? 
+                                `<button onclick="projectManager.sendEmailNowForItem('${item.id}')" class="btn btn-sm btn-outline-warning" title="Send Email Now">
+                                    <i class="fas fa-envelope"></i>
+                                </button>` : 
+                                `<button class="btn btn-sm btn-outline-secondary" disabled title="No email set">
+                                    <i class="fas fa-envelope-open"></i>
+                                </button>`
+                            }
                             <button onclick="projectManager.deleteComplianceItem('${item.id}')" class="btn btn-sm btn-outline-danger" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -2758,6 +2878,18 @@ document.addEventListener('DOMContentLoaded', function() {
     window.testEmailReminder = () => {
         if (window.projectManager) {
             window.projectManager.testEmailReminder();
+        }
+    };
+
+    window.sendTestEmail = () => {
+        if (window.projectManager) {
+            window.projectManager.sendTestEmail();
+        }
+    };
+
+    window.sendAllRemindersNow = () => {
+        if (window.projectManager) {
+            window.projectManager.sendAllRemindersNow();
         }
     };
 });
