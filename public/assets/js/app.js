@@ -1080,7 +1080,7 @@ class ProjectManager {
         }
         
         // Update main user dropdown in header
-        const dropdown = document.querySelector('#userDropdown + .dropdown-menu');
+        const dropdown = document.querySelector('.dropdown-menu');
         console.log('DEBUG - Updating dropdown, found element:', dropdown);
         console.log('DEBUG - Current users:', this.users);
         console.log('DEBUG - Users count:', this.users.length);
