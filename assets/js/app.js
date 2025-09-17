@@ -881,8 +881,18 @@ class ProjectManager {
             avatar: userData.name.charAt(0).toUpperCase(),
             createdAt: new Date().toISOString()
         };
+        console.log('DEBUG - Before adding user, users.length:', this.users.length);
         this.users.push(user);
-        await this.saveUsers(); // Wait for save to complete!
+        console.log('DEBUG - After adding user locally, users.length:', this.users.length);
+        console.log('DEBUG - New user added:', user);
+        
+        try {
+            await this.saveUsers(); // Wait for save to complete!
+            console.log('DEBUG - User successfully saved to cloud');
+        } catch (error) {
+            console.error('DEBUG - Error saving user to cloud:', error);
+        }
+        
         this.render(); // Use render() like projects do - this updates everything!
         this.closeUserModal();
     }
