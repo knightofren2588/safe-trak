@@ -25,11 +25,11 @@ class ProjectManager {
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
         
-        // Force reset cloud storage to remove old users and projects
-        if (this.cloudStorage.isConnected) {
-            await this.cloudStorage.forceResetCloudUsers();
-            await this.cloudStorage.forceResetCloudProjects();
-        }
+        // Force reset cloud storage to remove old users and projects (DISABLED for production)
+        // if (this.cloudStorage.isConnected) {
+        //     await this.cloudStorage.forceResetCloudUsers();
+        //     await this.cloudStorage.forceResetCloudProjects();
+        // }
         
         // Load data from cloud storage
         await this.loadAllData();
@@ -216,7 +216,11 @@ class ProjectManager {
             this.showConnectionStatus();
             
             // Update the user dropdown after loading users from cloud
-            this.updateUserDropdown();
+            console.log('DEBUG - About to call updateUserDropdown from loadAllData');
+            setTimeout(() => {
+                console.log('DEBUG - Calling updateUserDropdown with delay');
+                this.updateUserDropdown();
+            }, 100);
         } catch (error) {
             console.error('Error loading data from cloud storage:', error);
             // Fallback to local storage
