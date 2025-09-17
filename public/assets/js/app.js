@@ -25,6 +25,11 @@ class ProjectManager {
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
         
+        // Force cleanup old default users from cloud
+        if (this.cloudStorage.isConnected) {
+            await this.cloudStorage.forceCleanupCloudUsers();
+        }
+        
         // Force reset cloud storage to remove old users and projects (DISABLED for production)
         // if (this.cloudStorage.isConnected) {
         //     await this.cloudStorage.forceResetCloudUsers();

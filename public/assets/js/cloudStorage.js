@@ -165,7 +165,16 @@ class CloudStorageService {
 
     async loadUsers() {
         const data = await this.loadFromCloud('users');
-        return Object.values(data);
+        const users = Object.values(data);
+        
+        // Filter out old default users that shouldn't be in cloud
+        const oldDefaultUsers = ['sarah', 'mike', 'lisa', 'david'];
+        const filteredUsers = users.filter(user => !oldDefaultUsers.includes(user.id));
+        
+        console.log('DEBUG - Cloud users before filtering:', users);
+        console.log('DEBUG - Cloud users after filtering:', filteredUsers);
+        
+        return filteredUsers;
     }
 
     async saveCategories(categories) {
@@ -298,6 +307,19 @@ class CloudStorageService {
             console.error('Error resetting cloud users:', error);
             return false;
         }
+    }
+
+    // Force cleanup old default users from cloud
+    async forceCleanupCloudUsers() {
+        console.log('DEBUG - Starting force cleanup of cloud users');
+        const users = await this.loadUsers(); // This will now filter automatically
+        console.log('DEBUG - Users after filtering:', users);
+        
+        // Save the filtered users back to cloud (this removes the old ones permanently)
+        await this.saveUsers(users);
+        console.log('DEBUG - Force cleanup completed, old default users removed from cloud');
+        
+        return users;
     }
 
     // Force reset cloud storage to empty projects
