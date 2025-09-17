@@ -1070,6 +1070,9 @@ class ProjectManager {
         
         // Update main user dropdown in header
         const dropdown = document.querySelector('.dropdown-menu');
+        console.log('DEBUG - Updating dropdown, found element:', dropdown);
+        console.log('DEBUG - Current users:', this.users);
+        
         if (dropdown) {
             // Clear existing content
             dropdown.innerHTML = '';
@@ -1081,6 +1084,7 @@ class ProjectManager {
             
             // Add each user
             this.users.forEach(user => {
+                console.log('DEBUG - Adding user to dropdown:', user.name);
                 dropdown.innerHTML += `<li><a class="dropdown-item" href="#" onclick="switchUser('${user.id}')"><i class="fas fa-user me-2"></i>${user.name}</a></li>`;
             });
             
@@ -1090,6 +1094,10 @@ class ProjectManager {
             dropdown.innerHTML += '<li><a class="dropdown-item" href="#" onclick="openUserManagement()"><i class="fas fa-users-cog me-2"></i>Manage Users</a></li>';
             dropdown.innerHTML += '<li><hr class="dropdown-divider"></li>';
             dropdown.innerHTML += '<li><a class="dropdown-item text-danger" href="#" onclick="resetAllData()"><i class="fas fa-redo-alt me-2"></i>Reset All Data</a></li>';
+            
+            console.log('DEBUG - Dropdown updated with HTML:', dropdown.innerHTML);
+        } else {
+            console.error('DEBUG - Dropdown element not found!');
         }
     }
 
