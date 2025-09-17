@@ -111,6 +111,13 @@ class ProjectManager {
         }, 3000);
     }
 
+    // Manual function to force update dropdown (for debugging)
+    forceUpdateDropdown() {
+        console.log('MANUAL - Force updating dropdown');
+        console.log('MANUAL - Current users:', this.users);
+        this.populateUserDropdowns();
+    }
+
     // Emergency function to completely clear everything
     async emergencyClearAll() {
         console.log('EMERGENCY CLEAR - Starting complete data wipe...');
@@ -1073,9 +1080,10 @@ class ProjectManager {
         }
         
         // Update main user dropdown in header
-        const dropdown = document.querySelector('.dropdown-menu');
+        const dropdown = document.querySelector('#userDropdown + .dropdown-menu');
         console.log('DEBUG - Updating dropdown, found element:', dropdown);
         console.log('DEBUG - Current users:', this.users);
+        console.log('DEBUG - Users count:', this.users.length);
         
         if (dropdown) {
             // Clear existing content
@@ -1783,5 +1791,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Make emergency clear function available globally
     window.emergencyClear = () => {
         window.projectManager.emergencyClearAll();
+    };
+    
+    // Make force dropdown update available globally for testing
+    window.forceDropdownUpdate = () => {
+        window.projectManager.forceUpdateDropdown();
     };
 });
