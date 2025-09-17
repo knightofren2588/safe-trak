@@ -169,10 +169,16 @@ class CloudStorageService {
         
         // Filter out old default users that shouldn't be in cloud
         const oldDefaultUsers = ['sarah', 'mike', 'lisa', 'david'];
-        const filteredUsers = users.filter(user => !oldDefaultUsers.includes(user.id));
+        const filteredUsers = users.filter(user => {
+            const shouldKeep = !oldDefaultUsers.includes(user.id);
+            if (!shouldKeep) {
+                console.log('DEBUG - Filtering out old default user:', user.id, user.name);
+            }
+            return shouldKeep;
+        });
         
-        console.log('DEBUG - Cloud users before filtering:', users);
-        console.log('DEBUG - Cloud users after filtering:', filteredUsers);
+        console.log('DEBUG - Cloud users before filtering:', users.map(u => `${u.name} (${u.id})`));
+        console.log('DEBUG - Cloud users after filtering:', filteredUsers.map(u => `${u.name} (${u.id})`));
         
         return filteredUsers;
     }

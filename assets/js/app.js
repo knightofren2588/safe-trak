@@ -19,8 +19,8 @@ class ProjectManager {
     }
 
     async init() {
-        // Force cleanup of old default users immediately
-        this.forceCleanupOldUsers();
+        // DISABLED: forceCleanupOldUsers was overwriting real user data
+        // this.forceCleanupOldUsers();
         
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
