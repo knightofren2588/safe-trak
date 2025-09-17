@@ -862,7 +862,7 @@ class ProjectManager {
     }
 
     // User management methods
-    addUser(userData) {
+    async addUser(userData) {
         // Mark that user has interacted with the app
         this.hasUserInteracted = true;
         localStorage.setItem('safetrack_user_interacted', 'true');
@@ -882,12 +882,12 @@ class ProjectManager {
             createdAt: new Date().toISOString()
         };
         this.users.push(user);
-        this.saveUsers();
+        await this.saveUsers(); // Wait for save to complete!
         this.render(); // Use render() like projects do - this updates everything!
         this.closeUserModal();
     }
 
-    editUser(userId, userData) {
+    async editUser(userId, userData) {
         const index = this.users.findIndex(u => u.id === userId);
         if (index !== -1) {
             this.users[index] = { 
@@ -895,13 +895,13 @@ class ProjectManager {
                 ...userData,
                 avatar: userData.name.charAt(0).toUpperCase()
             };
-            this.saveUsers();
+            await this.saveUsers(); // Wait for save to complete!
             this.render(); // Use render() like projects do - this updates everything!
             this.closeUserModal();
         }
     }
 
-    deleteUser(userId) {
+    async deleteUser(userId) {
         // Mark that user has interacted with the app
         this.hasUserInteracted = true;
         localStorage.setItem('safetrack_user_interacted', 'true');
@@ -921,18 +921,18 @@ class ProjectManager {
                         project.createdBy = reassignTo;
                     }
                 });
-                this.saveProjects();
+                await this.saveProjects(); // Wait for save to complete!
             } else if (reassignTo === '') {
                 // Delete projects
                 this.projects = this.projects.filter(p => p.createdBy !== userId);
-                this.saveProjects();
+                await this.saveProjects(); // Wait for save to complete!
             } else {
                 return; // User cancelled
             }
         }
         
         this.users = this.users.filter(u => u.id !== userId);
-        this.saveUsers();
+        await this.saveUsers(); // Wait for save to complete!
         this.render(); // Use render() like projects do - this updates everything!
         
         // If deleted user was current user, switch to all view
@@ -941,7 +941,7 @@ class ProjectManager {
         }
     }
 
-    handleUserFormSubmit() {
+    async handleUserFormSubmit() {
         const formData = new FormData(document.getElementById('userForm'));
         const userData = {
             name: formData.get('name'),
@@ -966,9 +966,9 @@ class ProjectManager {
         }
 
         if (this.currentUserEditId) {
-            this.editUser(this.currentUserEditId, userData);
+            await this.editUser(this.currentUserEditId, userData);
         } else {
-            this.addUser(userData);
+            await this.addUser(userData);
         }
     }
 
