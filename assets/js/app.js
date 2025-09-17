@@ -84,7 +84,7 @@ class ProjectManager {
                 e.preventDefault();
                 console.log('Showing register form');
                 loginFormDiv.style.display = 'none';
-                registerFormDiv.classList.remove('hidden');
+                registerFormDiv.classList.remove('d-none');
             });
         }
 
@@ -92,7 +92,7 @@ class ProjectManager {
             showLogin.addEventListener('click', (e) => {
                 e.preventDefault();
                 console.log('Showing login form');
-                registerFormDiv.classList.add('hidden');
+                registerFormDiv.classList.add('d-none');
                 loginFormDiv.style.display = 'block';
             });
         }
