@@ -343,6 +343,19 @@ body {
     font-size: 1rem;
 }
 
+.btn-safety {
+    background-color: var(--safety-blue);
+    border-color: var(--safety-blue);
+    color: white;
+    font-weight: 600;
+}
+
+.btn-safety:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+    color: white;
+}
+
 /* ========================================
    🏷️ BADGES - SAFETY THEMED
 ======================================== */
