@@ -44,20 +44,26 @@ class ProjectManager {
     setupLoginHandlers() {
         // Wait for DOM to be ready
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('Setting up login handlers...');
+            
             // Login form
             const loginForm = document.getElementById('loginForm');
+            console.log('Login form found:', !!loginForm);
             if (loginForm) {
                 loginForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    console.log('Login form submitted');
                     await this.handleLogin();
                 });
             }
 
             // Register form
             const registerForm = document.getElementById('registerFormElement');
+            console.log('Register form found:', !!registerForm);
             if (registerForm) {
                 registerForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    console.log('Register form submitted');
                     await this.handleRegister();
                 });
             }
@@ -144,10 +150,13 @@ class ProjectManager {
     }
 
     async handleRegister() {
+        console.log('handleRegister called');
         const username = document.getElementById('registerUsername').value;
         const password = document.getElementById('registerPassword').value;
         const displayName = document.getElementById('registerName').value;
         const errorDiv = document.getElementById('loginError');
+
+        console.log('Registration data:', { username, password: '***', displayName });
 
         // Basic validation
         if (username.length < 3) {
@@ -165,12 +174,16 @@ class ProjectManager {
         this.showLoginLoading(true);
         errorDiv.classList.add('d-none');
 
+        console.log('Calling createUserWithUsernameAndPassword...');
         const result = await this.cloudStorage.createUserWithUsernameAndPassword(username, password, displayName);
+        console.log('Registration result:', result);
         
         if (result.success) {
+            console.log('Registration successful');
             // Success - auth state listener will handle UI updates
             this.clearLoginForm();
         } else {
+            console.log('Registration failed:', result.error);
             errorDiv.textContent = result.error;
             errorDiv.classList.remove('d-none');
         }
