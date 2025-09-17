@@ -599,18 +599,37 @@
                                 </select>
                                 <small class="text-muted">How long the training will take</small>
                             </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Export to Calendar</label>
+                                <div class="row g-2">
+                                    <div class="col-md-3">
+                                        <button type="button" class="btn btn-outline-primary w-100" onclick="exportToOutlook()">
+                                            <i class="fas fa-calendar me-2"></i>Outlook
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="button" class="btn btn-outline-danger w-100" onclick="exportToGoogleCalendar()">
+                                            <i class="fab fa-google me-2"></i>Google
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="button" class="btn btn-outline-secondary w-100" onclick="exportToAppleCalendar()">
+                                            <i class="fab fa-apple me-2"></i>Apple
+                                        </button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button type="button" class="btn btn-outline-success w-100" onclick="exportComplianceToCalendar()">
+                                            <i class="fas fa-download me-2"></i>ICS File
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Choose your calendar app or download ICS file</small>
+                            </div>
                         </div>
                     </div>
-                    <div class="modal-footer d-flex justify-content-between">
-                        <div>
-                            <button type="button" class="btn btn-success" onclick="exportComplianceToCalendar()">
-                                <i class="fas fa-calendar-plus me-2"></i>Add to Calendar
-                            </button>
-                        </div>
-                        <div>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Compliance Item</button>
-                        </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Compliance Item</button>
                     </div>
                 </form>
             </div>
