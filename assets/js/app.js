@@ -40,14 +40,35 @@ class ProjectManager {
         const assignedUser = this.users.find(u => u.id === complianceItem.assignedTo);
         const assignedName = assignedUser ? assignedUser.name : 'Team Member';
         
+        // Create dynamic message based on timing
+        let urgencyMessage = '';
+        let urgencyIcon = '';
+        
+        if (daysUntil === 0) {
+            urgencyMessage = '🚨 This training is scheduled for TODAY! Please complete it as soon as possible.';
+            urgencyIcon = '🚨 URGENT';
+        } else if (daysUntil === 1) {
+            urgencyMessage = '⚡ This training is due TOMORROW! Please prepare and schedule your time.';
+            urgencyIcon = '⚡ TOMORROW';
+        } else if (daysUntil <= 3) {
+            urgencyMessage = `⏰ This training is due in ${daysUntil} days. Please plan accordingly.`;
+            urgencyIcon = '⏰ SOON';
+        } else if (daysUntil <= 7) {
+            urgencyMessage = `📅 This training is due in ${daysUntil} days. Start planning your schedule.`;
+            urgencyIcon = '📅 UPCOMING';
+        } else {
+            urgencyMessage = `📋 This training is scheduled in ${daysUntil} days. Early reminder to help you plan.`;
+            urgencyIcon = '📋 ADVANCE NOTICE';
+        }
+        
         const emailParams = {
             to_email: complianceItem.reminderEmail,
             to_name: assignedName,
-            subject: `SafeTrack Reminder: ${complianceItem.title}`,
+            subject: `${urgencyIcon} SafeTrack: ${complianceItem.title}`,
             message: `
                 Hello ${assignedName},
                 
-                This is a reminder about your upcoming safety compliance item:
+                ${urgencyMessage}
                 
                 📋 Item: ${complianceItem.title}
                 📅 Training Date: ${new Date(complianceItem.trainingDate).toLocaleDateString()}
@@ -55,14 +76,17 @@ class ProjectManager {
                 🏷️ Type: ${complianceItem.type}
                 ⚡ Priority: ${complianceItem.priority}
                 
-                ${complianceItem.description ? `Description: ${complianceItem.description}` : ''}
+                ${complianceItem.description ? `📝 Description: ${complianceItem.description}` : ''}
                 
-                Please ensure you complete this training on time.
+                Please ensure you complete this training on time to maintain safety compliance.
                 
                 Best regards,
                 SafeTrack Safety Management System
+                Equitas Health
             `,
             compliance_title: complianceItem.title,
+            compliance_type: complianceItem.type,
+            compliance_priority: complianceItem.priority,
             training_date: new Date(complianceItem.trainingDate).toLocaleDateString(),
             days_until: daysUntil
         };
@@ -166,12 +190,20 @@ END:VCALENDAR`;
             const diffTime = trainingDate - today;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
-            // Check if we need to send reminders
+            // Check if we need to send reminders for different time periods
+            const shouldSend30Day = item.reminder30days && diffDays === 30;
+            const shouldSend14Day = item.reminder14days && diffDays === 14;
             const shouldSend7Day = item.reminder7days && diffDays === 7;
+            const shouldSend3Day = item.reminder3days && diffDays === 3;
             const shouldSend2Day = item.reminder2days && diffDays === 2;
+            const shouldSend1Day = item.reminder1day && diffDays === 1;
             const shouldSendToday = item.reminderDay && diffDays === 0;
             
-            if (shouldSend7Day || shouldSend2Day || shouldSendToday) {
+            // Morning of training (same day but earlier check)
+            const shouldSendMorning = item.reminderMorning && diffDays === 0;
+            
+            if (shouldSend30Day || shouldSend14Day || shouldSend7Day || shouldSend3Day || 
+                shouldSend2Day || shouldSend1Day || shouldSendToday || shouldSendMorning) {
                 this.sendReminderEmail(item, diffDays);
             }
         });
@@ -608,9 +640,14 @@ END:VCALENDAR`;
             assignedTo: formData.get('assignedTo'),
             priority: formData.get('priority'),
             reminderEmail: formData.get('reminderEmail'),
+            reminder30days: formData.has('reminder30days'),
+            reminder14days: formData.has('reminder14days'),
             reminder7days: formData.has('reminder7days'),
+            reminder3days: formData.has('reminder3days'),
             reminder2days: formData.has('reminder2days'),
-            reminderDay: formData.has('reminderDay')
+            reminder1day: formData.has('reminder1day'),
+            reminderDay: formData.has('reminderDay'),
+            reminderMorning: formData.has('reminderMorning')
         };
 
         if (this.currentComplianceEditId) {
@@ -1148,7 +1185,7 @@ END:VCALENDAR`;
         ];
         this.projects = []; // Start with empty projects
         this.saveUsers();
-        this.saveProjects();
+            this.saveProjects();
         
         // Reload the page to reset everything
         location.reload();
@@ -1281,7 +1318,7 @@ END:VCALENDAR`;
                 localStorage.setItem('safetrack_user_interacted', 'true');
                 
                 // Remove from local array
-                this.projects = this.projects.filter(p => p.id !== id);
+            this.projects = this.projects.filter(p => p.id !== id);
                 
                 // Save to cloud storage
                 await this.saveProjects();
@@ -1292,7 +1329,7 @@ END:VCALENDAR`;
                 }
                 
                 // Re-render the UI
-                this.render();
+            this.render();
                 
                 // Show success message
                 this.showNotification(`Project "${projectName}" deleted successfully`, 'success');
@@ -1499,7 +1536,7 @@ END:VCALENDAR`;
                     <div class="d-flex align-items-center">
                         <span class="status-badge bg-${this.getStatusColor(project)} text-white me-2">
                             ${this.getStatusDisplayText(project.status)}
-                        </span>
+                    </span>
                         <select class="form-select form-select-sm status-dropdown" onchange="projectManager.changeProjectStatus(${project.id}, this.value)">
                             <option value="active" ${project.status === 'active' ? 'selected' : ''}>Active</option>
                             <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>On Hold</option>

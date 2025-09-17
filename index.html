@@ -477,7 +477,7 @@
                             <div class="col-md-6">
                                 <label for="projectCategory" class="form-label">Safety Category *</label>
                                 <div class="input-group">
-                                    <select class="form-select" id="projectCategory" name="category" required>
+                                <select class="form-select" id="projectCategory" name="category" required>
                                         <option value="">Select Safety Category</option>
                                     </select>
                                     <button type="button" class="btn btn-outline-safety" onclick="openCategoryModal()" title="Manage Categories">
@@ -595,18 +595,45 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Reminder Schedule</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="reminder7days" name="reminder7days" checked>
-                                    <label class="form-check-label" for="reminder7days">7 days before</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="reminder30days" name="reminder30days">
+                                            <label class="form-check-label small" for="reminder30days">30 days before</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="reminder14days" name="reminder14days">
+                                            <label class="form-check-label small" for="reminder14days">2 weeks before</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="reminder7days" name="reminder7days" checked>
+                                            <label class="form-check-label small" for="reminder7days">7 days before</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="reminder3days" name="reminder3days">
+                                            <label class="form-check-label small" for="reminder3days">3 days before</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="reminder2days" name="reminder2days" checked>
+                                            <label class="form-check-label small" for="reminder2days">2 days before</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="reminder1day" name="reminder1day" checked>
+                                            <label class="form-check-label small" for="reminder1day">1 day before</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="reminderDay" name="reminderDay" checked>
+                                            <label class="form-check-label small" for="reminderDay">Day of training</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="reminderMorning" name="reminderMorning">
+                                            <label class="form-check-label small" for="reminderMorning">Morning of training</label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="reminder2days" name="reminder2days" checked>
-                                    <label class="form-check-label" for="reminder2days">2 days before</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="reminderDay" name="reminderDay" checked>
-                                    <label class="form-check-label" for="reminderDay">Day of training</label>
-                                </div>
+                                <small class="text-muted">Select when to send email reminders</small>
                             </div>
                         </div>
                     </div>
