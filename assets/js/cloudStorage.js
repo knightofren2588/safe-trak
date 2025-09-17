@@ -5,6 +5,8 @@ class CloudStorageService {
         this.auth = null;
         this.isConnected = false;
         this.organizationId = 'safety-tracker'; // You can change this to your organization ID
+        this.currentAuthUser = null;
+        this.authStateChangeCallbacks = [];
         this.init();
     }
 
@@ -18,24 +20,29 @@ class CloudStorageService {
         this.auth = window.firebaseAuth;
         this.functions = window.firebaseFunctions;
         
-        // Sign in anonymously for now (you can add proper auth later)
+        // Set up authentication state listener
         try {
-            await this.functions.signInAnonymously(this.auth);
-            this.isConnected = true;
-            console.log('Connected to cloud storage');
-            
-            // Notify the app that connection status has changed
-            if (window.projectManager) {
-                window.projectManager.showConnectionStatus();
-            }
+            this.functions.onAuthStateChanged(this.auth, (user) => {
+                this.currentAuthUser = user;
+                this.isConnected = !!user;
+                
+                if (user) {
+                    console.log('User authenticated:', user.email || user.uid);
+                } else {
+                    console.log('User signed out');
+                }
+                
+                // Notify callbacks about auth state change
+                this.authStateChangeCallbacks.forEach(callback => callback(user));
+                
+                // Notify the app that connection status has changed
+                if (window.projectManager) {
+                    window.projectManager.showConnectionStatus();
+                }
+            });
         } catch (error) {
-            console.error('Failed to connect to cloud storage:', error);
+            console.error('Failed to set up authentication:', error);
             this.isConnected = false;
-            
-            // Notify the app that connection status has changed
-            if (window.projectManager) {
-                window.projectManager.showConnectionStatus();
-            }
         }
     }
 
@@ -360,6 +367,58 @@ class CloudStorageService {
             console.error('Error resetting cloud projects:', error);
             return false;
         }
+    }
+
+    // Authentication methods
+    async signInWithEmailAndPassword(email, password) {
+        try {
+            const userCredential = await this.functions.signInWithEmailAndPassword(this.auth, email, password);
+            return { success: true, user: userCredential.user };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    async createUserWithEmailAndPassword(email, password) {
+        try {
+            const userCredential = await this.functions.createUserWithEmailAndPassword(this.auth, email, password);
+            return { success: true, user: userCredential.user };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    async signInWithGoogle() {
+        try {
+            const provider = new this.functions.GoogleAuthProvider();
+            const userCredential = await this.functions.signInWithPopup(this.auth, provider);
+            return { success: true, user: userCredential.user };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    async signOut() {
+        try {
+            await this.functions.signOut(this.auth);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    getCurrentUser() {
+        return this.currentAuthUser;
+    }
+
+    isAuthenticated() {
+        return !!this.currentAuthUser;
+    }
+
+    onAuthStateChanged(callback) {
+        this.authStateChangeCallbacks.push(callback);
+        // Call immediately with current state
+        callback(this.currentAuthUser);
     }
 }
 

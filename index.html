@@ -39,6 +39,83 @@
     </script>
 </head>
 <body class="bg-slate-50 min-h-screen">
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal fade" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <div class="mx-auto text-center">
+                        <div class="bg-blue-600 rounded-full p-3 mx-auto mb-3" style="width: 80px; height: 80px;">
+                            <i class="fas fa-shield-alt text-white text-3xl"></i>
+                        </div>
+                        <h4 class="text-xl font-bold text-blue-600">SafeTrack Login</h4>
+                        <p class="text-gray-600 mb-0">Secure access to Equitas Health Safety Management</p>
+                    </div>
+                </div>
+                <div class="modal-body px-6 pb-6">
+                    <div id="loginError" class="alert alert-danger d-none" role="alert"></div>
+                    
+                    <!-- Email/Password Login -->
+                    <form id="loginForm" class="mb-4">
+                        <div class="mb-4">
+                            <label for="loginEmail" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            <input type="email" class="form-control w-full px-3 py-2 border border-gray-300 rounded-md" id="loginEmail" placeholder="your.email@equitashealth.com" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="loginPassword" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <input type="password" class="form-control w-full px-3 py-2 border border-gray-300 rounded-md" id="loginPassword" placeholder="Enter your password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md mb-3">
+                            <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                        </button>
+                    </form>
+                    
+                    <div class="text-center mb-4">
+                        <span class="text-gray-500">or</span>
+                    </div>
+                    
+                    <!-- Google Sign-In -->
+                    <button id="googleSignIn" class="btn w-full border border-red-300 hover:bg-red-50 text-red-600 py-2 px-4 rounded-md mb-4">
+                        <i class="fab fa-google me-2"></i>Sign in with Google
+                    </button>
+                    
+                    <div class="text-center">
+                        <small class="text-gray-500">
+                            Don't have an account? 
+                            <a href="#" id="showRegister" class="text-blue-600 hover:text-blue-800">Create Account</a>
+                        </small>
+                    </div>
+                    
+                    <!-- Registration Form (hidden by default) -->
+                    <div id="registerForm" class="hidden mt-4">
+                        <hr class="my-4">
+                        <h6 class="text-center mb-4 font-medium">Create New Account</h6>
+                        <form id="registerFormElement">
+                            <div class="mb-4">
+                                <label for="registerEmail" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                                <input type="email" class="form-control w-full px-3 py-2 border border-gray-300 rounded-md" id="registerEmail" placeholder="your.email@equitashealth.com" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="registerPassword" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                                <input type="password" class="form-control w-full px-3 py-2 border border-gray-300 rounded-md" id="registerPassword" placeholder="Create a secure password" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="registerName" class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                <input type="text" class="form-control w-full px-3 py-2 border border-gray-300 rounded-md" id="registerName" placeholder="Your full name" required>
+                            </div>
+                            <button type="submit" class="btn w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md mb-2">
+                                <i class="fas fa-user-plus me-2"></i>Create Account
+                            </button>
+                            <button type="button" id="showLogin" class="btn w-full border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-4 rounded-md">
+                                Back to Login
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Header -->
     <header class="bg-white shadow-lg border-b-4 border-safety-blue">
         <div class="container mx-auto px-6 py-4">
@@ -87,6 +164,10 @@
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="#" onclick="resetAllData()">
                                 <i class="fas fa-trash me-2"></i>Reset All Data
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-warning" href="#" onclick="logout()">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
                             </a></li>
                         </ul>
                     </div>

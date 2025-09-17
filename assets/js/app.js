@@ -15,10 +15,91 @@ class ProjectManager {
         this.currentRoleEditId = null;
         this.currentDepartmentEditId = null;
         this.hasUserInteracted = localStorage.getItem('safetrack_user_interacted') === 'true'; // Flag to track if user has interacted with the app
+        this.isAuthenticated = false;
+        this.hasInitialized = false;
+        this.setupAuthentication();
         this.init();
     }
 
+    setupAuthentication() {
+        // Set up authentication state listener
+        this.cloudStorage.onAuthStateChanged((user) => {
+            this.isAuthenticated = !!user;
+            
+            if (user) {
+                // User is signed in
+                this.hideLoginModal();
+                this.showApp();
+            } else {
+                // User is signed out
+                this.showLoginModal();
+                this.hideApp();
+            }
+        });
+        
+        // Set up login form handlers
+        this.setupLoginHandlers();
+    }
+
+    setupLoginHandlers() {
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', () => {
+            // Login form
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await this.handleLogin();
+                });
+            }
+
+            // Register form
+            const registerForm = document.getElementById('registerFormElement');
+            if (registerForm) {
+                registerForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await this.handleRegister();
+                });
+            }
+
+            // Google sign in
+            const googleSignIn = document.getElementById('googleSignIn');
+            if (googleSignIn) {
+                googleSignIn.addEventListener('click', async () => {
+                    await this.handleGoogleSignIn();
+                });
+            }
+
+            // Show/hide register form
+            const showRegister = document.getElementById('showRegister');
+            const showLogin = document.getElementById('showLogin');
+            const registerForm = document.getElementById('registerForm');
+            const loginFormDiv = document.getElementById('loginForm').parentElement;
+
+            if (showRegister) {
+                showRegister.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    loginFormDiv.style.display = 'none';
+                    registerForm.classList.remove('hidden');
+                });
+            }
+
+            if (showLogin) {
+                showLogin.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    registerForm.classList.add('hidden');
+                    loginFormDiv.style.display = 'block';
+                });
+            }
+        });
+    }
+
     async init() {
+        // Only initialize if authenticated
+        if (!this.isAuthenticated) {
+            return;
+        }
+        
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
         
@@ -44,6 +125,169 @@ class ProjectManager {
         
         // Show connection status
         this.showConnectionStatus();
+    }
+
+    // Authentication handlers
+    async handleLogin() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const errorDiv = document.getElementById('loginError');
+
+        this.showLoginLoading(true);
+        errorDiv.classList.add('d-none');
+
+        const result = await this.cloudStorage.signInWithEmailAndPassword(email, password);
+        
+        if (result.success) {
+            // Success - auth state listener will handle UI updates
+            this.clearLoginForm();
+        } else {
+            errorDiv.textContent = result.error;
+            errorDiv.classList.remove('d-none');
+        }
+        
+        this.showLoginLoading(false);
+    }
+
+    async handleRegister() {
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+        const name = document.getElementById('registerName').value;
+        const errorDiv = document.getElementById('loginError');
+
+        this.showLoginLoading(true);
+        errorDiv.classList.add('d-none');
+
+        const result = await this.cloudStorage.createUserWithEmailAndPassword(email, password);
+        
+        if (result.success) {
+            // Update user profile with name
+            try {
+                await this.cloudStorage.functions.updateProfile(result.user, { displayName: name });
+            } catch (error) {
+                console.warn('Could not update user profile:', error);
+            }
+            
+            // Success - auth state listener will handle UI updates
+            this.clearLoginForm();
+        } else {
+            errorDiv.textContent = result.error;
+            errorDiv.classList.remove('d-none');
+        }
+        
+        this.showLoginLoading(false);
+    }
+
+    async handleGoogleSignIn() {
+        const errorDiv = document.getElementById('loginError');
+        
+        this.showLoginLoading(true);
+        errorDiv.classList.add('d-none');
+
+        const result = await this.cloudStorage.signInWithGoogle();
+        
+        if (result.success) {
+            // Success - auth state listener will handle UI updates
+            this.clearLoginForm();
+        } else {
+            errorDiv.textContent = result.error;
+            errorDiv.classList.remove('d-none');
+        }
+        
+        this.showLoginLoading(false);
+    }
+
+    async logout() {
+        const result = await this.cloudStorage.signOut();
+        if (result.success) {
+            // Clear local data
+            this.projects = [];
+            this.users = [];
+            this.categories = [];
+            this.roles = [];
+            this.departments = [];
+            this.currentUser = 'admin';
+        }
+    }
+
+    // UI Control methods
+    showLoginModal() {
+        const modal = document.getElementById('loginModal');
+        if (modal) {
+            // Use Bootstrap modal if available, otherwise show with inline styles
+            if (window.bootstrap && window.bootstrap.Modal) {
+                const bsModal = new window.bootstrap.Modal(modal);
+                bsModal.show();
+            } else {
+                modal.style.display = 'block';
+                modal.classList.add('show');
+            }
+        }
+    }
+
+    hideLoginModal() {
+        const modal = document.getElementById('loginModal');
+        if (modal) {
+            if (window.bootstrap && window.bootstrap.Modal) {
+                const bsModal = window.bootstrap.Modal.getInstance(modal);
+                if (bsModal) {
+                    bsModal.hide();
+                }
+            } else {
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+            }
+        }
+    }
+
+    showApp() {
+        // Show main app content
+        const appContent = document.querySelector('header, main');
+        if (appContent) {
+            appContent.style.display = 'block';
+        }
+        
+        // Initialize app if not already done
+        if (!this.hasInitialized) {
+            this.hasInitialized = true;
+            this.init();
+        }
+    }
+
+    hideApp() {
+        // Hide main app content
+        const header = document.querySelector('header');
+        const main = document.querySelector('main');
+        if (header) header.style.display = 'none';
+        if (main) main.style.display = 'none';
+    }
+
+    showLoginLoading(show) {
+        const submitButtons = document.querySelectorAll('#loginForm button[type="submit"], #registerFormElement button[type="submit"], #googleSignIn');
+        submitButtons.forEach(btn => {
+            if (show) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Please wait...';
+            } else {
+                btn.disabled = false;
+                // Restore original text
+                if (btn.id === 'googleSignIn') {
+                    btn.innerHTML = '<i class="fab fa-google me-2"></i>Sign in with Google';
+                } else if (btn.closest('#registerFormElement')) {
+                    btn.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
+                } else {
+                    btn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Sign In';
+                }
+            }
+        });
+    }
+
+    clearLoginForm() {
+        document.getElementById('loginEmail').value = '';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('registerEmail').value = '';
+        document.getElementById('registerPassword').value = '';
+        document.getElementById('registerName').value = '';
     }
     
     forceCleanupOldUsers() {
@@ -1829,5 +2073,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Make force dropdown update available globally for testing
     window.forceDropdownUpdate = () => {
         window.projectManager.forceUpdateDropdown();
+    };
+
+    // Global logout function
+    window.logout = () => {
+        window.projectManager.logout();
     };
 });
