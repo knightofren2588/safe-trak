@@ -17,6 +17,11 @@
     <!-- Custom CSS -->
     <link href="assets/css/style.css" rel="stylesheet">
     
+    <!-- Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
     <script>
         tailwind.config = {
             theme: {
@@ -219,6 +224,28 @@
                                 <option value="completed">Complete</option>
                                 <option value="on-hold">On Hold</option>
                             </select>
+                            
+                            <!-- Export Dropdown -->
+                            <div class="dropdown">
+                                <button class="btn btn-outline-success dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-download me-2"></i>Export
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="exportDropdown">
+                                    <li><a class="dropdown-item" href="#" onclick="exportToExcel()">
+                                        <i class="fas fa-file-excel me-2 text-success"></i>Export to Excel
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="exportToPDF()">
+                                        <i class="fas fa-file-pdf me-2 text-danger"></i>Export to PDF
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="exportToCSV()">
+                                        <i class="fas fa-file-csv me-2 text-info"></i>Export to CSV
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="printReport()">
+                                        <i class="fas fa-print me-2 text-secondary"></i>Print Report
+                                    </a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -291,27 +318,56 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row g-4">
+                    <!-- Export Options -->
+                    <div class="row g-4 mb-4">
                         <div class="col-md-4">
-                            <button class="btn btn-outline-light w-100 h-100 p-4 text-start border-2 hover-shadow">
+                            <button class="btn btn-outline-primary w-100 h-100 p-4 text-start border-2 hover-shadow" onclick="exportToPDF()">
                                 <i class="fas fa-file-pdf text-danger mb-2 fs-4"></i>
-                                <h6 class="fw-bold">Safety Project Summary</h6>
-                                <p class="text-muted small mb-0">Generate safety compliance PDF</p>
+                                <h6 class="fw-bold">PDF Report</h6>
+                                <p class="text-muted small mb-0">Generate comprehensive safety project report</p>
                             </button>
                         </div>
                         <div class="col-md-4">
-                            <button class="btn btn-outline-light w-100 h-100 p-4 text-start border-2 hover-shadow">
-                                <i class="fas fa-chart-line text-primary mb-2 fs-4"></i>
-                                <h6 class="fw-bold">Safety Progress Analytics</h6>
-                                <p class="text-muted small mb-0">View safety metrics & trends</p>
+                            <button class="btn btn-outline-success w-100 h-100 p-4 text-start border-2 hover-shadow" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel text-success mb-2 fs-4"></i>
+                                <h6 class="fw-bold">Excel Export</h6>
+                                <p class="text-muted small mb-0">Export data for analysis and reporting</p>
                             </button>
                         </div>
                         <div class="col-md-4">
-                            <button class="btn btn-outline-light w-100 h-100 p-4 text-start border-2 hover-shadow">
-                                <i class="fas fa-download text-success mb-2 fs-4"></i>
-                                <h6 class="fw-bold">Export Safety Data</h6>
-                                <p class="text-muted small mb-0">Download safety compliance data</p>
+                            <button class="btn btn-outline-info w-100 h-100 p-4 text-start border-2 hover-shadow" onclick="exportToCSV()">
+                                <i class="fas fa-table text-info mb-2 fs-4"></i>
+                                <h6 class="fw-bold">CSV Export</h6>
+                                <p class="text-muted small mb-0">Raw data for external systems</p>
                             </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Analytics Overview -->
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-chart-pie me-2 text-primary"></i>Project Status Breakdown
+                                    </h6>
+                                    <div id="statusBreakdown" class="mt-3">
+                                        <!-- Will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-users me-2 text-success"></i>Team Performance
+                                    </h6>
+                                    <div id="teamPerformance" class="mt-3">
+                                        <!-- Will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

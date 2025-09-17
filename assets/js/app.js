@@ -116,11 +116,221 @@ class ProjectManager {
 
     // Logout method removed - no authentication system
 
-    // All authentication UI methods removed - app works without login
-    
-    forceCleanupOldUsers() {
-        // This method is no longer needed since we removed hardcoded users from HTML
-        // Keeping it for compatibility but it does nothing now
+    // Export functionality
+    exportToExcel() {
+        try {
+            const exportData = this.prepareExportData();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Safety Projects");
+            
+            // Add some styling to the worksheet
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const address = XLSX.utils.encode_col(C) + "1"; // First row
+                if (!ws[address]) continue;
+                ws[address].s = { font: { bold: true }, fill: { fgColor: { rgb: "CCCCCC" } } };
+            }
+            
+            const fileName = `SafeTrack_Projects_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            
+            this.showNotification('Excel file downloaded successfully!', 'success');
+        } catch (error) {
+            console.error('Excel export error:', error);
+            this.showNotification('Failed to export Excel file', 'error');
+        }
+    }
+
+    exportToPDF() {
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(20);
+            doc.text('SafeTrack - Safety Projects Report', 20, 20);
+            
+            // Add date
+            doc.setFontSize(12);
+            doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 35);
+            
+            // Add current user context
+            const currentUserName = this.currentUser === 'all' ? 'All Users' : 
+                (this.users.find(u => u.id === this.currentUser)?.name || 'Unknown User');
+            doc.text(`View: ${currentUserName}`, 20, 45);
+            
+            // Prepare table data
+            const exportData = this.prepareExportData();
+            const tableColumns = ['Project', 'Status', 'Progress', 'Assigned To', 'Start Date', 'Due Date'];
+            const tableRows = exportData.map(project => [
+                project.Project,
+                project.Status,
+                project.Progress,
+                project['Assigned To'],
+                project['Start Date'],
+                project['Due Date']
+            ]);
+            
+            // Add table
+            doc.autoTable({
+                head: [tableColumns],
+                body: tableRows,
+                startY: 55,
+                theme: 'grid',
+                headStyles: { fillColor: [41, 128, 185] },
+                alternateRowStyles: { fillColor: [245, 245, 245] }
+            });
+            
+            const fileName = `SafeTrack_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+            
+            this.showNotification('PDF report downloaded successfully!', 'success');
+        } catch (error) {
+            console.error('PDF export error:', error);
+            this.showNotification('Failed to export PDF report', 'error');
+        }
+    }
+
+    exportToCSV() {
+        try {
+            const exportData = this.prepareExportData();
+            const headers = Object.keys(exportData[0] || {});
+            
+            let csvContent = headers.join(',') + '\n';
+            exportData.forEach(row => {
+                const values = headers.map(header => {
+                    let value = row[header] || '';
+                    // Escape commas and quotes
+                    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+                        value = '"' + value.replace(/"/g, '""') + '"';
+                    }
+                    return value;
+                });
+                csvContent += values.join(',') + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            const fileName = `SafeTrack_Data_${new Date().toISOString().split('T')[0]}.csv`;
+            link.setAttribute('download', fileName);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            this.showNotification('CSV file downloaded successfully!', 'success');
+        } catch (error) {
+            console.error('CSV export error:', error);
+            this.showNotification('Failed to export CSV file', 'error');
+        }
+    }
+
+    printReport() {
+        const printWindow = window.open('', '_blank');
+        const exportData = this.prepareExportData();
+        const currentUserName = this.currentUser === 'all' ? 'All Users' : 
+            (this.users.find(u => u.id === this.currentUser)?.name || 'Unknown User');
+        
+        let tableHtml = `
+            <html>
+            <head>
+                <title>SafeTrack Projects Report</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h1 { color: #2563eb; margin-bottom: 10px; }
+                    .meta { color: #666; margin-bottom: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #f8f9fa; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #f9f9f9; }
+                    .status-active { color: #28a745; font-weight: bold; }
+                    .status-completed { color: #6c757d; }
+                    .status-on-hold { color: #ffc107; }
+                    .status-cancelled { color: #dc3545; }
+                </style>
+            </head>
+            <body>
+                <h1>SafeTrack - Safety Projects Report</h1>
+                <div class="meta">
+                    <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
+                    <p><strong>View:</strong> ${currentUserName}</p>
+                    <p><strong>Total Projects:</strong> ${exportData.length}</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Assigned To</th>
+                            <th>Start Date</th>
+                            <th>Due Date</th>
+                            <th>Created By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        exportData.forEach(project => {
+            tableHtml += `
+                <tr>
+                    <td><strong>${project.Project}</strong><br><small>${project.Description || ''}</small></td>
+                    <td><span class="status-${project.Status.toLowerCase()}">${project.Status}</span></td>
+                    <td>${project.Progress}</td>
+                    <td>${project['Assigned To']}</td>
+                    <td>${project['Start Date']}</td>
+                    <td>${project['Due Date']}</td>
+                    <td>${project['Created By']}</td>
+                </tr>
+            `;
+        });
+        
+        tableHtml += `
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+        
+        printWindow.document.write(tableHtml);
+        printWindow.document.close();
+        printWindow.print();
+        
+        this.showNotification('Print dialog opened!', 'success');
+    }
+
+    prepareExportData() {
+        // Get projects based on current view
+        let projectsToExport;
+        if (this.currentUser === 'all') {
+            projectsToExport = this.projects;
+        } else {
+            projectsToExport = this.projects.filter(project => 
+                project.createdBy === this.currentUser || project.assignedTo === this.currentUser
+            );
+        }
+        
+        return projectsToExport.map(project => {
+            const assignedUser = this.users.find(u => u.id === project.assignedTo);
+            const createdByUser = this.users.find(u => u.id === project.createdBy);
+            
+            return {
+                'Project': project.title,
+                'Description': project.description || '',
+                'Status': project.status.charAt(0).toUpperCase() + project.status.slice(1),
+                'Progress': `${project.progress}%`,
+                'Assigned To': assignedUser ? assignedUser.name : (project.assignedTo || 'Unassigned'),
+                'Created By': createdByUser ? createdByUser.name : 'Unknown',
+                'Start Date': project.startDate ? new Date(project.startDate).toLocaleDateString() : '',
+                'Due Date': project.dueDate ? new Date(project.dueDate).toLocaleDateString() : '',
+                'Category': project.category || '',
+                'Created Date': new Date(project.createdAt).toLocaleDateString(),
+                'Screenshots': project.screenshots ? project.screenshots.length : 0
+            };
+        });
     }
     
     async waitForCloudStorage() {
@@ -1919,14 +2129,28 @@ document.addEventListener('DOMContentLoaded', function() {
         window.projectManager.forceUpdateDropdown();
     };
 
-    // Global logout function
-    window.logout = () => {
-        window.projectManager.logout();
+    // Global export functions
+    window.exportToExcel = () => {
+        if (window.projectManager) {
+            window.projectManager.exportToExcel();
+        }
     };
 
-    // Test function to manually show login modal
-    window.testShowLogin = () => {
-        console.log('Manual test: showing login modal');
-        window.projectManager.showLoginModal();
+    window.exportToPDF = () => {
+        if (window.projectManager) {
+            window.projectManager.exportToPDF();
+        }
+    };
+
+    window.exportToCSV = () => {
+        if (window.projectManager) {
+            window.projectManager.exportToCSV();
+        }
+    };
+
+    window.printReport = () => {
+        if (window.projectManager) {
+            window.projectManager.printReport();
+        }
     };
 });
