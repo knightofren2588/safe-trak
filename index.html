@@ -22,8 +22,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
-    <!-- Email Service -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <!-- Email service removed - using calendar reminders only -->
     
     <script>
         tailwind.config = {
@@ -335,14 +334,9 @@
                                     <h6 class="mb-0">
                                         <i class="fas fa-list-check me-2"></i>Safety Compliance Checklist
                                     </h6>
-                                    <div class="btn-group">
-                                        <button class="btn btn-sm btn-primary" onclick="addComplianceItem()">
-                                            <i class="fas fa-plus me-1"></i>Add Item
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" onclick="sendAllRemindersNow()" title="Send all pending reminders now">
-                                            <i class="fas fa-paper-plane me-1"></i>Send All Reminders
-                                        </button>
-                                    </div>
+                                    <button class="btn btn-sm btn-primary" onclick="addComplianceItem()">
+                                        <i class="fas fa-plus me-1"></i>Add Item
+                                    </button>
                                 </div>
                                 <div class="card-body p-0">
                                     <div class="table-responsive">
@@ -585,70 +579,32 @@
                             <div class="col-md-12">
                                 <hr class="my-3">
                                 <h6 class="mb-3">
-                                    <i class="fas fa-bell me-2"></i>Reminder & Calendar Settings
+                                    <i class="fas fa-calendar me-2"></i>Calendar Settings
                                 </h6>
                             </div>
                             <div class="col-md-6">
-                                <label for="reminderEmail" class="form-label">Email for Reminders</label>
-                                <div class="input-group">
-                                    <input type="email" class="form-control" id="reminderEmail" name="reminderEmail" placeholder="email@equitashealth.com">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="testEmailReminder()" title="Send test email">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
-                                </div>
-                                <small class="text-muted">Optional: Get automatic email reminders</small>
+                                <label for="calendarLocation" class="form-label">Training Location</label>
+                                <input type="text" class="form-control" id="calendarLocation" name="location" placeholder="e.g., Conference Room A, Main Building" value="Equitas Health - Safety Training Center">
+                                <small class="text-muted">Where the training will take place</small>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Reminder Schedule</label>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="reminder30days" name="reminder30days">
-                                            <label class="form-check-label small" for="reminder30days">30 days before</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="reminder14days" name="reminder14days">
-                                            <label class="form-check-label small" for="reminder14days">2 weeks before</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="reminder7days" name="reminder7days" checked>
-                                            <label class="form-check-label small" for="reminder7days">7 days before</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="reminder3days" name="reminder3days">
-                                            <label class="form-check-label small" for="reminder3days">3 days before</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="reminder2days" name="reminder2days" checked>
-                                            <label class="form-check-label small" for="reminder2days">2 days before</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="reminder1day" name="reminder1day" checked>
-                                            <label class="form-check-label small" for="reminder1day">1 day before</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="reminderDay" name="reminderDay" checked>
-                                            <label class="form-check-label small" for="reminderDay">Day of training</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="reminderMorning" name="reminderMorning">
-                                            <label class="form-check-label small" for="reminderMorning">Morning of training</label>
-                                        </div>
-                                    </div>
-                                </div>
-                                <small class="text-muted">Select when to send email reminders</small>
+                                <label for="trainingDuration" class="form-label">Training Duration (hours)</label>
+                                <select class="form-select" id="trainingDuration" name="duration">
+                                    <option value="1">1 hour</option>
+                                    <option value="2" selected>2 hours</option>
+                                    <option value="3">3 hours</option>
+                                    <option value="4">4 hours</option>
+                                    <option value="6">6 hours</option>
+                                    <option value="8">8 hours (full day)</option>
+                                </select>
+                                <small class="text-muted">How long the training will take</small>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer d-flex justify-content-between">
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-info" onclick="exportComplianceToCalendar()">
+                        <div>
+                            <button type="button" class="btn btn-success" onclick="exportComplianceToCalendar()">
                                 <i class="fas fa-calendar-plus me-2"></i>Add to Calendar
-                            </button>
-                            <button type="button" class="btn btn-outline-warning" onclick="sendTestEmail()">
-                                <i class="fas fa-envelope me-2"></i>Send Test Email
                             </button>
                         </div>
                         <div>

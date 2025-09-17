@@ -9,8 +9,6 @@ class ProjectManager {
         this.departments = [];
         this.complianceItems = [];
         this.currentUser = 'admin'; // Default to admin user's view
-        this.emailService = null;
-        this.initializeEmailService();
         this.currentEditId = null;
         this.currentUserEditId = null;
         this.currentProgressEditId = null;
@@ -22,65 +20,7 @@ class ProjectManager {
         this.init();
     }
 
-    // Email and Calendar Integration
-    initializeEmailService() {
-        // Initialize EmailJS (free email service)
-        if (typeof emailjs !== 'undefined') {
-            emailjs.init("jt0JyNjB1EQpgqLRR"); // Your EmailJS public key
-            this.emailService = emailjs;
-            console.log('EmailJS initialized successfully');
-        } else {
-            console.warn('EmailJS not loaded - email reminders disabled');
-        }
-    }
-
-    async sendReminderEmail(complianceItem, daysUntil) {
-        if (!this.emailService || !complianceItem.reminderEmail) return;
-
-        const assignedUser = this.users.find(u => u.id === complianceItem.assignedTo);
-        const assignedName = assignedUser ? assignedUser.name : 'Team Member';
-        
-        // Create dynamic message based on timing
-        let urgencyMessage = '';
-        let urgencyIcon = '';
-        
-        if (daysUntil === 0) {
-            urgencyMessage = '🚨 This training is scheduled for TODAY! Please complete it as soon as possible.';
-            urgencyIcon = '🚨 URGENT';
-        } else if (daysUntil === 1) {
-            urgencyMessage = '⚡ This training is due TOMORROW! Please prepare and schedule your time.';
-            urgencyIcon = '⚡ TOMORROW';
-        } else if (daysUntil <= 3) {
-            urgencyMessage = `⏰ This training is due in ${daysUntil} days. Please plan accordingly.`;
-            urgencyIcon = '⏰ SOON';
-        } else if (daysUntil <= 7) {
-            urgencyMessage = `📅 This training is due in ${daysUntil} days. Start planning your schedule.`;
-            urgencyIcon = '📅 UPCOMING';
-        } else {
-            urgencyMessage = `📋 This training is scheduled in ${daysUntil} days. Early reminder to help you plan.`;
-            urgencyIcon = '📋 ADVANCE NOTICE';
-        }
-        
-        const emailParams = {
-            to_name: assignedName,
-            to_email: complianceItem.reminderEmail,
-            compliance_title: complianceItem.title,
-            training_date: new Date(complianceItem.trainingDate).toLocaleDateString(),
-            days_until: daysUntil,
-            message: `Hello ${assignedName}, ${urgencyMessage} Item: ${complianceItem.title}. Training Date: ${new Date(complianceItem.trainingDate).toLocaleDateString()}. Days Until: ${daysUntil} days. Type: ${complianceItem.type}. Priority: ${complianceItem.priority}. ${complianceItem.description ? 'Description: ' + complianceItem.description : ''} Please ensure you complete this training on time to maintain safety compliance. Best regards, SafeTrack Safety Management System - Equitas Health`
-        };
-
-        try {
-            await this.emailService.send("service_15n321d", "template_bq11d9p", emailParams);
-            console.log('Reminder email sent successfully to:', complianceItem.reminderEmail);
-            this.showNotification(`Reminder email sent for: ${complianceItem.title}`, 'success');
-            return true;
-        } catch (error) {
-            console.error('Failed to send reminder email:', error);
-            this.showNotification(`Failed to send email reminder for: ${complianceItem.title}`, 'error');
-            return false;
-        }
-    }
+    // Calendar Integration (Email system removed)
 
     exportComplianceToCalendar() {
         // Get form data to create calendar event
@@ -88,6 +28,8 @@ class ProjectManager {
         const description = document.getElementById('complianceDescription').value;
         const trainingDate = document.getElementById('complianceTrainingDate').value;
         const type = document.getElementById('complianceType').value;
+        const location = document.getElementById('calendarLocation').value;
+        const duration = parseInt(document.getElementById('trainingDuration').value);
         
         if (!title || !trainingDate) {
             alert('Please fill in the title and training date first');
@@ -98,14 +40,19 @@ class ProjectManager {
             title: title,
             description: description,
             trainingDate: trainingDate,
-            type: type
+            type: type,
+            location: location,
+            duration: duration
         });
     }
 
     createCalendarFile(complianceData) {
         const startDate = new Date(complianceData.trainingDate);
+        // Set training time to 9:00 AM by default
+        startDate.setHours(9, 0, 0, 0);
+        
         const endDate = new Date(startDate);
-        endDate.setHours(startDate.getHours() + 2); // 2-hour duration
+        endDate.setHours(startDate.getHours() + (complianceData.duration || 2)); // Use selected duration
 
         // Format dates for ICS format (YYYYMMDDTHHMMSSZ)
         const formatDate = (date) => {
@@ -123,7 +70,7 @@ DTSTART:${formatDate(startDate)}
 DTEND:${formatDate(endDate)}
 SUMMARY:${complianceData.title}
 DESCRIPTION:Safety Compliance Training\\n\\nType: ${complianceData.type}\\n\\n${complianceData.description || 'No additional description'}\\n\\nGenerated by SafeTrack Safety Management System
-LOCATION:Equitas Health - Safety Training Center
+LOCATION:${complianceData.location || 'Equitas Health - Safety Training Center'}
 STATUS:CONFIRMED
 SEQUENCE:0
 BEGIN:VALARM
@@ -158,189 +105,23 @@ END:VCALENDAR`;
         this.showNotification('Calendar file downloaded! Open with Outlook, Google Calendar, or Apple Calendar.', 'success');
     }
 
-    checkAndSendReminders() {
-        // Check for items that need reminders
-        const today = new Date();
-        
-        this.complianceItems.forEach(item => {
-            if (!item.trainingDate || !item.reminderEmail || item.status === 'completed') return;
-            
-            const trainingDate = new Date(item.trainingDate);
-            const diffTime = trainingDate - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            // Check if we need to send reminders for different time periods
-            const shouldSend30Day = item.reminder30days && diffDays === 30;
-            const shouldSend14Day = item.reminder14days && diffDays === 14;
-            const shouldSend7Day = item.reminder7days && diffDays === 7;
-            const shouldSend3Day = item.reminder3days && diffDays === 3;
-            const shouldSend2Day = item.reminder2days && diffDays === 2;
-            const shouldSend1Day = item.reminder1day && diffDays === 1;
-            const shouldSendToday = item.reminderDay && diffDays === 0;
-            
-            // Morning of training (same day but earlier check)
-            const shouldSendMorning = item.reminderMorning && diffDays === 0;
-            
-            if (shouldSend30Day || shouldSend14Day || shouldSend7Day || shouldSend3Day || 
-                shouldSend2Day || shouldSend1Day || shouldSendToday || shouldSendMorning) {
-                this.sendReminderEmail(item, diffDays);
-            }
-        });
-    }
-
-    startReminderSystem() {
-        // Check reminders immediately
-        this.checkAndSendReminders();
-        
-        // Then check every hour
-        setInterval(() => {
-            this.checkAndSendReminders();
-        }, 60 * 60 * 1000); // 1 hour
-        
-        console.log('Reminder system started - checking every hour');
-    }
-
-    async testEmailReminder() {
-        const email = document.getElementById('reminderEmail').value;
-        const title = document.getElementById('complianceTitle').value || 'Test Compliance Item';
-        
-        if (!email) {
-            alert('Please enter an email address first');
-            return;
-        }
-
-        if (!this.emailService) {
-            alert('Email service not initialized. Please set up EmailJS service first.\n\n1. Go to EmailJS dashboard\n2. Add Email Service (Gmail)\n3. Get Service ID\n4. Update SafeTrack code');
-            return;
-        }
-
-        // Ultra-simple test with minimal variables
-        const testEmailParams = {
-            to_name: 'Safety Team Member',
-            to_email: email,
-            message: `Hello! This is a test email from SafeTrack. If you receive this, the email system is working!`
-        };
-
-        try {
-            this.showNotification('Sending test email...', 'info');
-            await this.emailService.send("service_15n321d", "template_bq11d9p", testEmailParams);
-            this.showNotification(`Test email sent successfully to ${email}!`, 'success');
-        } catch (error) {
-            console.error('Test email failed:', error);
-            this.showNotification('Test email failed. Check console for details.', 'error');
-        }
-    }
-
-    async sendTestEmail() {
-        const email = document.getElementById('reminderEmail').value;
-        const title = document.getElementById('complianceTitle').value || 'Test Compliance Item';
-        const type = document.getElementById('complianceType').value || 'training';
-        const trainingDate = document.getElementById('complianceTrainingDate').value || new Date().toISOString().split('T')[0];
-        
-        if (!email) {
-            alert('Please enter an email address first');
-            return;
-        }
-
-        if (!this.emailService) {
-            alert('Email service not initialized. Please refresh the page and try again.');
-            return;
-        }
-
-        // Create a test compliance item
-        const testItem = {
-            title: title,
-            type: type,
-            trainingDate: trainingDate,
-            reminderEmail: email,
-            priority: 'medium',
-            description: 'This is a test email from SafeTrack to verify the email system is working correctly.',
-            assignedTo: this.currentUser
-        };
-
-        const daysUntil = Math.ceil((new Date(trainingDate) - new Date()) / (1000 * 60 * 60 * 24));
-        
-        try {
-            this.showNotification('Sending test email...', 'info');
-            const success = await this.sendReminderEmail(testItem, daysUntil);
-            if (success) {
-                alert(`Test email sent successfully to ${email}!\n\nCheck your inbox (and spam folder) for the SafeTrack reminder email.`);
-            }
-        } catch (error) {
-            console.error('Test email failed:', error);
-            alert('Test email failed. Check the console for error details.');
-        }
-    }
-
-    async sendEmailNowForItem(itemId) {
+    exportItemToCalendar(itemId) {
         const item = this.complianceItems.find(c => c.id === itemId);
         if (!item) return;
 
-        if (!item.reminderEmail) {
-            alert('No email address set for this compliance item. Please edit the item to add an email address.');
+        if (!item.trainingDate) {
+            alert('No training date set for this compliance item. Please edit the item to add a training date.');
             return;
         }
 
-        const daysUntil = Math.ceil((new Date(item.trainingDate) - new Date()) / (1000 * 60 * 60 * 24));
-        
-        try {
-            this.showNotification('Sending email reminder...', 'info');
-            const success = await this.sendReminderEmail(item, daysUntil);
-            if (success) {
-                alert(`Email reminder sent successfully to ${item.reminderEmail}!`);
-            }
-        } catch (error) {
-            console.error('Email send failed:', error);
-            alert('Failed to send email. Check console for details.');
-        }
-    }
-
-    async sendAllRemindersNow() {
-        const itemsWithEmail = this.complianceItems.filter(item => 
-            item.reminderEmail && item.status !== 'completed'
-        );
-
-        if (itemsWithEmail.length === 0) {
-            alert('No compliance items with email addresses found.');
-            return;
-        }
-
-        const confirmed = confirm(`Send email reminders for ${itemsWithEmail.length} compliance items now?\n\nThis will send immediate reminders regardless of the scheduled dates.`);
-        if (!confirmed) return;
-
-        this.showNotification(`Sending ${itemsWithEmail.length} email reminders...`, 'info');
-        
-        let successCount = 0;
-        let failCount = 0;
-
-        for (const item of itemsWithEmail) {
-            const daysUntil = Math.ceil((new Date(item.trainingDate) - new Date()) / (1000 * 60 * 60 * 24));
-            
-            try {
-                const success = await this.sendReminderEmail(item, daysUntil);
-                if (success) {
-                    successCount++;
-                } else {
-                    failCount++;
-                }
-                
-                // Small delay to avoid overwhelming the email service
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            } catch (error) {
-                console.error(`Failed to send email for ${item.title}:`, error);
-                failCount++;
-            }
-        }
-
-        const resultMessage = `Email reminders sent!\n\n✅ Successful: ${successCount}\n❌ Failed: ${failCount}`;
-        alert(resultMessage);
-        
-        if (successCount > 0) {
-            this.showNotification(`${successCount} email reminders sent successfully!`, 'success');
-        }
-        if (failCount > 0) {
-            this.showNotification(`${failCount} email reminders failed to send`, 'error');
-        }
+        this.createCalendarFile({
+            title: item.title,
+            description: item.description,
+            trainingDate: item.trainingDate,
+            type: item.type,
+            location: item.location || 'Equitas Health - Safety Training Center',
+            duration: item.duration || 2
+        });
     }
 
     // Authentication methods removed - app works without login
@@ -377,9 +158,6 @@ END:VCALENDAR`;
         // Render compliance data
         this.renderComplianceTable();
         this.updateComplianceStats();
-        
-        // Start reminder checking (check every hour)
-        this.startReminderSystem();
         
         // Show connection status
         this.showConnectionStatus();
@@ -714,15 +492,8 @@ END:VCALENDAR`;
             trainingDate: formData.get('trainingDate'),
             assignedTo: formData.get('assignedTo'),
             priority: formData.get('priority'),
-            reminderEmail: formData.get('reminderEmail'),
-            reminder30days: formData.has('reminder30days'),
-            reminder14days: formData.has('reminder14days'),
-            reminder7days: formData.has('reminder7days'),
-            reminder3days: formData.has('reminder3days'),
-            reminder2days: formData.has('reminder2days'),
-            reminder1day: formData.has('reminder1day'),
-            reminderDay: formData.has('reminderDay'),
-            reminderMorning: formData.has('reminderMorning')
+            location: formData.get('location'),
+            duration: formData.get('duration')
         };
 
         if (this.currentComplianceEditId) {
@@ -864,14 +635,9 @@ END:VCALENDAR`;
                             <button onclick="projectManager.openComplianceModal('${item.id}')" class="btn btn-sm btn-outline-primary" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            ${item.reminderEmail ? 
-                                `<button onclick="projectManager.sendEmailNowForItem('${item.id}')" class="btn btn-sm btn-outline-warning" title="Send Email Now">
-                                    <i class="fas fa-envelope"></i>
-                                </button>` : 
-                                `<button class="btn btn-sm btn-outline-secondary" disabled title="No email set">
-                                    <i class="fas fa-envelope-open"></i>
-                                </button>`
-                            }
+                            <button onclick="projectManager.exportItemToCalendar('${item.id}')" class="btn btn-sm btn-outline-success" title="Add to Calendar">
+                                <i class="fas fa-calendar-plus"></i>
+                            </button>
                             <button onclick="projectManager.deleteComplianceItem('${item.id}')" class="btn btn-sm btn-outline-danger" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>
