@@ -15,7 +15,7 @@ class ProjectManager {
         this.currentRoleEditId = null;
         this.currentDepartmentEditId = null;
         this.hasUserInteracted = localStorage.getItem('safetrack_user_interacted') === 'true'; // Flag to track if user has interacted with the app
-        this.isAuthenticated = false;
+        this.isAuthenticated = true; // Temporarily disable authentication
         this.hasInitialized = false;
         // Don't setup authentication here - wait for DOM to be ready
         this.init();
@@ -102,10 +102,8 @@ class ProjectManager {
     }
 
     async init() {
-        // Temporarily disable auth check to debug login modal
-        // if (!this.isAuthenticated) {
-        //     return;
-        // }
+        // Skip authentication for now - just load the app
+        console.log('Skipping authentication, loading app directly');
         
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
@@ -2108,5 +2106,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Global logout function
     window.logout = () => {
         window.projectManager.logout();
+    };
+
+    // Test function to manually show login modal
+    window.testShowLogin = () => {
+        console.log('Manual test: showing login modal');
+        window.projectManager.showLoginModal();
     };
 });
