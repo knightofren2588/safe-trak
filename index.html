@@ -47,15 +47,15 @@
     <!-- Authentication removed for now - app works without login -->
 
     <!-- Header -->
-    <header class="bg-white shadow-lg border-b-4 border-safety-blue">
+    <header class="bg-white shadow-lg" style="border-bottom: 4px solid var(--safety-red);">
         <div class="container mx-auto px-6 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="bg-gradient-to-r from-safety-blue to-safety-info text-white p-3 rounded-lg shadow-lg hover-scale">
+                    <div class="p-3 rounded-lg shadow-lg hover-scale" style="background: var(--safety-red); color: white;">
                         <i class="fas fa-shield-alt text-xl"></i>
                     </div>
                     <div>
-                        <h1 class="text-2xl font-bold gradient-text">🛡️ SafeTrack</h1>
+                        <h1 class="text-2xl font-bold" style="color: var(--safety-red);">🛡️ SafeTrack</h1>
                         <p class="text-sm text-gray-600">Advanced Safety Project Management for Equitas Health</p>
                         
                         <!-- Daily Safety Quote -->
@@ -120,16 +120,16 @@
     <nav class="bg-white shadow-sm border-b">
         <div class="container mx-auto px-6">
             <div class="flex space-x-8">
-                <button class="tab-btn active py-4 px-2 border-b-2 border-safety-blue text-safety-blue font-medium" data-tab="dashboard">
+                <button class="tab-btn active py-4 px-2 border-b-2 font-medium" style="border-color: var(--safety-red); color: var(--safety-red);" data-tab="dashboard">
                     <i class="fas fa-shield-alt mr-2"></i>Safety Dashboard
                 </button>
-                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600 hover:text-safety-blue" data-tab="projects">
+                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" style="hover:color: var(--safety-red);" data-tab="projects">
                     <i class="fas fa-project-diagram mr-2"></i>Safety Projects
                 </button>
-                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600 hover:text-safety-blue" data-tab="compliance">
+                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" data-tab="compliance">
                     <i class="fas fa-clipboard-check mr-2"></i>Safety Compliance
                 </button>
-                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600 hover:text-safety-blue" data-tab="reports">
+                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" data-tab="reports">
                     <i class="fas fa-chart-line mr-2"></i>Safety Reports
                 </button>
             </div>
@@ -146,12 +146,12 @@
                     <div class="stats-card">
                         <div class="icon-circle success">
                             <i class="fas fa-check-circle"></i>
-                        </div>
+                                </div>
                         <div class="stats-content">
                             <div class="stats-info">
                                 <div class="stats-number" id="activeProjects">12</div>
                                 <div class="stats-label">Active Safety Projects</div>
-                            </div>
+                                </div>
                             <div class="stats-trend">
                                 <i class="fas fa-arrow-up trend-up"></i> +2 this week
                             </div>
@@ -162,12 +162,12 @@
                     <div class="stats-card">
                         <div class="icon-circle warning">
                             <i class="fas fa-exclamation-triangle"></i>
-                        </div>
+                                </div>
                         <div class="stats-content">
                             <div class="stats-info">
                                 <div class="stats-number" id="atRiskProjects">3</div>
                                 <div class="stats-label">Safety Risk Projects</div>
-                            </div>
+                                </div>
                             <div class="stats-trend">
                                 <i class="fas fa-arrow-down trend-down"></i> -1 this week
                             </div>
@@ -178,12 +178,12 @@
                     <div class="stats-card">
                         <div class="icon-circle primary">
                             <i class="fas fa-users"></i>
-                        </div>
+                                </div>
                         <div class="stats-content">
                             <div class="stats-info">
                                 <div class="stats-number" id="teamMembers">24</div>
                                 <div class="stats-label">Safety Team Members</div>
-                            </div>
+                                </div>
                             <div class="stats-trend">
                                 <i class="fas fa-minus trend-neutral"></i> No change
                             </div>
@@ -194,12 +194,12 @@
                     <div class="stats-card">
                         <div class="icon-circle danger">
                             <i class="fas fa-calendar-times"></i>
-                        </div>
+                                </div>
                         <div class="stats-content">
                             <div class="stats-info">
                                 <div class="stats-number" id="overdueProjects">1</div>
                                 <div class="stats-label">Overdue Safety Items</div>
-                            </div>
+                                </div>
                             <div class="stats-trend">
                                 <i class="fas fa-arrow-up trend-down"></i> +1 this week
                             </div>

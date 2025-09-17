@@ -566,6 +566,16 @@ body {
     color: var(--safety-orange);
 }
 
+/* Tab button styling */
+.tab-btn:hover {
+    color: var(--safety-red) !important;
+}
+
+.tab-btn.active {
+    border-color: var(--safety-red) !important;
+    color: var(--safety-red) !important;
+}
+
 /* ========================================
    🎴 CARDS - COMPACT
 ======================================== */
