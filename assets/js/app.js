@@ -67,21 +67,21 @@ class ProjectManager {
             // Show/hide register form
             const showRegister = document.getElementById('showRegister');
             const showLogin = document.getElementById('showLogin');
-            const registerForm = document.getElementById('registerForm');
+            const registerFormDiv = document.getElementById('registerForm');
             const loginFormDiv = document.getElementById('loginForm').parentElement;
 
             if (showRegister) {
                 showRegister.addEventListener('click', (e) => {
                     e.preventDefault();
                     loginFormDiv.style.display = 'none';
-                    registerForm.classList.remove('hidden');
+                    registerFormDiv.classList.remove('hidden');
                 });
             }
 
             if (showLogin) {
                 showLogin.addEventListener('click', (e) => {
                     e.preventDefault();
-                    registerForm.classList.add('hidden');
+                    registerFormDiv.classList.add('hidden');
                     loginFormDiv.style.display = 'block';
                 });
             }
@@ -1989,31 +1989,45 @@ function resetAllData() {
 }
 
 function syncData() {
-    projectManager.syncData();
+    if (window.projectManager) {
+        window.projectManager.syncData();
+    }
 }
 
 function switchUser(userId) {
-    projectManager.switchUser(userId);
+    if (window.projectManager) {
+        window.projectManager.switchUser(userId);
+    }
 }
 
 function updateProjectProgress() {
-    projectManager.updateProjectProgress();
+    if (window.projectManager) {
+        window.projectManager.updateProjectProgress();
+    }
 }
 
 function addCategory() {
-    projectManager.addCategory();
+    if (window.projectManager) {
+        window.projectManager.addCategory();
+    }
 }
 
 function openCategoryModal() {
-    projectManager.openCategoryModal();
+    if (window.projectManager) {
+        window.projectManager.openCategoryModal();
+    }
 }
 
 function addRole() {
-    projectManager.addRole();
+    if (window.projectManager) {
+        window.projectManager.addRole();
+    }
 }
 
 function openRoleModal() {
-    projectManager.openRoleModal();
+    if (window.projectManager) {
+        window.projectManager.openRoleModal();
+    }
 }
 
 
