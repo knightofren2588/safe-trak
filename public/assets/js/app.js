@@ -40,8 +40,15 @@ class ProjectManager {
         // }
         
         // Only load sample users if no users exist AND user hasn't interacted with the app
+        console.log('DEBUG - After loadAllData, users.length:', this.users.length);
+        console.log('DEBUG - hasUserInteracted:', this.hasUserInteracted);
+        console.log('DEBUG - Users array:', this.users);
+        
         if (this.users.length === 0 && !this.hasUserInteracted) {
+            console.log('DEBUG - Loading sample users because no users found and no interaction');
             this.loadSampleUsers();
+        } else {
+            console.log('DEBUG - NOT loading sample users');
         }
         
         this.render();
@@ -366,6 +373,9 @@ class ProjectManager {
     }
 
     loadSampleUsers() {
+        console.log('WARNING - loadSampleUsers() called! This will overwrite existing users!');
+        console.log('WARNING - Current users before reset:', this.users);
+        
         // Clear existing users and reset to new defaults
         this.users = [
             {
@@ -375,7 +385,10 @@ class ProjectManager {
                 avatar: "A"
             }
         ];
+        
+        console.log('WARNING - Users after reset:', this.users);
         this.saveUsers();
+        console.log('WARNING - loadSampleUsers() completed and saved to cloud');
         
         // Also clear local storage to remove old default users
         localStorage.removeItem('safetrack_users');
