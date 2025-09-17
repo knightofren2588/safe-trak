@@ -15,33 +15,39 @@ class ProjectManager {
         this.currentRoleEditId = null;
         this.currentDepartmentEditId = null;
         this.hasUserInteracted = localStorage.getItem('safetrack_user_interacted') === 'true'; // Flag to track if user has interacted with the app
-        this.isAuthenticated = true; // Temporarily disable authentication
+        this.isAuthenticated = false; // Re-enable authentication
         this.hasInitialized = false;
         // Don't setup authentication here - wait for DOM to be ready
         this.init();
     }
 
     setupAuthentication() {
-        // Set up authentication state listener
-        this.cloudStorage.onAuthStateChanged((user) => {
-            console.log('Auth state changed:', !!user);
-            this.isAuthenticated = !!user;
-            
-            if (user) {
-                console.log('User signed in, showing app');
-                // User is signed in
-                this.hideLoginModal();
-                this.showApp();
-            } else {
-                console.log('User signed out, showing login modal');
-                // User is signed out
-                this.showLoginModal();
-                this.hideApp();
-            }
-        });
+        // Simple authentication check
+        const savedAuth = localStorage.getItem('safetrack_authenticated');
+        if (savedAuth === 'true') {
+            this.isAuthenticated = true;
+            console.log('User already authenticated');
+        } else {
+            // Simple prompt-based login for now
+            this.promptLogin();
+        }
+    }
+    
+    promptLogin() {
+        const username = prompt('Enter username (default: admin):') || 'admin';
+        const password = prompt('Enter password (default: safetrack123):') || 'safetrack123';
         
-        // Set up login form handlers
-        this.setupLoginHandlers();
+        // Simple hardcoded check for now (we can make this secure later)
+        if (username === 'admin' && password === 'safetrack123') {
+            this.isAuthenticated = true;
+            localStorage.setItem('safetrack_authenticated', 'true');
+            console.log('Authentication successful');
+            // Re-run init now that user is authenticated
+            this.init();
+        } else {
+            alert('Invalid credentials. Please refresh and try again.');
+            this.isAuthenticated = false;
+        }
     }
 
     setupLoginHandlers() {
@@ -102,8 +108,13 @@ class ProjectManager {
     }
 
     async init() {
-        // Skip authentication for now - just load the app
-        console.log('Skipping authentication, loading app directly');
+        // Only initialize if authenticated
+        if (!this.isAuthenticated) {
+            console.log('Not authenticated, skipping app initialization');
+            return;
+        }
+        
+        console.log('User authenticated, loading app');
         
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
@@ -197,16 +208,11 @@ class ProjectManager {
     }
 
     async logout() {
-        const result = await this.cloudStorage.signOut();
-        if (result.success) {
-            // Clear local data
-            this.projects = [];
-            this.users = [];
-            this.categories = [];
-            this.roles = [];
-            this.departments = [];
-            this.currentUser = 'admin';
-        }
+        // Simple logout - clear authentication and reload
+        localStorage.removeItem('safetrack_authenticated');
+        this.isAuthenticated = false;
+        alert('Logged out successfully. Page will reload.');
+        window.location.reload();
     }
 
     // UI Control methods
@@ -2086,12 +2092,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Setup authentication after DOM is ready
     window.projectManager.setupAuthentication();
-    
-    // Force show login modal for debugging
-    console.log('Forcing login modal to show for debugging');
-    setTimeout(() => {
-        window.projectManager.showLoginModal();
-    }, 1000);
     
     // Make emergency clear function available globally
     window.emergencyClear = () => {
