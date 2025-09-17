@@ -62,33 +62,12 @@ class ProjectManager {
         }
         
         const emailParams = {
-            to_email: complianceItem.reminderEmail,
             to_name: assignedName,
-            subject: `${urgencyIcon} SafeTrack: ${complianceItem.title}`,
-            message: `
-                Hello ${assignedName},
-                
-                ${urgencyMessage}
-                
-                📋 Item: ${complianceItem.title}
-                📅 Training Date: ${new Date(complianceItem.trainingDate).toLocaleDateString()}
-                ⏰ Days Until: ${daysUntil} days
-                🏷️ Type: ${complianceItem.type}
-                ⚡ Priority: ${complianceItem.priority}
-                
-                ${complianceItem.description ? `📝 Description: ${complianceItem.description}` : ''}
-                
-                Please ensure you complete this training on time to maintain safety compliance.
-                
-                Best regards,
-                SafeTrack Safety Management System
-                Equitas Health
-            `,
+            to_email: complianceItem.reminderEmail,
             compliance_title: complianceItem.title,
-            compliance_type: complianceItem.type,
-            compliance_priority: complianceItem.priority,
             training_date: new Date(complianceItem.trainingDate).toLocaleDateString(),
-            days_until: daysUntil
+            days_until: daysUntil,
+            message: `Hello ${assignedName}, ${urgencyMessage} Item: ${complianceItem.title}. Training Date: ${new Date(complianceItem.trainingDate).toLocaleDateString()}. Days Until: ${daysUntil} days. Type: ${complianceItem.type}. Priority: ${complianceItem.priority}. ${complianceItem.description ? 'Description: ' + complianceItem.description : ''} Please ensure you complete this training on time to maintain safety compliance. Best regards, SafeTrack Safety Management System - Equitas Health`
         };
 
         try {
@@ -235,27 +214,11 @@ END:VCALENDAR`;
             return;
         }
 
+        // Ultra-simple test with minimal variables
         const testEmailParams = {
-            to_email: email,
             to_name: 'Safety Team Member',
-            subject: 'SafeTrack Test Email - Email System Working!',
-            message: `
-                Hello!
-                
-                This is a test email from your SafeTrack Safety Management System.
-                
-                📋 Test Item: ${title}
-                📅 Test Date: ${new Date().toLocaleDateString()}
-                ✅ Email System: Working perfectly!
-                
-                If you received this email, your reminder system is configured correctly.
-                
-                Best regards,
-                SafeTrack Safety Management System
-            `,
-            compliance_title: title,
-            training_date: new Date().toLocaleDateString(),
-            days_until: 'Test'
+            to_email: email,
+            message: `Hello! This is a test email from SafeTrack. If you receive this, the email system is working!`
         };
 
         try {
