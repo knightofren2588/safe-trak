@@ -190,14 +190,23 @@ class CloudStorageService {
         const data = await this.loadFromCloud('users');
         const users = Object.values(data);
         
-        // Filter out old default users that shouldn't be in cloud
-        const oldDefaultUsers = ['sarah', 'mike', 'lisa', 'david'];
+        // Filter out ONLY the specific old default users (not any user with similar names)
+        const oldDefaultUsers = [
+            {id: 'sarah', name: 'Sarah Johnson'},
+            {id: 'mike', name: 'MIke'},  // Note: this was the old default "MIke" with capital I
+            {id: 'lisa', name: 'Lisa Davis'},
+            {id: 'david', name: 'David Wilson'}
+        ];
+        
         const filteredUsers = users.filter(user => {
-            const shouldKeep = !oldDefaultUsers.includes(user.id);
-            if (!shouldKeep) {
+            // Only filter if BOTH id AND name match exactly (to avoid filtering real users)
+            const isOldDefault = oldDefaultUsers.some(oldUser => 
+                oldUser.id === user.id && oldUser.name === user.name
+            );
+            if (isOldDefault) {
                 console.log('DEBUG - Filtering out old default user:', user.id, user.name);
             }
-            return shouldKeep;
+            return !isOldDefault;
         });
         
         console.log('DEBUG - Cloud users before filtering:', users.map(u => `${u.name} (${u.id})`));
