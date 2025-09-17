@@ -129,34 +129,93 @@ END:VCALENDAR`;
         const formData = this.getFormCalendarData();
         if (!formData) return;
         
-        // Try to use Outlook desktop protocol first, fallback to web
-        const outlookDesktopUrl = this.createOutlookDesktopUrl(formData);
+        // Try multiple Outlook integration methods
+        this.tryOutlookIntegration(formData);
+    }
+
+    async tryOutlookIntegration(formData) {
         const outlookWebUrl = this.createOutlookUrl(formData);
         
-        // Try desktop Outlook first
-        const link = document.createElement('a');
-        link.href = outlookDesktopUrl;
-        link.style.display = 'none';
-        document.body.appendChild(link);
+        // Method 1: Try Outlook desktop protocol
+        const outlookDesktopUrl = this.createOutlookDesktopUrl(formData);
         
+        // Create hidden link for desktop protocol
+        const desktopLink = document.createElement('a');
+        desktopLink.href = outlookDesktopUrl;
+        desktopLink.style.display = 'none';
+        document.body.appendChild(desktopLink);
+        
+        let desktopOpened = false;
+        
+        // Try to detect if desktop Outlook opened
         try {
-            link.click();
-            this.showNotification('Opening Outlook desktop app...', 'success');
+            // Set a flag to detect if we're still in the page after attempting to open
+            const beforeTime = Date.now();
+            desktopLink.click();
             
-            // Fallback to web after 2 seconds if desktop doesn't work
+            // If we're still here after 1 second, desktop probably didn't open
             setTimeout(() => {
-                const userChoice = confirm('If Outlook desktop didn\'t open, click OK to open Outlook Web instead.');
-                if (userChoice) {
-                    window.open(outlookWebUrl, '_blank');
+                const afterTime = Date.now();
+                if (afterTime - beforeTime > 800) {
+                    // Desktop likely didn't open, offer web option
+                    this.showOutlookFallbackOptions(outlookWebUrl, formData);
+                } else {
+                    this.showNotification('Opening in Outlook desktop app...', 'success');
+                    desktopOpened = true;
                 }
-            }, 2000);
+            }, 1000);
+            
         } catch (error) {
-            // Fallback to web
-            window.open(outlookWebUrl, '_blank');
-            this.showNotification('Opening Outlook Web Calendar...', 'success');
+            console.log('Desktop Outlook failed:', error);
+            this.showOutlookFallbackOptions(outlookWebUrl, formData);
         }
         
-        document.body.removeChild(link);
+        document.body.removeChild(desktopLink);
+    }
+
+    showOutlookFallbackOptions(outlookWebUrl, formData) {
+        // Create a more user-friendly dialog
+        const modal = document.createElement('div');
+        modal.className = 'modal fade show';
+        modal.style.display = 'block';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        
+        modal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="fab fa-microsoft me-2"></i>Choose Outlook Option
+                        </h5>
+                    </div>
+                    <div class="modal-body text-center">
+                        <p class="mb-4">How would you like to add this event to Outlook?</p>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary btn-lg" onclick="window.open('${outlookWebUrl}', '_blank'); document.body.removeChild(this.closest('.modal'));">
+                                <i class="fas fa-globe me-2"></i>Open Outlook Web
+                            </button>
+                            <button class="btn btn-outline-secondary btn-lg" onclick="projectManager.downloadOutlookICS(${JSON.stringify(formData).replace(/"/g, '&quot;')}); document.body.removeChild(this.closest('.modal'));">
+                                <i class="fas fa-download me-2"></i>Download ICS File
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="document.body.removeChild(this.closest('.modal'));">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (document.body.contains(modal)) {
+                document.body.removeChild(modal);
+            }
+        }, 10000);
     }
 
     exportToGoogleCalendar() {
@@ -254,20 +313,19 @@ END:VCALENDAR`;
         const endDate = new Date(startDate);
         endDate.setHours(startDate.getHours() + data.duration);
         
-        // Format for Outlook desktop protocol
+        // Format for Outlook desktop protocol (simpler format)
         const formatOutlookDesktop = (date) => {
-            return date.toISOString().replace(/[-:]/g, '').split('.')[0];
+            return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
         };
         
-        const params = new URLSearchParams({
-            subject: `SafeTrack: ${data.title}`,
-            startdt: formatOutlookDesktop(startDate),
-            enddt: formatOutlookDesktop(endDate),
-            body: `Safety Compliance Training\\n\\nType: ${data.type}\\n\\n${data.description || 'No additional description'}\\n\\nGenerated by SafeTrack Safety Management System`,
-            location: data.location || 'Equitas Health - Safety Training Center'
-        });
+        // Use simpler Outlook protocol format
+        const subject = encodeURIComponent(`SafeTrack: ${data.title}`);
+        const body = encodeURIComponent(`Safety Compliance Training\n\nType: ${data.type}\nDuration: ${data.duration} hours\n\n${data.description || 'No additional description'}\n\nGenerated by SafeTrack Safety Management System - Equitas Health`);
+        const location = encodeURIComponent(data.location || 'Equitas Health - Safety Training Center');
+        const startTime = formatOutlookDesktop(startDate);
+        const endTime = formatOutlookDesktop(endDate);
         
-        return `outlook:${params.toString()}`;
+        return `outlook://calendar/new?subject=${subject}&body=${body}&location=${location}&start=${startTime}&end=${endTime}`;
     }
 
     createAutoImportCalendarFile(data) {
@@ -352,6 +410,72 @@ END:VCALENDAR`;
         }, 500);
 
         this.showNotification('Calendar file downloaded! It should auto-open in your default calendar app.', 'success');
+    }
+
+    downloadOutlookICS(formData) {
+        // Create Outlook-optimized ICS file
+        const startDate = new Date(formData.trainingDate);
+        startDate.setHours(9, 0, 0, 0);
+        
+        const endDate = new Date(startDate);
+        endDate.setHours(startDate.getHours() + formData.duration);
+
+        const formatDate = (date) => {
+            return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        };
+
+        // Outlook-specific ICS format
+        const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//SafeTrack//Outlook Integration//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:${Date.now()}@safetrack.outlook.com
+DTSTART:${formatDate(startDate)}
+DTEND:${formatDate(endDate)}
+SUMMARY:SafeTrack: ${formData.title}
+DESCRIPTION:Safety Compliance Training\\n\\nType: ${formData.type}\\nDuration: ${formData.duration} hours\\n\\n${formData.description || 'No additional description'}\\n\\nGenerated by SafeTrack Safety Management System - Equitas Health
+LOCATION:${formData.location || 'Equitas Health - Safety Training Center'}
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+SEQUENCE:0
+PRIORITY:5
+CATEGORIES:Safety Training,Compliance
+CLASS:PUBLIC
+BEGIN:VALARM
+TRIGGER:-P7D
+ACTION:DISPLAY
+DESCRIPTION:SafeTrack Reminder: ${formData.title} - 7 days to go!
+END:VALARM
+BEGIN:VALARM
+TRIGGER:-P2D
+ACTION:DISPLAY
+DESCRIPTION:SafeTrack Reminder: ${formData.title} - 2 days to go!
+END:VALARM
+BEGIN:VALARM
+TRIGGER:-PT2H
+ACTION:DISPLAY
+DESCRIPTION:SafeTrack Reminder: ${formData.title} starts in 2 hours
+END:VALARM
+END:VEVENT
+END:VCALENDAR`;
+
+        // Download the file
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        const fileName = `SafeTrack_Outlook_${formData.title.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        this.showNotification('Outlook ICS file downloaded! Double-click to import to Outlook.', 'success');
     }
 
     // Authentication methods removed - app works without login
