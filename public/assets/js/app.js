@@ -1059,12 +1059,37 @@ class ProjectManager {
     }
 
     populateUserDropdowns() {
+        // Update project assignment dropdown
         const assignedToSelect = document.getElementById('projectAssignedTo');
         if (assignedToSelect) {
             assignedToSelect.innerHTML = '<option value="">Select Team Member</option>' +
                 this.users.map(user => 
                     `<option value="${user.id}">${user.name}${user.role ? ` (${user.role})` : ''}</option>`
                 ).join('');
+        }
+        
+        // Update main user dropdown in header
+        const dropdown = document.querySelector('.dropdown-menu');
+        if (dropdown) {
+            // Clear existing content
+            dropdown.innerHTML = '';
+            
+            // Add header
+            dropdown.innerHTML += '<li><h6 class="dropdown-header">Safety Team Members</h6></li>';
+            dropdown.innerHTML += '<li><a class="dropdown-item" href="#" onclick="switchUser(\'all\')"><i class="fas fa-users me-2"></i>All Projects View</a></li>';
+            dropdown.innerHTML += '<li><hr class="dropdown-divider"></li>';
+            
+            // Add each user
+            this.users.forEach(user => {
+                dropdown.innerHTML += `<li><a class="dropdown-item" href="#" onclick="switchUser('${user.id}')"><i class="fas fa-user me-2"></i>${user.name}</a></li>`;
+            });
+            
+            // Add management options
+            dropdown.innerHTML += '<li><hr class="dropdown-divider"></li>';
+            dropdown.innerHTML += '<li><a class="dropdown-item" href="#" onclick="openUserModal()"><i class="fas fa-plus me-2"></i>Add New User</a></li>';
+            dropdown.innerHTML += '<li><a class="dropdown-item" href="#" onclick="openUserManagement()"><i class="fas fa-users-cog me-2"></i>Manage Users</a></li>';
+            dropdown.innerHTML += '<li><hr class="dropdown-divider"></li>';
+            dropdown.innerHTML += '<li><a class="dropdown-item text-danger" href="#" onclick="resetAllData()"><i class="fas fa-redo-alt me-2"></i>Reset All Data</a></li>';
         }
     }
 
