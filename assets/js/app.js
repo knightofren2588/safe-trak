@@ -17,7 +17,7 @@ class ProjectManager {
         this.hasUserInteracted = localStorage.getItem('safetrack_user_interacted') === 'true'; // Flag to track if user has interacted with the app
         this.isAuthenticated = false;
         this.hasInitialized = false;
-        this.setupAuthentication();
+        // Don't setup authentication here - wait for DOM to be ready
         this.init();
     }
 
@@ -42,56 +42,60 @@ class ProjectManager {
     }
 
     setupLoginHandlers() {
-        // Wait for DOM to be ready
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('Setting up login handlers...');
-            
-            // Login form
-            const loginForm = document.getElementById('loginForm');
-            console.log('Login form found:', !!loginForm);
-            if (loginForm) {
-                loginForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    console.log('Login form submitted');
-                    await this.handleLogin();
-                });
-            }
+        console.log('Setting up login handlers...');
+        
+        // Login form
+        const loginForm = document.getElementById('loginForm');
+        console.log('Login form found:', !!loginForm);
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                console.log('Login form submitted');
+                await this.handleLogin();
+            });
+        }
 
-            // Register form
-            const registerForm = document.getElementById('registerFormElement');
-            console.log('Register form found:', !!registerForm);
-            if (registerForm) {
-                registerForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    console.log('Register form submitted');
-                    await this.handleRegister();
-                });
-            }
+        // Register form
+        const registerForm = document.getElementById('registerFormElement');
+        console.log('Register form found:', !!registerForm);
+        if (registerForm) {
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                console.log('Register form submitted');
+                await this.handleRegister();
+            });
+        }
 
-            // Remove Google sign in since we're using username/password only
+        // Show/hide register form
+        const showRegister = document.getElementById('showRegister');
+        const showLogin = document.getElementById('showLogin');
+        const registerFormDiv = document.getElementById('registerForm');
+        const loginFormDiv = document.getElementById('loginForm').parentElement;
 
-            // Show/hide register form
-            const showRegister = document.getElementById('showRegister');
-            const showLogin = document.getElementById('showLogin');
-            const registerFormDiv = document.getElementById('registerForm');
-            const loginFormDiv = document.getElementById('loginForm').parentElement;
-
-            if (showRegister) {
-                showRegister.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    loginFormDiv.style.display = 'none';
-                    registerFormDiv.classList.remove('hidden');
-                });
-            }
-
-            if (showLogin) {
-                showLogin.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    registerFormDiv.classList.add('hidden');
-                    loginFormDiv.style.display = 'block';
-                });
-            }
+        console.log('Form toggle elements found:', {
+            showRegister: !!showRegister,
+            showLogin: !!showLogin,
+            registerFormDiv: !!registerFormDiv,
+            loginFormDiv: !!loginFormDiv
         });
+
+        if (showRegister) {
+            showRegister.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Showing register form');
+                loginFormDiv.style.display = 'none';
+                registerFormDiv.classList.remove('hidden');
+            });
+        }
+
+        if (showLogin) {
+            showLogin.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Showing login form');
+                registerFormDiv.classList.add('hidden');
+                loginFormDiv.style.display = 'block';
+            });
+        }
     }
 
     async init() {
@@ -2070,6 +2074,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // Initialize the project manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     window.projectManager = new ProjectManager();
+    
+    // Setup authentication after DOM is ready
+    window.projectManager.setupAuthentication();
     
     // Make emergency clear function available globally
     window.emergencyClear = () => {
