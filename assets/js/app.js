@@ -19,27 +19,11 @@ class ProjectManager {
     }
 
     async init() {
-        console.log('🔵 INIT START - users.length:', this.users.length);
-        
-        // DISABLED: forceCleanupOldUsers was overwriting real user data
-        // this.forceCleanupOldUsers();
-        
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
-        console.log('🔵 AFTER waitForCloudStorage - users.length:', this.users.length);
-        
-        // Remove old debugging code - not needed anymore
-        
-        // Force reset cloud storage to remove old users and projects (DISABLED for production)
-        // if (this.cloudStorage.isConnected) {
-        //     await this.cloudStorage.forceResetCloudUsers();
-        //     await this.cloudStorage.forceResetCloudProjects();
-        // }
         
         // Load data from cloud storage
-        console.log('🔵 BEFORE loadAllData - users.length:', this.users.length);
         await this.loadAllData();
-        console.log('🔵 AFTER loadAllData - users.length:', this.users.length, 'users:', this.users.map(u => u.name));
         
         // Don't load sample data - start with empty state
         // if (this.projects.length === 0 && !this.hasUserInteracted) {
@@ -121,8 +105,6 @@ class ProjectManager {
 
     // Manual function to force update dropdown (for debugging)
     forceUpdateDropdown() {
-        console.log('MANUAL - Force updating dropdown');
-        console.log('MANUAL - Current users:', this.users);
         this.populateUserDropdowns();
     }
 
@@ -203,8 +185,6 @@ class ProjectManager {
 
     async loadAllData() {
         try {
-            console.log('Loading data from cloud storage...');
-            
             // Load all data in parallel
             const [projects, users, categories, roles, departments, currentUser] = await Promise.all([
                 this.cloudStorage.loadProjects(),
@@ -215,17 +195,12 @@ class ProjectManager {
                 this.cloudStorage.loadCurrentUser()
             ]);
             
-            console.log('DEBUG - Projects loaded from cloud:', projects);
-            console.log('DEBUG - Users loaded from cloud:', users);
-            
             this.projects = projects;
             this.users = users;
             this.categories = categories;
             this.roles = roles;
             this.departments = departments;
             this.currentUser = currentUser;
-            
-            console.log('Data loaded successfully from cloud storage');
             
             // Update connection status after successful data load
             this.showConnectionStatus();
@@ -261,9 +236,7 @@ class ProjectManager {
     }
 
     async saveUsers() {
-        console.log('🟡 SAVING USERS - count:', this.users.length, 'users:', this.users.map(u => u.name));
         await this.cloudStorage.saveUsers(this.users);
-        console.log('🟡 USERS SAVED TO CLOUD');
     }
 
     loadCurrentUser() {
@@ -367,10 +340,7 @@ class ProjectManager {
     }
 
     loadSampleUsers() {
-        console.log('WARNING - loadSampleUsers() called! This will overwrite existing users!');
-        console.log('WARNING - Current users before reset:', this.users);
-        
-        // Clear existing users and reset to new defaults
+        // Reset to only admin user - no sample users
         this.users = [
             {
                 id: "admin",
@@ -379,10 +349,7 @@ class ProjectManager {
                 avatar: "A"
             }
         ];
-        
-        console.log('WARNING - Users after reset:', this.users);
         this.saveUsers();
-        console.log('WARNING - loadSampleUsers() completed and saved to cloud');
         
         // Also clear local storage to remove old default users
         localStorage.removeItem('safetrack_users');
@@ -414,6 +381,13 @@ class ProjectManager {
 
     generateId() {
         return Math.max(0, ...this.projects.map(p => p.id)) + 1;
+    }
+
+    // Security helper to escape HTML
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     addProject(projectData) {
@@ -888,17 +862,8 @@ class ProjectManager {
             avatar: userData.name.charAt(0).toUpperCase(),
             createdAt: new Date().toISOString()
         };
-        console.log('DEBUG - Before adding user, users.length:', this.users.length);
         this.users.push(user);
-        console.log('DEBUG - After adding user locally, users.length:', this.users.length);
-        console.log('DEBUG - New user added:', user);
-        
-        try {
-            await this.saveUsers(); // Wait for save to complete!
-            console.log('DEBUG - User successfully saved to cloud');
-        } catch (error) {
-            console.error('DEBUG - Error saving user to cloud:', error);
-        }
+        await this.saveUsers();
         
         this.render(); // Use render() like projects do - this updates everything!
         this.closeUserModal();
@@ -948,14 +913,8 @@ class ProjectManager {
             }
         }
         
-        console.log('🔴 DELETE USER - Before deletion, users:', this.users.map(u => u.name));
-        console.log('🔴 DELETE USER - Deleting userId:', userId);
         this.users = this.users.filter(u => u.id !== userId);
-        console.log('🔴 DELETE USER - After deletion, users:', this.users.map(u => u.name));
-        
-        console.log('🔴 DELETE USER - About to save to cloud...');
-        await this.saveUsers(); // Wait for save to complete!
-        console.log('🔴 DELETE USER - Save completed');
+        await this.saveUsers();
         
         this.render(); // Use render() like projects do - this updates everything!
         
@@ -1116,9 +1075,6 @@ class ProjectManager {
         
         // Update main user dropdown in header
         const dropdown = document.querySelector('.dropdown-menu');
-        console.log('DEBUG - Updating dropdown, found element:', dropdown);
-        console.log('DEBUG - Current users:', this.users);
-        console.log('DEBUG - Users count:', this.users.length);
         
         if (dropdown) {
             // Clear existing content
@@ -1131,8 +1087,9 @@ class ProjectManager {
             
             // Add each user
             this.users.forEach(user => {
-                console.log('DEBUG - Adding user to dropdown:', user.name);
-                dropdown.innerHTML += `<li><a class="dropdown-item" href="#" onclick="switchUser('${user.id}')"><i class="fas fa-user me-2"></i>${user.name}</a></li>`;
+                const escapedId = user.id.replace(/'/g, "\\'");
+                const escapedName = this.escapeHtml(user.name);
+                dropdown.innerHTML += `<li><a class="dropdown-item" href="#" onclick="switchUser('${escapedId}')"><i class="fas fa-user me-2"></i>${escapedName}</a></li>`;
             });
             
             // Add management options
@@ -1141,10 +1098,6 @@ class ProjectManager {
             dropdown.innerHTML += '<li><a class="dropdown-item" href="#" onclick="openUserManagement()"><i class="fas fa-users-cog me-2"></i>Manage Users</a></li>';
             dropdown.innerHTML += '<li><hr class="dropdown-divider"></li>';
             dropdown.innerHTML += '<li><a class="dropdown-item text-danger" href="#" onclick="resetAllData()"><i class="fas fa-redo-alt me-2"></i>Reset All Data</a></li>';
-            
-            console.log('DEBUG - Dropdown updated with HTML:', dropdown.innerHTML);
-        } else {
-            console.error('DEBUG - Dropdown element not found!');
         }
     }
 

@@ -156,23 +156,16 @@ class CloudStorageService {
     }
 
     async saveUsers(users) {
-        console.log('🟠 CLOUD SAVE - Saving users to cloud:', users.map(u => u.name));
-        
         // First, get all existing user IDs from cloud
         const existingData = await this.loadFromCloud('users');
         const existingIds = Object.keys(existingData);
         const newIds = users.map(u => u.id);
         
-        console.log('🟠 CLOUD SAVE - Existing IDs:', existingIds);
-        console.log('🟠 CLOUD SAVE - New IDs:', newIds);
-        
         // Find users to delete (exist in cloud but not in new array)
         const idsToDelete = existingIds.filter(id => !newIds.includes(id));
-        console.log('🟠 CLOUD SAVE - IDs to delete:', idsToDelete);
         
         // Delete removed users from cloud
         for (const id of idsToDelete) {
-            console.log('🟠 CLOUD SAVE - Deleting user from cloud:', id);
             await this.deleteFromCloud('users', id);
         }
         
@@ -181,9 +174,7 @@ class CloudStorageService {
         users.forEach(user => {
             data[user.id] = user;
         });
-        console.log('🟠 CLOUD SAVE - Data object keys:', Object.keys(data));
         await this.saveToCloud('users', data);
-        console.log('🟠 CLOUD SAVE - Users saved to cloud successfully');
     }
 
     async loadUsers() {
@@ -203,14 +194,8 @@ class CloudStorageService {
             const isOldDefault = oldDefaultUsers.some(oldUser => 
                 oldUser.id === user.id && oldUser.name === user.name
             );
-            if (isOldDefault) {
-                console.log('DEBUG - Filtering out old default user:', user.id, user.name);
-            }
             return !isOldDefault;
         });
-        
-        console.log('DEBUG - Cloud users before filtering:', users.map(u => `${u.name} (${u.id})`));
-        console.log('DEBUG - Cloud users after filtering:', filteredUsers.map(u => `${u.name} (${u.id})`));
         
         return filteredUsers;
     }
@@ -349,13 +334,10 @@ class CloudStorageService {
 
     // Force cleanup old default users from cloud
     async forceCleanupCloudUsers() {
-        console.log('DEBUG - Starting force cleanup of cloud users');
         const users = await this.loadUsers(); // This will now filter automatically
-        console.log('DEBUG - Users after filtering:', users);
         
         // Save the filtered users back to cloud (this removes the old ones permanently)
         await this.saveUsers(users);
-        console.log('DEBUG - Force cleanup completed, old default users removed from cloud');
         
         return users;
     }
