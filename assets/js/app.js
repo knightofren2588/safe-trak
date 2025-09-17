@@ -62,13 +62,7 @@ class ProjectManager {
                 });
             }
 
-            // Google sign in
-            const googleSignIn = document.getElementById('googleSignIn');
-            if (googleSignIn) {
-                googleSignIn.addEventListener('click', async () => {
-                    await this.handleGoogleSignIn();
-                });
-            }
+            // Remove Google sign in since we're using username/password only
 
             // Show/hide register form
             const showRegister = document.getElementById('showRegister');
@@ -129,14 +123,14 @@ class ProjectManager {
 
     // Authentication handlers
     async handleLogin() {
-        const email = document.getElementById('loginEmail').value;
+        const username = document.getElementById('loginUsername').value;
         const password = document.getElementById('loginPassword').value;
         const errorDiv = document.getElementById('loginError');
 
         this.showLoginLoading(true);
         errorDiv.classList.add('d-none');
 
-        const result = await this.cloudStorage.signInWithEmailAndPassword(email, password);
+        const result = await this.cloudStorage.signInWithUsernameAndPassword(username, password);
         
         if (result.success) {
             // Success - auth state listener will handle UI updates
@@ -150,41 +144,28 @@ class ProjectManager {
     }
 
     async handleRegister() {
-        const email = document.getElementById('registerEmail').value;
+        const username = document.getElementById('registerUsername').value;
         const password = document.getElementById('registerPassword').value;
-        const name = document.getElementById('registerName').value;
+        const displayName = document.getElementById('registerName').value;
         const errorDiv = document.getElementById('loginError');
 
-        this.showLoginLoading(true);
-        errorDiv.classList.add('d-none');
-
-        const result = await this.cloudStorage.createUserWithEmailAndPassword(email, password);
-        
-        if (result.success) {
-            // Update user profile with name
-            try {
-                await this.cloudStorage.functions.updateProfile(result.user, { displayName: name });
-            } catch (error) {
-                console.warn('Could not update user profile:', error);
-            }
-            
-            // Success - auth state listener will handle UI updates
-            this.clearLoginForm();
-        } else {
-            errorDiv.textContent = result.error;
+        // Basic validation
+        if (username.length < 3) {
+            errorDiv.textContent = 'Username must be at least 3 characters long';
             errorDiv.classList.remove('d-none');
+            return;
         }
-        
-        this.showLoginLoading(false);
-    }
 
-    async handleGoogleSignIn() {
-        const errorDiv = document.getElementById('loginError');
-        
+        if (password.length < 6) {
+            errorDiv.textContent = 'Password must be at least 6 characters long';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
         this.showLoginLoading(true);
         errorDiv.classList.add('d-none');
 
-        const result = await this.cloudStorage.signInWithGoogle();
+        const result = await this.cloudStorage.createUserWithUsernameAndPassword(username, password, displayName);
         
         if (result.success) {
             // Success - auth state listener will handle UI updates
@@ -263,7 +244,7 @@ class ProjectManager {
     }
 
     showLoginLoading(show) {
-        const submitButtons = document.querySelectorAll('#loginForm button[type="submit"], #registerFormElement button[type="submit"], #googleSignIn');
+        const submitButtons = document.querySelectorAll('#loginForm button[type="submit"], #registerFormElement button[type="submit"]');
         submitButtons.forEach(btn => {
             if (show) {
                 btn.disabled = true;
@@ -271,9 +252,7 @@ class ProjectManager {
             } else {
                 btn.disabled = false;
                 // Restore original text
-                if (btn.id === 'googleSignIn') {
-                    btn.innerHTML = '<i class="fab fa-google me-2"></i>Sign in with Google';
-                } else if (btn.closest('#registerFormElement')) {
+                if (btn.closest('#registerFormElement')) {
                     btn.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
                 } else {
                     btn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Sign In';
@@ -283,9 +262,9 @@ class ProjectManager {
     }
 
     clearLoginForm() {
-        document.getElementById('loginEmail').value = '';
+        document.getElementById('loginUsername').value = '';
         document.getElementById('loginPassword').value = '';
-        document.getElementById('registerEmail').value = '';
+        document.getElementById('registerUsername').value = '';
         document.getElementById('registerPassword').value = '';
         document.getElementById('registerName').value = '';
     }

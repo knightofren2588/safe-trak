@@ -20,28 +20,39 @@ class CloudStorageService {
         this.auth = window.firebaseAuth;
         this.functions = window.firebaseFunctions;
         
-        // Set up authentication state listener
+        // Use anonymous authentication for Firebase connection, but handle login separately
         try {
-            this.functions.onAuthStateChanged(this.auth, (user) => {
-                this.currentAuthUser = user;
-                this.isConnected = !!user;
-                
-                if (user) {
-                    console.log('User authenticated:', user.email || user.uid);
+            await this.functions.signInAnonymously(this.auth);
+            console.log('Connected to Firebase with anonymous auth');
+            
+            // Check if user is logged in from local storage
+            const savedSession = localStorage.getItem('safetrack_user_session');
+            if (savedSession) {
+                const session = JSON.parse(savedSession);
+                // Verify session is still valid (not expired)
+                if (session.expires > Date.now()) {
+                    this.currentAuthUser = session.user;
+                    this.isConnected = true;
                 } else {
-                    console.log('User signed out');
+                    // Session expired, clear it
+                    localStorage.removeItem('safetrack_user_session');
+                    this.currentAuthUser = null;
+                    this.isConnected = false;
                 }
-                
-                // Notify callbacks about auth state change
-                this.authStateChangeCallbacks.forEach(callback => callback(user));
-                
-                // Notify the app that connection status has changed
-                if (window.projectManager) {
-                    window.projectManager.showConnectionStatus();
-                }
-            });
+            } else {
+                this.currentAuthUser = null;
+                this.isConnected = false;
+            }
+            
+            // Notify callbacks about initial auth state
+            this.authStateChangeCallbacks.forEach(callback => callback(this.currentAuthUser));
+            
+            // Notify the app that connection status has changed
+            if (window.projectManager) {
+                window.projectManager.showConnectionStatus();
+            }
         } catch (error) {
-            console.error('Failed to set up authentication:', error);
+            console.error('Failed to connect to Firebase:', error);
             this.isConnected = false;
         }
     }
@@ -369,42 +380,133 @@ class CloudStorageService {
         }
     }
 
-    // Authentication methods
-    async signInWithEmailAndPassword(email, password) {
+    // Custom Authentication methods
+    async signInWithUsernameAndPassword(username, password) {
         try {
-            const userCredential = await this.functions.signInWithEmailAndPassword(this.auth, email, password);
-            return { success: true, user: userCredential.user };
+            // Hash the password for comparison (simple hash for demo - use bcrypt in production)
+            const hashedPassword = await this.hashPassword(password);
+            
+            // Get user from Firestore
+            const usersRef = this.functions.collection(this.db, 'auth_users');
+            const q = this.functions.query(usersRef, this.functions.where('username', '==', username));
+            const querySnapshot = await this.functions.getDocs(q);
+            
+            if (querySnapshot.empty) {
+                return { success: false, error: 'Invalid username or password' };
+            }
+            
+            const userDoc = querySnapshot.docs[0];
+            const userData = userDoc.data();
+            
+            // Verify password
+            if (userData.passwordHash !== hashedPassword) {
+                return { success: false, error: 'Invalid username or password' };
+            }
+            
+            // Create user session
+            const user = {
+                uid: userDoc.id,
+                username: userData.username,
+                displayName: userData.displayName,
+                createdAt: userData.createdAt
+            };
+            
+            // Save session to localStorage with expiration (24 hours)
+            const session = {
+                user: user,
+                expires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+            };
+            localStorage.setItem('safetrack_user_session', JSON.stringify(session));
+            
+            this.currentAuthUser = user;
+            this.isConnected = true;
+            
+            // Notify callbacks
+            this.authStateChangeCallbacks.forEach(callback => callback(user));
+            
+            return { success: true, user: user };
         } catch (error) {
-            return { success: false, error: error.message };
+            console.error('Sign in error:', error);
+            return { success: false, error: 'Login failed. Please try again.' };
         }
     }
 
-    async createUserWithEmailAndPassword(email, password) {
+    async createUserWithUsernameAndPassword(username, password, displayName) {
         try {
-            const userCredential = await this.functions.createUserWithEmailAndPassword(this.auth, email, password);
-            return { success: true, user: userCredential.user };
+            // Check if username already exists
+            const usersRef = this.functions.collection(this.db, 'auth_users');
+            const q = this.functions.query(usersRef, this.functions.where('username', '==', username));
+            const querySnapshot = await this.functions.getDocs(q);
+            
+            if (!querySnapshot.empty) {
+                return { success: false, error: 'Username already exists' };
+            }
+            
+            // Hash the password
+            const hashedPassword = await this.hashPassword(password);
+            
+            // Create user document
+            const newUserData = {
+                username: username,
+                passwordHash: hashedPassword,
+                displayName: displayName,
+                createdAt: new Date().toISOString()
+            };
+            
+            const docRef = await this.functions.addDoc(usersRef, newUserData);
+            
+            // Create user session
+            const user = {
+                uid: docRef.id,
+                username: username,
+                displayName: displayName,
+                createdAt: newUserData.createdAt
+            };
+            
+            // Save session to localStorage
+            const session = {
+                user: user,
+                expires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+            };
+            localStorage.setItem('safetrack_user_session', JSON.stringify(session));
+            
+            this.currentAuthUser = user;
+            this.isConnected = true;
+            
+            // Notify callbacks
+            this.authStateChangeCallbacks.forEach(callback => callback(user));
+            
+            return { success: true, user: user };
         } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
-
-    async signInWithGoogle() {
-        try {
-            const provider = new this.functions.GoogleAuthProvider();
-            const userCredential = await this.functions.signInWithPopup(this.auth, provider);
-            return { success: true, user: userCredential.user };
-        } catch (error) {
-            return { success: false, error: error.message };
+            console.error('Registration error:', error);
+            return { success: false, error: 'Registration failed. Please try again.' };
         }
     }
 
     async signOut() {
         try {
-            await this.functions.signOut(this.auth);
+            // Clear session from localStorage
+            localStorage.removeItem('safetrack_user_session');
+            
+            this.currentAuthUser = null;
+            this.isConnected = false;
+            
+            // Notify callbacks
+            this.authStateChangeCallbacks.forEach(callback => callback(null));
+            
             return { success: true };
         } catch (error) {
             return { success: false, error: error.message };
         }
+    }
+
+    // Simple password hashing (use bcrypt in production)
+    async hashPassword(password) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password + 'safetrack_salt'); // Add salt
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
     getCurrentUser() {
