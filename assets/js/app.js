@@ -390,6 +390,20 @@ class ProjectManager {
         return div.innerHTML;
     }
 
+    // Update project table title based on current user
+    updateProjectTableTitle() {
+        const titleElement = document.getElementById('projectTableTitle');
+        if (titleElement) {
+            if (this.currentUser === 'all') {
+                titleElement.textContent = 'All Safety Projects';
+            } else {
+                const user = this.users.find(u => u.id === this.currentUser);
+                const userName = user ? user.name : 'User';
+                titleElement.textContent = `${userName}'s Safety Projects`;
+            }
+        }
+    }
+
     addProject(projectData) {
         // Mark that user has interacted with the app
         this.hasUserInteracted = true;
@@ -604,7 +618,22 @@ class ProjectManager {
 
     renderProjectTable(projectsToRender = null) {
         const tbody = document.getElementById('projectTableBody');
-        const projects = projectsToRender || this.projects;
+        
+        // If no specific projects provided, filter by current user
+        let projects = projectsToRender;
+        if (!projects) {
+            if (this.currentUser === 'all') {
+                projects = this.projects;
+            } else {
+                // Show only projects created by or assigned to current user
+                projects = this.projects.filter(project => 
+                    project.createdBy === this.currentUser || project.assignedTo === this.currentUser
+                );
+            }
+        }
+        
+        // Update table title based on current user
+        this.updateProjectTableTitle();
         
         if (projects.length === 0) {
             tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No safety projects found. <button onclick="openProjectModal()" class="btn btn-link p-0">Create your first safety project</button></td></tr>';
