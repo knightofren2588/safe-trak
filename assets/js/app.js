@@ -557,6 +557,7 @@ class ProjectManager {
         this.renderDashboardStats();
         this.renderRecentProjects();
         this.renderProjectTable();
+        this.populateUserDropdowns(); // Update user dropdowns when rendering
     }
 
     renderDashboardStats() {
