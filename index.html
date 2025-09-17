@@ -51,12 +51,12 @@
         <div class="container mx-auto px-6 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="bg-gradient-to-r from-safety-blue to-safety-info text-white p-3 rounded-lg shadow-lg">
+                    <div class="bg-gradient-to-r from-safety-blue to-safety-info text-white p-3 rounded-lg shadow-lg hover-scale">
                         <i class="fas fa-shield-alt text-xl"></i>
                     </div>
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-800">SafeTrack</h1>
-                        <p class="text-sm text-gray-600">Safety-First Project Management for Equitas Health</p>
+                        <h1 class="text-2xl font-bold gradient-text">🛡️ SafeTrack</h1>
+                        <p class="text-sm text-gray-600">Advanced Safety Project Management for Equitas Health</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
@@ -127,69 +127,57 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="container mx-auto px-6 py-8">
+    <main class="main-container animate-fade-in">
         <!-- Dashboard Tab -->
         <div id="dashboard" class="tab-content">
             <!-- Stats Cards -->
-            <div class="row g-4 mb-4">
-                <div class="col-md-3 col-sm-6">
-                    <div class="card card-hover h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-success bg-opacity-10 p-3 rounded me-3">
-                                    <i class="fas fa-check-circle text-success fs-4"></i>
-                                </div>
-                                <div>
-                                    <p class="text-muted small mb-1">Active Safety Projects</p>
-                                    <p class="h4 mb-0 text-dark" id="activeProjects">12</p>
-                                </div>
+            <div class="row g-4 mb-5">
+                <div class="col-lg-3 col-md-6">
+                    <div class="stats-card hover-lift">
+                        <div class="d-flex align-items-center justify-content-center mb-3">
+                            <div class="p-3 rounded-circle" style="background: var(--success-gradient); color: white;">
+                                <i class="fas fa-check-circle fa-2x"></i>
+                            </div>
+                        </div>
+                        <div class="stats-number" id="activeProjects">12</div>
+                        <div class="stats-label">Active Safety Projects</div>
+                    </div>
+                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="card card-hover h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-warning bg-opacity-10 p-3 rounded me-3">
-                                    <i class="fas fa-exclamation-triangle text-warning fs-4"></i>
-                                </div>
-                                <div>
-                                    <p class="text-muted small mb-1">Safety Risk Projects</p>
-                                    <p class="h4 mb-0 text-dark" id="atRiskProjects">3</p>
-                                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="stats-card hover-lift">
+                        <div class="d-flex align-items-center justify-content-center mb-3">
+                            <div class="p-3 rounded-circle" style="background: var(--warning-gradient); color: white;">
+                                <i class="fas fa-exclamation-triangle fa-2x"></i>
                             </div>
                         </div>
+                        <div class="stats-number" id="atRiskProjects">3</div>
+                        <div class="stats-label">Safety Risk Projects</div>
                     </div>
                 </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="card card-hover h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-primary bg-opacity-10 p-3 rounded me-3">
-                                    <i class="fas fa-users text-primary fs-4"></i>
-                                </div>
-                                <div>
-                                    <p class="text-muted small mb-1">Safety Team Members</p>
-                                    <p class="h4 mb-0 text-dark" id="teamMembers">24</p>
-                                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="stats-card hover-lift">
+                        <div class="d-flex align-items-center justify-content-center mb-3">
+                            <div class="p-3 rounded-circle" style="background: var(--primary-gradient); color: white;">
+                                <i class="fas fa-users fa-2x"></i>
                             </div>
                         </div>
+                        <div class="stats-number" id="teamMembers">24</div>
+                        <div class="stats-label">Safety Team Members</div>
                     </div>
                 </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="card card-hover h-100 border-0 shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-danger bg-opacity-10 p-3 rounded me-3">
-                                    <i class="fas fa-calendar-times text-danger fs-4"></i>
-                                </div>
-                                <div>
-                                    <p class="text-muted small mb-1">Overdue Safety Items</p>
-                                    <p class="h4 mb-0 text-dark" id="overdueProjects">1</p>
-                                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="stats-card hover-lift">
+                        <div class="d-flex align-items-center justify-content-center mb-3">
+                            <div class="p-3 rounded-circle" style="background: var(--danger-gradient); color: white;">
+                                <i class="fas fa-calendar-times fa-2x"></i>
                             </div>
                         </div>
+                        <div class="stats-number" id="overdueProjects">1</div>
+                        <div class="stats-label">Overdue Safety Items</div>
                     </div>
                 </div>
             </div>
@@ -1106,3 +1094,4 @@
     <script src="assets/js/app.js"></script>
 </body>
 </html>
+
