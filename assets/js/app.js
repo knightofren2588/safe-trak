@@ -7,7 +7,7 @@ class ProjectManager {
         this.categories = [];
         this.roles = [];
         this.departments = [];
-        this.currentUser = 'all';
+        this.currentUser = 'admin'; // Default to admin user's view
         this.currentEditId = null;
         this.currentUserEditId = null;
         this.currentProgressEditId = null;
@@ -241,7 +241,7 @@ class ProjectManager {
 
     loadCurrentUser() {
         const stored = localStorage.getItem('safetrack_current_user');
-        return stored ? JSON.parse(stored) : 'all';
+        return stored ? JSON.parse(stored) : 'admin'; // Default to admin user's view instead of all
     }
 
     async saveCurrentUser() {
@@ -395,14 +395,16 @@ class ProjectManager {
         this.hasUserInteracted = true;
         localStorage.setItem('safetrack_user_interacted', 'true');
         
-        const assignedTo = projectData.assignedTo || this.currentUser;
+        // If current user is 'all', default to admin for project creation
+        const creatorId = this.currentUser === 'all' ? 'admin' : this.currentUser;
+        const assignedTo = projectData.assignedTo || creatorId;
         
         const project = {
             id: this.generateId(),
             ...projectData,
             status: 'active',
             progress: 0,
-            createdBy: this.currentUser,
+            createdBy: creatorId,
             assignedTo: assignedTo,
             createdAt: new Date().toISOString()
         };
@@ -865,6 +867,9 @@ class ProjectManager {
         this.users.push(user);
         await this.saveUsers();
         
+        // Automatically switch to the newly created user's view
+        this.switchUser(user.id);
+        
         this.render(); // Use render() like projects do - this updates everything!
         this.closeUserModal();
     }
@@ -1081,15 +1086,26 @@ class ProjectManager {
             dropdown.innerHTML = '';
             
             // Add header
-            dropdown.innerHTML += '<li><h6 class="dropdown-header">Safety Team Members</h6></li>';
-            dropdown.innerHTML += '<li><a class="dropdown-item" href="#" onclick="switchUser(\'all\')"><i class="fas fa-users me-2"></i>All Projects View</a></li>';
-            dropdown.innerHTML += '<li><hr class="dropdown-divider"></li>';
+            dropdown.innerHTML += '<li><h6 class="dropdown-header">Project Views</h6></li>';
             
-            // Add each user
+            // Add "All Projects View" with active indicator
+            const allActiveClass = this.currentUser === 'all' ? ' active' : '';
+            dropdown.innerHTML += `<li><a class="dropdown-item${allActiveClass}" href="#" onclick="switchUser('all')"><i class="fas fa-users me-2"></i>All Projects View</a></li>`;
+            dropdown.innerHTML += '<li><hr class="dropdown-divider"></li>';
+            dropdown.innerHTML += '<li><h6 class="dropdown-header">Individual Views</h6></li>';
+            
+            // Add each user with active indicator and project count
             this.users.forEach(user => {
                 const escapedId = user.id.replace(/'/g, "\\'");
                 const escapedName = this.escapeHtml(user.name);
-                dropdown.innerHTML += `<li><a class="dropdown-item" href="#" onclick="switchUser('${escapedId}')"><i class="fas fa-user me-2"></i>${escapedName}</a></li>`;
+                const activeClass = this.currentUser === user.id ? ' active' : '';
+                const userIcon = user.id === 'admin' ? 'fas fa-user-shield' : 'fas fa-user';
+                
+                // Count projects for this user
+                const userProjectCount = this.projects.filter(p => p.createdBy === user.id || p.assignedTo === user.id).length;
+                const projectBadge = userProjectCount > 0 ? ` <span class="badge bg-secondary">${userProjectCount}</span>` : '';
+                
+                dropdown.innerHTML += `<li><a class="dropdown-item${activeClass}" href="#" onclick="switchUser('${escapedId}')"><i class="${userIcon} me-2"></i>${escapedName}${projectBadge}</a></li>`;
             });
             
             // Add management options

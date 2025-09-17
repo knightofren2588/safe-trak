@@ -260,7 +260,7 @@ class CloudStorageService {
                 const snapshot = await this.functions.getDocs(this.functions.collection(this.db, 'settings'));
                 if (!snapshot.empty) {
                     const data = snapshot.docs[0].data();
-                    return data.userId || 'all';
+                    return data.userId || 'admin';
                 }
             } catch (error) {
                 console.error('Error loading current user from cloud:', error);
@@ -268,7 +268,7 @@ class CloudStorageService {
         }
         
         const stored = localStorage.getItem('safetrack_current_user');
-        return stored ? JSON.parse(stored) : 'all';
+        return stored ? JSON.parse(stored) : 'admin';
     }
 
     // Connection status
