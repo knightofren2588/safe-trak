@@ -24,13 +24,16 @@ class ProjectManager {
     setupAuthentication() {
         // Set up authentication state listener
         this.cloudStorage.onAuthStateChanged((user) => {
+            console.log('Auth state changed:', !!user);
             this.isAuthenticated = !!user;
             
             if (user) {
+                console.log('User signed in, showing app');
                 // User is signed in
                 this.hideLoginModal();
                 this.showApp();
             } else {
+                console.log('User signed out, showing login modal');
                 // User is signed out
                 this.showLoginModal();
                 this.hideApp();
@@ -99,10 +102,10 @@ class ProjectManager {
     }
 
     async init() {
-        // Only initialize if authenticated
-        if (!this.isAuthenticated) {
-            return;
-        }
+        // Temporarily disable auth check to debug login modal
+        // if (!this.isAuthenticated) {
+        //     return;
+        // }
         
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
@@ -210,16 +213,24 @@ class ProjectManager {
 
     // UI Control methods
     showLoginModal() {
+        console.log('showLoginModal called');
         const modal = document.getElementById('loginModal');
+        console.log('Login modal element found:', !!modal);
+        
         if (modal) {
+            console.log('Showing login modal');
             // Use Bootstrap modal if available, otherwise show with inline styles
             if (window.bootstrap && window.bootstrap.Modal) {
+                console.log('Using Bootstrap modal');
                 const bsModal = new window.bootstrap.Modal(modal);
                 bsModal.show();
             } else {
+                console.log('Using inline styles for modal');
                 modal.style.display = 'block';
                 modal.classList.add('show');
             }
+        } else {
+            console.error('Login modal element not found!');
         }
     }
 
@@ -2077,6 +2088,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Setup authentication after DOM is ready
     window.projectManager.setupAuthentication();
+    
+    // Force show login modal for debugging
+    console.log('Forcing login modal to show for debugging');
+    setTimeout(() => {
+        window.projectManager.showLoginModal();
+    }, 1000);
     
     // Make emergency clear function available globally
     window.emergencyClear = () => {
