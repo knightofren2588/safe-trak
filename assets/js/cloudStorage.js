@@ -20,40 +20,24 @@ class CloudStorageService {
         this.auth = window.firebaseAuth;
         this.functions = window.firebaseFunctions;
         
-        // Use anonymous authentication for Firebase connection, but handle login separately
+        // Simple Firebase connection for cloud storage
         try {
             await this.functions.signInAnonymously(this.auth);
-            console.log('Connected to Firebase with anonymous auth');
-            
-            // Check if user is logged in from local storage
-            const savedSession = localStorage.getItem('safetrack_user_session');
-            if (savedSession) {
-                const session = JSON.parse(savedSession);
-                // Verify session is still valid (not expired)
-                if (session.expires > Date.now()) {
-                    this.currentAuthUser = session.user;
-                    this.isConnected = true;
-                } else {
-                    // Session expired, clear it
-                    localStorage.removeItem('safetrack_user_session');
-                    this.currentAuthUser = null;
-                    this.isConnected = false;
-                }
-            } else {
-                this.currentAuthUser = null;
-                this.isConnected = false;
-            }
-            
-            // Notify callbacks about initial auth state
-            this.authStateChangeCallbacks.forEach(callback => callback(this.currentAuthUser));
+            this.isConnected = true;
+            console.log('Connected to cloud storage');
             
             // Notify the app that connection status has changed
             if (window.projectManager) {
                 window.projectManager.showConnectionStatus();
             }
         } catch (error) {
-            console.error('Failed to connect to Firebase:', error);
+            console.error('Failed to connect to cloud storage:', error);
             this.isConnected = false;
+            
+            // Notify the app that connection status has changed
+            if (window.projectManager) {
+                window.projectManager.showConnectionStatus();
+            }
         }
     }
 
@@ -514,13 +498,12 @@ class CloudStorageService {
     }
 
     isAuthenticated() {
-        return !!this.currentAuthUser;
+        return this.isConnected;
     }
 
     onAuthStateChanged(callback) {
-        this.authStateChangeCallbacks.push(callback);
-        // Call immediately with current state
-        callback(this.currentAuthUser);
+        // Simplified - just call immediately with connection status
+        callback(this.isConnected ? { connected: true } : null);
     }
 }
 
