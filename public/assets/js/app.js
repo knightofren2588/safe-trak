@@ -237,13 +237,16 @@ class ProjectManager {
             this.currentUser = currentUser;
             
             console.log('Data loaded successfully from cloud storage');
+            console.log('DEBUG - About to update connection status');
             
             // Update connection status after successful data load
             this.showConnectionStatus();
+            console.log('DEBUG - Connection status updated');
             
             // Update the user dropdown after loading users from cloud
             console.log('DEBUG - About to call updateUserDropdown from loadAllData');
             this.updateUserDropdown();
+            console.log('DEBUG - updateUserDropdown completed');
         } catch (error) {
             console.error('Error loading data from cloud storage:', error);
             // Fallback to local storage
