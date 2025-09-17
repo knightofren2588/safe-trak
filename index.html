@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Tracker - Equitas Health</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link href="assets/css/style.css" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'safety-blue': '#1e40af',
+                        'safety-green': '#059669',
+                        'safety-orange': '#ea580c',
+                        'safety-red': '#dc2626',
+                        'safety-gray': '#6b7280',
+                        'safety-yellow': '#f59e0b',
+                        'safety-emergency': '#ef4444',
+                        'safety-caution': '#f97316',
+                        'safety-safe': '#10b981',
+                        'safety-info': '#3b82f6'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-lg border-b-4 border-safety-blue">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-gradient-to-r from-safety-blue to-safety-info text-white p-3 rounded-lg shadow-lg">
+                        <i class="fas fa-shield-alt text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">SafeTrack</h1>
+                        <p class="text-sm text-gray-600">Safety-First Project Management for Equitas Health</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- Connection Status Indicator -->
+                    <div id="connectionStatus" class="d-flex align-items-center me-3">
+                        <div id="connectionIndicator" class="badge bg-warning me-2">
+                            <i class="fas fa-cloud-upload-alt me-1"></i>Connecting...
+                        </div>
+                        <button id="syncButton" class="btn btn-sm btn-outline-safety" onclick="syncData()" title="Sync with cloud">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-outline-safety dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user me-2"></i>
+                            <span id="currentUserName">Select User</span>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                            <li><h6 class="dropdown-header">Safety Team Members</h6></li>
+                            <li><a class="dropdown-item" href="#" onclick="switchUser('all')">
+                                <i class="fas fa-users me-2"></i>All Projects View
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="switchUser('admin')">
+                                <i class="fas fa-user-shield me-2"></i>Admin User
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="openUserModal()">
+                                <i class="fas fa-plus me-2"></i>Add New User
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="openUserManagement()">
+                                <i class="fas fa-users-cog me-2"></i>Manage Users
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="resetAllData()">
+                                <i class="fas fa-trash me-2"></i>Reset All Data
+                            </a></li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-safety text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md" onclick="openProjectModal()">
+                        <i class="fas fa-plus mr-2"></i>New Safety Project
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="container mx-auto px-6">
+            <div class="flex space-x-8">
+                <button class="tab-btn active py-4 px-2 border-b-2 border-safety-blue text-safety-blue font-medium" data-tab="dashboard">
+                    <i class="fas fa-shield-alt mr-2"></i>Safety Dashboard
+                </button>
+                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600 hover:text-safety-blue" data-tab="projects">
+                    <i class="fas fa-project-diagram mr-2"></i>Safety Projects
+                </button>
+                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600 hover:text-safety-blue" data-tab="compliance">
+                    <i class="fas fa-clipboard-check mr-2"></i>Safety Compliance
+                </button>
+                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600 hover:text-safety-blue" data-tab="reports">
+                    <i class="fas fa-chart-line mr-2"></i>Safety Reports
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content">
+            <!-- Stats Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="card card-hover h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 p-3 rounded me-3">
+                                    <i class="fas fa-check-circle text-success fs-4"></i>
+                                </div>
+                                <div>
+                                    <p class="text-muted small mb-1">Active Safety Projects</p>
+                                    <p class="h4 mb-0 text-dark" id="activeProjects">12</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card card-hover h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-warning bg-opacity-10 p-3 rounded me-3">
+                                    <i class="fas fa-exclamation-triangle text-warning fs-4"></i>
+                                </div>
+                                <div>
+                                    <p class="text-muted small mb-1">Safety Risk Projects</p>
+                                    <p class="h4 mb-0 text-dark" id="atRiskProjects">3</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card card-hover h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 p-3 rounded me-3">
+                                    <i class="fas fa-users text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <p class="text-muted small mb-1">Safety Team Members</p>
+                                    <p class="h4 mb-0 text-dark" id="teamMembers">24</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card card-hover h-100 border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-danger bg-opacity-10 p-3 rounded me-3">
+                                    <i class="fas fa-calendar-times text-danger fs-4"></i>
+                                </div>
+                                <div>
+                                    <p class="text-muted small mb-1">Overdue Safety Items</p>
+                                    <p class="h4 mb-0 text-dark" id="overdueProjects">1</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Projects -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="card-title mb-0 d-flex align-items-center">
+                        <i class="fas fa-shield-alt me-2 text-safety-blue"></i>
+                        Recent Safety Projects
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="recentProjectsList">
+                        <!-- Projects will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Projects Tab -->
+        <div id="projects" class="tab-content d-none">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">All Safety Projects</h5>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="searchInput" placeholder="Search safety projects..." class="form-control" style="width: 200px;">
+                            <select id="statusFilter" class="form-select" style="width: 150px;">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="completed">Complete</option>
+                                <option value="on-hold">On Hold</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="border-0">Project</th>
+                                    <th class="border-0">Status</th>
+                                    <th class="border-0">Progress</th>
+                                    <th class="border-0">Start Date</th>
+                                    <th class="border-0">Due Date</th>
+                                    <th class="border-0">Assigned To</th>
+                                    <th class="border-0">Screenshots</th>
+                                    <th class="border-0">Quick Actions</th>
+                                    <th class="border-0">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="projectTableBody">
+                                <!-- Projects will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compliance Tab -->
+        <div id="compliance" class="tab-content d-none">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="card-title mb-0 d-flex align-items-center">
+                        <i class="fas fa-shield-alt me-2 text-safety-blue"></i>
+                        Safety Compliance Dashboard
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card bg-gradient text-white" style="background: linear-gradient(135deg, #059669, #10b981);">
+                                <div class="card-body">
+                                    <h5 class="card-title">Safety Compliance</h5>
+                                    <h2 class="display-4 fw-bold">94%</h2>
+                                    <p class="card-text opacity-75">Above target (90%)</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-gradient text-white" style="background: linear-gradient(135deg, #1e40af, #3b82f6);">
+                                <div class="card-body">
+                                    <h5 class="card-title">Training Completion</h5>
+                                    <h2 class="display-4 fw-bold">87%</h2>
+                                    <p class="card-text opacity-75">3% below target</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content d-none">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="card-title mb-0 d-flex align-items-center">
+                        <i class="fas fa-chart-line me-2 text-safety-blue"></i>
+                        Safety Reports & Analytics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-light w-100 h-100 p-4 text-start border-2 hover-shadow">
+                                <i class="fas fa-file-pdf text-danger mb-2 fs-4"></i>
+                                <h6 class="fw-bold">Safety Project Summary</h6>
+                                <p class="text-muted small mb-0">Generate safety compliance PDF</p>
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-light w-100 h-100 p-4 text-start border-2 hover-shadow">
+                                <i class="fas fa-chart-line text-primary mb-2 fs-4"></i>
+                                <h6 class="fw-bold">Safety Progress Analytics</h6>
+                                <p class="text-muted small mb-0">View safety metrics & trends</p>
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-light w-100 h-100 p-4 text-start border-2 hover-shadow">
+                                <i class="fas fa-download text-success mb-2 fs-4"></i>
+                                <h6 class="fw-bold">Export Safety Data</h6>
+                                <p class="text-muted small mb-0">Download safety compliance data</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Project Modal -->
+    <div class="modal fade" id="projectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">New Safety Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="projectForm">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="projectName" class="form-label">Safety Project Name *</label>
+                                <input type="text" class="form-control" id="projectName" name="name" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="projectDescription" class="form-label">Safety Description</label>
+                                <textarea class="form-control" id="projectDescription" name="description" rows="3"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="projectPriority" class="form-label">Safety Priority *</label>
+                                <select class="form-select" id="projectPriority" name="priority" required>
+                                    <option value="">Select Safety Priority</option>
+                                    <option value="critical">Critical Safety Risk</option>
+                                    <option value="high">High Safety Priority</option>
+                                    <option value="medium">Medium Safety Priority</option>
+                                    <option value="low">Low Safety Priority</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="projectCategory" class="form-label">Safety Category *</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="projectCategory" name="category" required>
+                                        <option value="">Select Safety Category</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline-safety" onclick="openCategoryModal()" title="Manage Categories">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="projectStartDate" class="form-label">Start Date *</label>
+                                <input type="date" class="form-control" id="projectStartDate" name="startDate" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="projectDueDate" class="form-label">Safety Deadline *</label>
+                                <input type="date" class="form-control" id="projectDueDate" name="dueDate" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="projectAssignedTo" class="form-label">Assigned To</label>
+                                <select class="form-select" id="projectAssignedTo" name="assignedTo">
+                                    <option value="">Select Team Member</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="projectStatus" class="form-label">Status</label>
+                                <select class="form-select" id="projectStatus" name="status" required>
+                                    <option value="active">Active</option>
+                                    <option value="on-hold">On Hold</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="projectScreenshots" class="form-label">Screenshots</label>
+                                <input type="file" class="form-control" id="projectScreenshots" name="screenshots" multiple accept="image/*">
+                                <small class="form-text text-muted">Upload multiple images (PNG, JPG, GIF)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-safety" id="submitText">Create Safety Project</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Modal -->
+    <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userModalTitle">Add New Safety Team Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="userForm">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="userName" class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" id="userName" name="name" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="userEmail" class="form-label">Email Address *</label>
+                                <input type="email" class="form-control" id="userEmail" name="email" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="userDepartment" class="form-label">Department *</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="userDepartment" name="department" required>
+                                        <option value="">Select Department</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline-safety" onclick="openDepartmentModal()" title="Manage Departments">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="userRole" class="form-label">Safety Role *</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="userRole" name="role" required>
+                                        <option value="">Select Role</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline-safety" onclick="openRoleModal()" title="Manage Roles">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-safety" id="userSubmitText">Add Team Member</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Management Modal -->
+    <div class="modal fade" id="userManagementModal" tabindex="-1" aria-labelledby="userManagementModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Manage Safety Team Members</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Department</th>
+                                    <th>Role</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userManagementTableBody">
+                                <!-- Users will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-safety" onclick="openUserModal()">
+                        <i class="fas fa-plus me-2"></i>Add New User
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screenshot Modal -->
+    <div class="modal fade screenshot-modal" id="screenshotModal" tabindex="-1" aria-labelledby="screenshotModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Project Screenshots</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="screenshotContainer">
+                        <!-- Screenshots will be loaded here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Update Modal -->
+    <div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Project Progress</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="projectNameDisplay" class="form-label">Project</label>
+                        <input type="text" class="form-control" id="projectNameDisplay" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="progressSlider" class="form-label">Progress: <span id="progressValue">0</span>%</label>
+                        <input type="range" class="form-range" id="progressSlider" min="0" max="100" value="0">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">0%</small>
+                            <small class="text-muted">25%</small>
+                            <small class="text-muted">50%</small>
+                            <small class="text-muted">75%</small>
+                            <small class="text-muted">100%</small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="progressNotes" class="form-label">Progress Notes (Optional)</label>
+                        <textarea class="form-control" id="progressNotes" rows="3" placeholder="Add notes about the progress update..."></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Projects will automatically be marked as "Complete" when progress reaches 100%.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-safety" onclick="updateProjectProgress()">Update Progress</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Management Modal -->
+    <div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="categoryModalLabel">Manage Project Categories</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <input type="text" class="form-control" id="categoryName" placeholder="Enter category name...">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-safety w-100" onclick="addCategory()">
+                                <i class="fas fa-plus me-2"></i>Add Category
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Category Name</th>
+                                    <th>Projects Count</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoryTableBody">
+                                <!-- Categories will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Management Modal -->
+    <div class="modal fade" id="roleModal" tabindex="-1" aria-labelledby="roleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="roleModalLabel">Manage User Roles</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <input type="text" class="form-control" id="roleName" placeholder="Enter role name...">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-safety w-100" onclick="addRole()">
+                                <i class="fas fa-plus me-2"></i>Add Role
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Role Name</th>
+                                    <th>Users Count</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roleTableBody">
+                                <!-- Roles will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Management Modal -->
+    <div class="modal fade" id="departmentModal" tabindex="-1" aria-labelledby="departmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="departmentModalLabel">Manage Departments</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <input type="text" class="form-control" id="departmentName" placeholder="Enter department name...">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-safety w-100" onclick="addDepartment()">
+                                <i class="fas fa-plus me-2"></i>Add Department
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Department Name</th>
+                                    <th>Users Count</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="departmentTableBody">
+                                <!-- Departments will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+        import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtFzWjlpTGR5r7n3CqHmDcb8oCKnjoTYs",
+            authDomain: "project-tracker-c3205.firebaseapp.com",
+            projectId: "project-tracker-c3205",
+            storageBucket: "project-tracker-c3205.firebasestorage.app",
+            messagingSenderId: "801280592412",
+            appId: "1:801280592412:web:39047f94b012ae57032dd9"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Make Firebase available globally
+        window.firebaseApp = app;
+        window.firestore = db;
+        window.firebaseAuth = auth;
+        
+        // Make Firebase functions available globally
+        window.firebaseFunctions = {
+            signInAnonymously,
+            collection,
+            doc,
+            getDocs,
+            setDoc,
+            deleteDoc,
+            onSnapshot
+        };
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Cloud Storage Service -->
+    <script src="assets/js/cloudStorage.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
