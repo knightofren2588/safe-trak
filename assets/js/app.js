@@ -15,106 +15,13 @@ class ProjectManager {
         this.currentRoleEditId = null;
         this.currentDepartmentEditId = null;
         this.hasUserInteracted = localStorage.getItem('safetrack_user_interacted') === 'true'; // Flag to track if user has interacted with the app
-        this.isAuthenticated = false; // Re-enable authentication
-        this.hasInitialized = false;
-        // Don't setup authentication here - wait for DOM to be ready
         this.init();
     }
 
-    setupAuthentication() {
-        // Simple authentication check
-        const savedAuth = localStorage.getItem('safetrack_authenticated');
-        if (savedAuth === 'true') {
-            this.isAuthenticated = true;
-            console.log('User already authenticated');
-        } else {
-            // Simple prompt-based login for now
-            this.promptLogin();
-        }
-    }
-    
-    promptLogin() {
-        const username = prompt('Enter username (default: admin):') || 'admin';
-        const password = prompt('Enter password (default: safetrack123):') || 'safetrack123';
-        
-        // Simple hardcoded check for now (we can make this secure later)
-        if (username === 'admin' && password === 'safetrack123') {
-            this.isAuthenticated = true;
-            localStorage.setItem('safetrack_authenticated', 'true');
-            console.log('Authentication successful');
-            // Re-run init now that user is authenticated
-            this.init();
-        } else {
-            alert('Invalid credentials. Please refresh and try again.');
-            this.isAuthenticated = false;
-        }
-    }
-
-    setupLoginHandlers() {
-        console.log('Setting up login handlers...');
-        
-        // Login form
-        const loginForm = document.getElementById('loginForm');
-        console.log('Login form found:', !!loginForm);
-        if (loginForm) {
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                console.log('Login form submitted');
-                await this.handleLogin();
-            });
-        }
-
-        // Register form
-        const registerForm = document.getElementById('registerFormElement');
-        console.log('Register form found:', !!registerForm);
-        if (registerForm) {
-            registerForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                console.log('Register form submitted');
-                await this.handleRegister();
-            });
-        }
-
-        // Show/hide register form
-        const showRegister = document.getElementById('showRegister');
-        const showLogin = document.getElementById('showLogin');
-        const registerFormDiv = document.getElementById('registerForm');
-        const loginFormDiv = document.getElementById('loginForm').parentElement;
-
-        console.log('Form toggle elements found:', {
-            showRegister: !!showRegister,
-            showLogin: !!showLogin,
-            registerFormDiv: !!registerFormDiv,
-            loginFormDiv: !!loginFormDiv
-        });
-
-        if (showRegister) {
-            showRegister.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Showing register form');
-                loginFormDiv.style.display = 'none';
-                registerFormDiv.classList.remove('d-none');
-            });
-        }
-
-        if (showLogin) {
-            showLogin.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Showing login form');
-                registerFormDiv.classList.add('d-none');
-                loginFormDiv.style.display = 'block';
-            });
-        }
-    }
+    // Authentication methods removed - app works without login
 
     async init() {
-        // Only initialize if authenticated
-        if (!this.isAuthenticated) {
-            console.log('Not authenticated, skipping app initialization');
-            return;
-        }
-        
-        console.log('User authenticated, loading app');
+        console.log('Initializing app normally without authentication');
         
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
@@ -207,99 +114,9 @@ class ProjectManager {
         this.showLoginLoading(false);
     }
 
-    async logout() {
-        // Simple logout - clear authentication and reload
-        localStorage.removeItem('safetrack_authenticated');
-        this.isAuthenticated = false;
-        alert('Logged out successfully. Page will reload.');
-        window.location.reload();
-    }
+    // Logout method removed - no authentication system
 
-    // UI Control methods
-    showLoginModal() {
-        console.log('showLoginModal called');
-        const modal = document.getElementById('loginModal');
-        console.log('Login modal element found:', !!modal);
-        
-        if (modal) {
-            console.log('Showing login modal');
-            // Use Bootstrap modal if available, otherwise show with inline styles
-            if (window.bootstrap && window.bootstrap.Modal) {
-                console.log('Using Bootstrap modal');
-                const bsModal = new window.bootstrap.Modal(modal);
-                bsModal.show();
-            } else {
-                console.log('Using inline styles for modal');
-                modal.style.display = 'block';
-                modal.classList.add('show');
-            }
-        } else {
-            console.error('Login modal element not found!');
-        }
-    }
-
-    hideLoginModal() {
-        const modal = document.getElementById('loginModal');
-        if (modal) {
-            if (window.bootstrap && window.bootstrap.Modal) {
-                const bsModal = window.bootstrap.Modal.getInstance(modal);
-                if (bsModal) {
-                    bsModal.hide();
-                }
-            } else {
-                modal.style.display = 'none';
-                modal.classList.remove('show');
-            }
-        }
-    }
-
-    showApp() {
-        // Show main app content
-        const appContent = document.querySelector('header, main');
-        if (appContent) {
-            appContent.style.display = 'block';
-        }
-        
-        // Initialize app if not already done
-        if (!this.hasInitialized) {
-            this.hasInitialized = true;
-            this.init();
-        }
-    }
-
-    hideApp() {
-        // Hide main app content
-        const header = document.querySelector('header');
-        const main = document.querySelector('main');
-        if (header) header.style.display = 'none';
-        if (main) main.style.display = 'none';
-    }
-
-    showLoginLoading(show) {
-        const submitButtons = document.querySelectorAll('#loginForm button[type="submit"], #registerFormElement button[type="submit"]');
-        submitButtons.forEach(btn => {
-            if (show) {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Please wait...';
-            } else {
-                btn.disabled = false;
-                // Restore original text
-                if (btn.closest('#registerFormElement')) {
-                    btn.innerHTML = '<i class="fas fa-user-plus me-2"></i>Create Account';
-                } else {
-                    btn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Sign In';
-                }
-            }
-        });
-    }
-
-    clearLoginForm() {
-        document.getElementById('loginUsername').value = '';
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('registerUsername').value = '';
-        document.getElementById('registerPassword').value = '';
-        document.getElementById('registerName').value = '';
-    }
+    // All authentication UI methods removed - app works without login
     
     forceCleanupOldUsers() {
         // This method is no longer needed since we removed hardcoded users from HTML
@@ -2090,8 +1907,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 document.addEventListener('DOMContentLoaded', function() {
     window.projectManager = new ProjectManager();
     
-    // Setup authentication after DOM is ready
-    window.projectManager.setupAuthentication();
+    // Remove authentication setup - app works normally
     
     // Make emergency clear function available globally
     window.emergencyClear = () => {

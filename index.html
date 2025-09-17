@@ -39,66 +39,7 @@
     </script>
 </head>
 <body class="bg-slate-50 min-h-screen">
-    <!-- Simple Login Modal -->
-    <div id="loginModal" class="modal fade" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">SafeTrack Login</h5>
-                </div>
-                <div class="modal-body">
-                    <div id="loginError" class="alert alert-danger d-none"></div>
-                    
-                    <form id="loginForm">
-                        <div class="mb-3">
-                            <label for="loginUsername" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="loginUsername" placeholder="Enter username" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="loginPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="loginPassword" placeholder="Enter password" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            Sign In
-                        </button>
-                    </form>
-                    
-                    <hr class="my-3">
-                    
-                    <div class="text-center">
-                        <p class="mb-2">Don't have an account?</p>
-                        <button id="showRegister" class="btn btn-outline-success">Create Account</button>
-                    </div>
-                    
-                    <!-- Registration Form -->
-                    <div id="registerForm" class="d-none mt-3">
-                        <hr class="my-3">
-                        <h6>Create New Account</h6>
-                        <form id="registerFormElement">
-                            <div class="mb-3">
-                                <label for="registerUsername" class="form-label">Username</label>
-                                <input type="text" class="form-control" id="registerUsername" placeholder="Choose username" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="registerPassword" class="form-label">Password</label>
-                                <input type="password" class="form-control" id="registerPassword" placeholder="Create password" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="registerName" class="form-label">Display Name</label>
-                                <input type="text" class="form-control" id="registerName" placeholder="Your name" required>
-                            </div>
-                            <button type="submit" class="btn btn-success w-100 mb-2">
-                                Create Account
-                            </button>
-                            <button type="button" id="showLogin" class="btn btn-outline-secondary w-100">
-                                Back to Login
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Authentication removed for now - app works without login -->
 
     <!-- Header -->
     <header class="bg-white shadow-lg border-b-4 border-safety-blue">
@@ -149,17 +90,11 @@
                             <li><a class="dropdown-item text-danger" href="#" onclick="resetAllData()">
                                 <i class="fas fa-trash me-2"></i>Reset All Data
                             </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-warning" href="#" onclick="logout()">
-                                <i class="fas fa-sign-out-alt me-2"></i>Logout
-                            </a></li>
+                            <!-- Logout removed - no authentication system -->
                         </ul>
                     </div>
                     <button class="btn btn-safety text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md" onclick="openProjectModal()">
                         <i class="fas fa-plus mr-2"></i>New Safety Project
-                    </button>
-                    <button class="btn btn-warning ms-2" onclick="testShowLogin()">
-                        Test Login
                     </button>
                 </div>
             </div>
