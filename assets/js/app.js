@@ -210,7 +210,7 @@ END:VCALENDAR`;
         }
 
         if (!this.emailService) {
-            alert('Email service not initialized. Please refresh the page and try again.');
+            alert('Email service not initialized. Please set up EmailJS service first.\n\n1. Go to EmailJS dashboard\n2. Add Email Service (Gmail)\n3. Get Service ID\n4. Update SafeTrack code');
             return;
         }
 
