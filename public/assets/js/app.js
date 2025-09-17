@@ -39,22 +39,32 @@ class ProjectManager {
         //     this.loadSampleData();
         // }
         
-        // Only load sample users if no users exist AND user hasn't interacted with the app
-        console.log('DEBUG - After loadAllData, users.length:', this.users.length);
-        console.log('DEBUG - hasUserInteracted:', this.hasUserInteracted);
-        console.log('DEBUG - Users array:', this.users);
-        
-        if (this.users.length === 0 && !this.hasUserInteracted) {
-            console.log('DEBUG - Loading sample users because no users found and no interaction');
-            this.loadSampleUsers();
-        } else {
-            console.log('DEBUG - NOT loading sample users');
+        try {
+            // Only load sample users if no users exist AND user hasn't interacted with the app
+            console.log('DEBUG - After loadAllData, users.length:', this.users.length);
+            console.log('DEBUG - hasUserInteracted:', this.hasUserInteracted);
+            console.log('DEBUG - Users array:', this.users);
+            
+            if (this.users.length === 0 && !this.hasUserInteracted) {
+                console.log('DEBUG - Loading sample users because no users found and no interaction');
+                this.loadSampleUsers();
+            } else {
+                console.log('DEBUG - NOT loading sample users');
+            }
+            
+            console.log('DEBUG - About to call render()');
+            this.render();
+            console.log('DEBUG - About to call setupEventListeners()');
+            this.setupEventListeners();
+            console.log('DEBUG - About to call updateUserInterface()');
+            this.updateUserInterface();
+            console.log('DEBUG - About to call populateUserDropdowns()');
+            this.populateUserDropdowns();
+            console.log('DEBUG - Initialization completed successfully');
+        } catch (error) {
+            console.error('ERROR in init() after loadAllData:', error);
+            console.error('Error stack:', error.stack);
         }
-        
-        this.render();
-        this.setupEventListeners();
-        this.updateUserInterface();
-        this.populateUserDropdowns();
         this.populateCategoryDropdowns();
         this.populateRoleDropdowns();
         this.populateDepartmentDropdowns();
@@ -233,10 +243,7 @@ class ProjectManager {
             
             // Update the user dropdown after loading users from cloud
             console.log('DEBUG - About to call updateUserDropdown from loadAllData');
-            setTimeout(() => {
-                console.log('DEBUG - Calling updateUserDropdown with delay');
-                this.updateUserDropdown();
-            }, 100);
+            this.updateUserDropdown();
         } catch (error) {
             console.error('Error loading data from cloud storage:', error);
             // Fallback to local storage
