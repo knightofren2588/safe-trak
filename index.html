@@ -39,63 +39,56 @@
     </script>
 </head>
 <body class="bg-slate-50 min-h-screen">
-    <!-- Login Modal -->
-    <div id="loginModal" class="modal fade" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <!-- Simple Login Modal -->
+    <div id="loginModal" class="modal fade" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header border-0 pb-0">
-                    <div class="w-100 text-center">
-                        <div class="bg-primary rounded-circle p-3 mx-auto mb-3" style="width: 80px; height: 80px;">
-                            <i class="fas fa-shield-alt text-white fs-1"></i>
-                        </div>
-                        <h4 class="modal-title text-primary">SafeTrack Login</h4>
-                        <p class="text-muted mb-0">Secure access to Equitas Health Safety Management</p>
-                    </div>
+                <div class="modal-header">
+                    <h5 class="modal-title">SafeTrack Login</h5>
                 </div>
-                <div class="modal-body p-4">
-                    <div id="loginError" class="alert alert-danger d-none" role="alert"></div>
+                <div class="modal-body">
+                    <div id="loginError" class="alert alert-danger d-none"></div>
                     
-                    <!-- Username/Password Login -->
-                    <form id="loginForm" class="mb-3">
+                    <form id="loginForm">
                         <div class="mb-3">
                             <label for="loginUsername" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="loginUsername" placeholder="Enter your username" required>
+                            <input type="text" class="form-control" id="loginUsername" placeholder="Enter username" required>
                         </div>
                         <div class="mb-3">
                             <label for="loginPassword" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="loginPassword" placeholder="Enter your password" required>
+                            <input type="password" class="form-control" id="loginPassword" placeholder="Enter password" required>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100 mb-3">
-                            <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                        <button type="submit" class="btn btn-primary w-100">
+                            Sign In
                         </button>
                     </form>
                     
+                    <hr class="my-3">
+                    
                     <div class="text-center">
-                        <small class="text-muted">
-                            Don't have an account? 
-                            <a href="#" id="showRegister" class="text-primary text-decoration-none">Create Account</a>
-                        </small>
+                        <p class="mb-2">Don't have an account?</p>
+                        <button id="showRegister" class="btn btn-outline-success">Create Account</button>
                     </div>
                     
-                    <!-- Registration Form (hidden by default) -->
+                    <!-- Registration Form -->
                     <div id="registerForm" class="d-none mt-3">
                         <hr class="my-3">
-                        <h6 class="text-center mb-3">Create New Account</h6>
+                        <h6>Create New Account</h6>
                         <form id="registerFormElement">
                             <div class="mb-3">
                                 <label for="registerUsername" class="form-label">Username</label>
-                                <input type="text" class="form-control" id="registerUsername" placeholder="Choose a username" required>
+                                <input type="text" class="form-control" id="registerUsername" placeholder="Choose username" required>
                             </div>
                             <div class="mb-3">
                                 <label for="registerPassword" class="form-label">Password</label>
-                                <input type="password" class="form-control" id="registerPassword" placeholder="Create a secure password" required>
+                                <input type="password" class="form-control" id="registerPassword" placeholder="Create password" required>
                             </div>
                             <div class="mb-3">
                                 <label for="registerName" class="form-label">Display Name</label>
-                                <input type="text" class="form-control" id="registerName" placeholder="Your display name" required>
+                                <input type="text" class="form-control" id="registerName" placeholder="Your name" required>
                             </div>
                             <button type="submit" class="btn btn-success w-100 mb-2">
-                                <i class="fas fa-user-plus me-2"></i>Create Account
+                                Create Account
                             </button>
                             <button type="button" id="showLogin" class="btn btn-outline-secondary w-100">
                                 Back to Login
