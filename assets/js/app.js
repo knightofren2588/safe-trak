@@ -11,6 +11,12 @@ class ProjectManager {
         this.currentUser = 'admin'; // Default to admin user's view
         this.currentEditId = null;
         this.currentUserEditId = null;
+        
+        // Import system properties
+        this.importData = null;
+        this.importStep = 1;
+        this.columnMappings = {};
+        this.validatedData = [];
         this.currentProgressEditId = null;
         this.currentCategoryEditId = null;
         this.currentRoleEditId = null;
@@ -2789,6 +2795,510 @@ END:VCALENDAR`;
                 userDepartmentSelect.appendChild(option);
             });
         }
+    }
+
+    // ==========================================
+    // BULK IMPORT SYSTEM
+    // ==========================================
+
+    openImportModal(type) {
+        this.importType = type;
+        document.getElementById('importModalLabel').innerHTML = `
+            <i class="fas fa-upload me-2"></i>Import Projects from ${type.charAt(0).toUpperCase() + type.slice(1)}
+        `;
+        
+        // Reset import state
+        this.importStep = 1;
+        this.importData = null;
+        this.columnMappings = {};
+        this.validatedData = [];
+        
+        // Show step 1
+        this.showImportStep(1);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('importModal'));
+        modal.show();
+    }
+
+    showImportStep(step) {
+        // Hide all steps
+        for (let i = 1; i <= 3; i++) {
+            document.getElementById(`importStep${i}`).classList.add('d-none');
+        }
+        document.getElementById('importProgress').classList.add('d-none');
+        
+        // Show current step
+        document.getElementById(`importStep${step}`).classList.remove('d-none');
+        this.importStep = step;
+        
+        // Update buttons
+        const backBtn = document.getElementById('importBackBtn');
+        const nextBtn = document.getElementById('importNextBtn');
+        const finalBtn = document.getElementById('importFinalBtn');
+        
+        if (step === 1) {
+            backBtn.style.display = 'none';
+            nextBtn.style.display = 'inline-block';
+            finalBtn.style.display = 'none';
+            nextBtn.disabled = !this.importData;
+        } else if (step === 2) {
+            backBtn.style.display = 'inline-block';
+            nextBtn.style.display = 'inline-block';
+            finalBtn.style.display = 'none';
+            nextBtn.disabled = false;
+        } else if (step === 3) {
+            backBtn.style.display = 'inline-block';
+            nextBtn.style.display = 'none';
+            finalBtn.style.display = 'inline-block';
+        }
+    }
+
+    async handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        this.showNotification('Reading file...', 'info');
+        
+        try {
+            if (file.name.endsWith('.csv')) {
+                this.importData = await this.readCSVFile(file);
+            } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                this.importData = await this.readExcelFile(file);
+            } else {
+                throw new Error('Unsupported file format');
+            }
+            
+            this.showNotification(`File loaded successfully! Found ${this.importData.length - 1} rows of data.`, 'success');
+            document.getElementById('importNextBtn').disabled = false;
+            
+        } catch (error) {
+            this.showNotification(`Error reading file: ${error.message}`, 'error');
+            this.importData = null;
+            document.getElementById('importNextBtn').disabled = true;
+        }
+    }
+
+    async readCSVFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const csv = e.target.result;
+                    const lines = csv.split('\n').filter(line => line.trim());
+                    const data = lines.map(line => {
+                        // Simple CSV parser (handles basic cases)
+                        const result = [];
+                        let current = '';
+                        let inQuotes = false;
+                        
+                        for (let i = 0; i < line.length; i++) {
+                            const char = line[i];
+                            if (char === '"') {
+                                inQuotes = !inQuotes;
+                            } else if (char === ',' && !inQuotes) {
+                                result.push(current.trim());
+                                current = '';
+                            } else {
+                                current += char;
+                            }
+                        }
+                        result.push(current.trim());
+                        return result;
+                    });
+                    resolve(data);
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsText(file);
+        });
+    }
+
+    async readExcelFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    resolve(jsonData);
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = () => reject(new Error('Failed to read Excel file'));
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    importNextStep() {
+        if (this.importStep === 1) {
+            this.setupColumnMapping();
+            this.showImportStep(2);
+        } else if (this.importStep === 2) {
+            this.validateAndPreview();
+            this.showImportStep(3);
+        }
+    }
+
+    importPreviousStep() {
+        if (this.importStep > 1) {
+            this.showImportStep(this.importStep - 1);
+        }
+    }
+
+    setupColumnMapping() {
+        if (!this.importData || this.importData.length === 0) return;
+        
+        const headers = this.importData[0];
+        const fileColumnsDiv = document.getElementById('fileColumns');
+        const projectFieldsDiv = document.getElementById('projectFields');
+        
+        // Show file columns
+        fileColumnsDiv.innerHTML = headers.map((header, index) => 
+            `<div class="mb-2">
+                <span class="badge bg-secondary">${index + 1}</span>
+                <strong>${header}</strong>
+                <div class="text-muted small">Sample: ${this.importData[1] ? this.importData[1][index] || 'N/A' : 'N/A'}</div>
+            </div>`
+        ).join('');
+        
+        // Show project field mappings
+        const projectFields = [
+            { key: 'title', label: 'Project Title', required: true },
+            { key: 'description', label: 'Description', required: false },
+            { key: 'status', label: 'Status', required: false },
+            { key: 'assignedTo', label: 'Assigned To', required: false },
+            { key: 'category', label: 'Category', required: false },
+            { key: 'priority', label: 'Priority', required: false },
+            { key: 'progress', label: 'Progress (%)', required: false },
+            { key: 'startDate', label: 'Start Date', required: false },
+            { key: 'endDate', label: 'End Date', required: false }
+        ];
+        
+        projectFieldsDiv.innerHTML = projectFields.map(field => {
+            const matchedColumn = this.findBestColumnMatch(headers, field.key, field.label);
+            return `
+                <div class="mb-3">
+                    <label class="form-label">
+                        ${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}
+                    </label>
+                    <select class="form-select form-select-sm" onchange="projectManager.updateColumnMapping('${field.key}', this.value)">
+                        <option value="">-- Skip this field --</option>
+                        ${headers.map((header, index) => 
+                            `<option value="${index}" ${matchedColumn === index ? 'selected' : ''}>${header}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+            `;
+        }).join('');
+        
+        // Initialize mappings with auto-detected matches
+        this.columnMappings = {};
+        projectFields.forEach(field => {
+            const matchedColumn = this.findBestColumnMatch(headers, field.key, field.label);
+            if (matchedColumn !== -1) {
+                this.columnMappings[field.key] = matchedColumn;
+            }
+        });
+    }
+
+    findBestColumnMatch(headers, fieldKey, fieldLabel) {
+        const searchTerms = {
+            title: ['title', 'name', 'project', 'task', 'subject'],
+            description: ['description', 'desc', 'details', 'notes', 'comment'],
+            status: ['status', 'state', 'phase'],
+            assignedTo: ['assigned', 'owner', 'responsible', 'user'],
+            category: ['category', 'type', 'group', 'class'],
+            priority: ['priority', 'importance', 'urgency'],
+            progress: ['progress', 'completion', 'percent', '%'],
+            startDate: ['start', 'begin', 'created'],
+            endDate: ['end', 'due', 'deadline', 'finish']
+        };
+        
+        const terms = searchTerms[fieldKey] || [fieldKey];
+        
+        for (let i = 0; i < headers.length; i++) {
+            const header = headers[i].toLowerCase();
+            if (terms.some(term => header.includes(term))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    updateColumnMapping(fieldKey, columnIndex) {
+        if (columnIndex === '') {
+            delete this.columnMappings[fieldKey];
+        } else {
+            this.columnMappings[fieldKey] = parseInt(columnIndex);
+        }
+    }
+
+    validateAndPreview() {
+        if (!this.importData || this.importData.length < 2) return;
+        
+        const headers = this.importData[0];
+        const rows = this.importData.slice(1);
+        
+        this.validatedData = [];
+        let validCount = 0;
+        let errorCount = 0;
+        
+        rows.forEach((row, index) => {
+            const project = {};
+            let isValid = true;
+            let errors = [];
+            
+            // Map columns to project fields
+            Object.keys(this.columnMappings).forEach(fieldKey => {
+                const columnIndex = this.columnMappings[fieldKey];
+                if (columnIndex !== undefined && row[columnIndex] !== undefined) {
+                    let value = row[columnIndex].toString().trim();
+                    
+                    // Process specific fields
+                    switch (fieldKey) {
+                        case 'progress':
+                            const progressNum = parseFloat(value);
+                            if (!isNaN(progressNum)) {
+                                project[fieldKey] = Math.min(100, Math.max(0, progressNum));
+                            }
+                            break;
+                        case 'status':
+                            const validStatuses = ['active', 'completed', 'on-hold'];
+                            project[fieldKey] = validStatuses.includes(value.toLowerCase()) ? 
+                                value.toLowerCase() : 'active';
+                            break;
+                        case 'priority':
+                            const validPriorities = ['low', 'medium', 'high'];
+                            project[fieldKey] = validPriorities.includes(value.toLowerCase()) ? 
+                                value.toLowerCase() : 'medium';
+                            break;
+                        default:
+                            project[fieldKey] = value;
+                    }
+                }
+            });
+            
+            // Validate required fields
+            if (!project.title || project.title.length === 0) {
+                isValid = false;
+                errors.push('Missing title');
+            }
+            
+            // Set defaults
+            project.id = `import_${Date.now()}_${index}`;
+            project.createdAt = new Date().toISOString();
+            project.screenshots = [];
+            project.progress = project.progress || 0;
+            project.status = project.status || 'active';
+            project.priority = project.priority || 'medium';
+            project.assignedTo = project.assignedTo || this.currentUser;
+            
+            if (isValid) {
+                validCount++;
+                this.validatedData.push({ ...project, _rowIndex: index + 2, _errors: [] });
+            } else {
+                errorCount++;
+                this.validatedData.push({ ...project, _rowIndex: index + 2, _errors: errors, _invalid: true });
+            }
+        });
+        
+        // Update UI
+        document.getElementById('validProjectsCount').textContent = validCount;
+        document.getElementById('errorCount').textContent = errorCount;
+        
+        if (errorCount > 0) {
+            document.getElementById('errorAlert').classList.remove('d-none');
+        } else {
+            document.getElementById('errorAlert').classList.add('d-none');
+        }
+        
+        this.renderPreviewTable();
+    }
+
+    renderPreviewTable() {
+        const headerRow = document.getElementById('previewTableHeader');
+        const tbody = document.getElementById('previewTableBody');
+        
+        if (this.validatedData.length === 0) return;
+        
+        // Create headers
+        const displayFields = ['title', 'description', 'status', 'assignedTo', 'category', 'progress'];
+        headerRow.innerHTML = `
+            <th>Row</th>
+            <th>Status</th>
+            ${displayFields.map(field => `<th>${field.charAt(0).toUpperCase() + field.slice(1)}</th>`).join('')}
+        `;
+        
+        // Create rows
+        tbody.innerHTML = this.validatedData.slice(0, 50).map(item => {
+            const statusClass = item._invalid ? 'table-danger' : 'table-success';
+            const statusIcon = item._invalid ? 
+                '<i class="fas fa-exclamation-triangle text-warning"></i>' : 
+                '<i class="fas fa-check-circle text-success"></i>';
+            
+            return `
+                <tr class="${statusClass}">
+                    <td>${item._rowIndex}</td>
+                    <td>${statusIcon}</td>
+                    ${displayFields.map(field => `<td>${item[field] || ''}</td>`).join('')}
+                </tr>
+            `;
+        }).join('');
+        
+        if (this.validatedData.length > 50) {
+            tbody.innerHTML += `
+                <tr>
+                    <td colspan="${displayFields.length + 2}" class="text-center text-muted">
+                        ... and ${this.validatedData.length - 50} more rows
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    async executeImport() {
+        const validProjects = this.validatedData.filter(item => !item._invalid);
+        if (validProjects.length === 0) {
+            this.showNotification('No valid projects to import', 'warning');
+            return;
+        }
+        
+        // Show progress
+        document.getElementById('importStep3').classList.add('d-none');
+        document.getElementById('importProgress').classList.remove('d-none');
+        
+        const progressBar = document.getElementById('importProgressBar');
+        const progressText = document.getElementById('importProgressText');
+        
+        let imported = 0;
+        const total = validProjects.length;
+        
+        for (const project of validProjects) {
+            try {
+                // Clean up project data
+                const cleanProject = { ...project };
+                delete cleanProject._rowIndex;
+                delete cleanProject._errors;
+                delete cleanProject._invalid;
+                
+                // Add to projects array and save
+                this.projects.push(cleanProject);
+                await this.saveProjects();
+                
+                imported++;
+                const percentage = Math.round((imported / total) * 100);
+                progressBar.style.width = `${percentage}%`;
+                progressText.textContent = `Imported ${imported} of ${total} projects...`;
+                
+                // Small delay to show progress
+                await new Promise(resolve => setTimeout(resolve, 50));
+                
+            } catch (error) {
+                console.error('Error importing project:', error);
+            }
+        }
+        
+        // Update UI and close modal
+        this.render();
+        this.showNotification(`Successfully imported ${imported} projects!`, 'success');
+        
+        // Close modal after a short delay
+        setTimeout(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('importModal'));
+            modal.hide();
+        }, 1500);
+    }
+
+    downloadImportTemplate() {
+        const templateData = [
+            ['Project Title', 'Description', 'Status', 'Assigned To', 'Category', 'Priority', 'Progress', 'Start Date', 'End Date'],
+            ['Sample Safety Inspection', 'Monthly safety inspection of facility', 'active', 'Admin User', 'Safety', 'high', '25', '2024-01-15', '2024-01-30'],
+            ['Equipment Maintenance', 'Routine maintenance of safety equipment', 'active', 'Admin User', 'Maintenance', 'medium', '0', '2024-02-01', '2024-02-15'],
+            ['Training Program', 'Employee safety training program', 'completed', 'Admin User', 'Training', 'high', '100', '2024-01-01', '2024-01-31']
+        ];
+        
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(templateData);
+        
+        // Set column widths
+        ws['!cols'] = [
+            { wch: 25 }, { wch: 40 }, { wch: 12 }, { wch: 15 }, 
+            { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }
+        ];
+        
+        XLSX.utils.book_append_sheet(wb, ws, 'Projects');
+        XLSX.writeFile(wb, 'SafeTrack_Import_Template.xlsx');
+        
+        this.showNotification('Template downloaded! Fill it out and import back.', 'success');
+    }
+
+    showSampleData() {
+        const sampleHtml = `
+            <div class="modal fade" id="sampleDataModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Sample Data Format</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Your file should have columns like this:</p>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Project Title</th>
+                                            <th>Description</th>
+                                            <th>Status</th>
+                                            <th>Assigned To</th>
+                                            <th>Priority</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Safety Inspection</td>
+                                            <td>Monthly facility inspection</td>
+                                            <td>active</td>
+                                            <td>John Smith</td>
+                                            <td>high</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Equipment Check</td>
+                                            <td>Check safety equipment</td>
+                                            <td>completed</td>
+                                            <td>Jane Doe</td>
+                                            <td>medium</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="alert alert-info">
+                                <strong>Supported Values:</strong><br>
+                                <strong>Status:</strong> active, completed, on-hold<br>
+                                <strong>Priority:</strong> low, medium, high<br>
+                                <strong>Progress:</strong> 0-100 (numbers)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existing = document.getElementById('sampleDataModal');
+        if (existing) existing.remove();
+        
+        // Add and show modal
+        document.body.insertAdjacentHTML('beforeend', sampleHtml);
+        const modal = new bootstrap.Modal(document.getElementById('sampleDataModal'));
+        modal.show();
     }
 }
 
