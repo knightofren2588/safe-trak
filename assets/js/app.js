@@ -948,8 +948,15 @@ class ProjectManager {
             }
         }
         
+        console.log('🔴 DELETE USER - Before deletion, users:', this.users.map(u => u.name));
+        console.log('🔴 DELETE USER - Deleting userId:', userId);
         this.users = this.users.filter(u => u.id !== userId);
+        console.log('🔴 DELETE USER - After deletion, users:', this.users.map(u => u.name));
+        
+        console.log('🔴 DELETE USER - About to save to cloud...');
         await this.saveUsers(); // Wait for save to complete!
+        console.log('🔴 DELETE USER - Save completed');
+        
         this.render(); // Use render() like projects do - this updates everything!
         
         // If deleted user was current user, switch to all view

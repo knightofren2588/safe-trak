@@ -156,11 +156,34 @@ class CloudStorageService {
     }
 
     async saveUsers(users) {
+        console.log('🟠 CLOUD SAVE - Saving users to cloud:', users.map(u => u.name));
+        
+        // First, get all existing user IDs from cloud
+        const existingData = await this.loadFromCloud('users');
+        const existingIds = Object.keys(existingData);
+        const newIds = users.map(u => u.id);
+        
+        console.log('🟠 CLOUD SAVE - Existing IDs:', existingIds);
+        console.log('🟠 CLOUD SAVE - New IDs:', newIds);
+        
+        // Find users to delete (exist in cloud but not in new array)
+        const idsToDelete = existingIds.filter(id => !newIds.includes(id));
+        console.log('🟠 CLOUD SAVE - IDs to delete:', idsToDelete);
+        
+        // Delete removed users from cloud
+        for (const id of idsToDelete) {
+            console.log('🟠 CLOUD SAVE - Deleting user from cloud:', id);
+            await this.deleteFromCloud('users', id);
+        }
+        
+        // Save current users to cloud
         const data = {};
         users.forEach(user => {
             data[user.id] = user;
         });
+        console.log('🟠 CLOUD SAVE - Data object keys:', Object.keys(data));
         await this.saveToCloud('users', data);
+        console.log('🟠 CLOUD SAVE - Users saved to cloud successfully');
     }
 
     async loadUsers() {
