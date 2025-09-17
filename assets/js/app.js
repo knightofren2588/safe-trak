@@ -19,11 +19,14 @@ class ProjectManager {
     }
 
     async init() {
+        console.log('🔵 INIT START - users.length:', this.users.length);
+        
         // DISABLED: forceCleanupOldUsers was overwriting real user data
         // this.forceCleanupOldUsers();
         
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
+        console.log('🔵 AFTER waitForCloudStorage - users.length:', this.users.length);
         
         // Remove old debugging code - not needed anymore
         
@@ -34,7 +37,9 @@ class ProjectManager {
         // }
         
         // Load data from cloud storage
+        console.log('🔵 BEFORE loadAllData - users.length:', this.users.length);
         await this.loadAllData();
+        console.log('🔵 AFTER loadAllData - users.length:', this.users.length, 'users:', this.users.map(u => u.name));
         
         // Don't load sample data - start with empty state
         // if (this.projects.length === 0 && !this.hasUserInteracted) {
@@ -256,7 +261,9 @@ class ProjectManager {
     }
 
     async saveUsers() {
+        console.log('🟡 SAVING USERS - count:', this.users.length, 'users:', this.users.map(u => u.name));
         await this.cloudStorage.saveUsers(this.users);
+        console.log('🟡 USERS SAVED TO CLOUD');
     }
 
     loadCurrentUser() {
