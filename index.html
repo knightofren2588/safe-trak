@@ -132,44 +132,68 @@
         <div id="dashboard" class="tab-content">
             <!-- Stats Cards -->
             <div class="row g-3 mb-4">
-                <div class="col-lg-3 col-md-6">
-                    <div class="stats-card hover-lift">
+                <div class="col-lg-6 col-md-6">
+                    <div class="stats-card">
                         <div class="icon-circle success">
                             <i class="fas fa-check-circle"></i>
                         </div>
-                        <div class="stats-number" id="activeProjects">12</div>
-                        <div class="stats-label">Active Safety Projects</div>
-                    </div>
-                </div>
+                        <div class="stats-content">
+                            <div class="stats-info">
+                                <div class="stats-number" id="activeProjects">12</div>
+                                <div class="stats-label">Active Safety Projects</div>
+                            </div>
+                            <div class="stats-trend">
+                                <i class="fas fa-arrow-up trend-up"></i> +2 this week
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stats-card hover-lift">
+                <div class="col-lg-6 col-md-6">
+                    <div class="stats-card">
                         <div class="icon-circle warning">
                             <i class="fas fa-exclamation-triangle"></i>
                         </div>
-                        <div class="stats-number" id="atRiskProjects">3</div>
-                        <div class="stats-label">Safety Risk Projects</div>
+                        <div class="stats-content">
+                            <div class="stats-info">
+                                <div class="stats-number" id="atRiskProjects">3</div>
+                                <div class="stats-label">Safety Risk Projects</div>
+                            </div>
+                            <div class="stats-trend">
+                                <i class="fas fa-arrow-down trend-down"></i> -1 this week
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stats-card hover-lift">
+                <div class="col-lg-6 col-md-6">
+                    <div class="stats-card">
                         <div class="icon-circle primary">
                             <i class="fas fa-users"></i>
                         </div>
-                        <div class="stats-number" id="teamMembers">24</div>
-                        <div class="stats-label">Safety Team Members</div>
+                        <div class="stats-content">
+                            <div class="stats-info">
+                                <div class="stats-number" id="teamMembers">24</div>
+                                <div class="stats-label">Safety Team Members</div>
+                            </div>
+                            <div class="stats-trend">
+                                <i class="fas fa-minus trend-neutral"></i> No change
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stats-card hover-lift">
+                <div class="col-lg-6 col-md-6">
+                    <div class="stats-card">
                         <div class="icon-circle danger">
                             <i class="fas fa-calendar-times"></i>
                         </div>
-                        <div class="stats-number" id="overdueProjects">1</div>
-                        <div class="stats-label">Overdue Safety Items</div>
+                        <div class="stats-content">
+                            <div class="stats-info">
+                                <div class="stats-number" id="overdueProjects">1</div>
+                                <div class="stats-label">Overdue Safety Items</div>
+                            </div>
+                            <div class="stats-trend">
+                                <i class="fas fa-arrow-up trend-down"></i> +1 this week
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
