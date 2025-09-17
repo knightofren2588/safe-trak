@@ -41,10 +41,10 @@ class ProjectManager {
         //     this.loadSampleData();
         // }
         
-        // Only load sample users if no users exist AND user hasn't interacted with the app
-        if (this.users.length === 0 && !this.hasUserInteracted) {
-            this.loadSampleUsers();
-        }
+        // Don't load sample users - users should be added manually
+        // if (this.users.length === 0 && !this.hasUserInteracted) {
+        //     this.loadSampleUsers();
+        // }
         
         this.render();
         this.setupEventListeners();
