@@ -26,9 +26,11 @@ class ProjectManager {
     initializeEmailService() {
         // Initialize EmailJS (free email service)
         if (typeof emailjs !== 'undefined') {
-            // You'll need to get these from EmailJS dashboard (free account)
-            emailjs.init("YOUR_PUBLIC_KEY"); // Replace with your EmailJS public key
+            emailjs.init("jt0JyNjB1EQpgqLRR"); // Your EmailJS public key
             this.emailService = emailjs;
+            console.log('EmailJS initialized successfully');
+        } else {
+            console.warn('EmailJS not loaded - email reminders disabled');
         }
     }
 
@@ -66,11 +68,13 @@ class ProjectManager {
         };
 
         try {
-            await this.emailService.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", emailParams);
-            console.log('Reminder email sent successfully');
+            await this.emailService.send("service_15n321d", "template_bq11d9p", emailParams);
+            console.log('Reminder email sent successfully to:', complianceItem.reminderEmail);
+            this.showNotification(`Reminder email sent for: ${complianceItem.title}`, 'success');
             return true;
         } catch (error) {
             console.error('Failed to send reminder email:', error);
+            this.showNotification(`Failed to send email reminder for: ${complianceItem.title}`, 'error');
             return false;
         }
     }
@@ -183,6 +187,53 @@ END:VCALENDAR`;
         }, 60 * 60 * 1000); // 1 hour
         
         console.log('Reminder system started - checking every hour');
+    }
+
+    async testEmailReminder() {
+        const email = document.getElementById('reminderEmail').value;
+        const title = document.getElementById('complianceTitle').value || 'Test Compliance Item';
+        
+        if (!email) {
+            alert('Please enter an email address first');
+            return;
+        }
+
+        if (!this.emailService) {
+            alert('Email service not initialized. Please refresh the page and try again.');
+            return;
+        }
+
+        const testEmailParams = {
+            to_email: email,
+            to_name: 'Safety Team Member',
+            subject: 'SafeTrack Test Email - Email System Working!',
+            message: `
+                Hello!
+                
+                This is a test email from your SafeTrack Safety Management System.
+                
+                📋 Test Item: ${title}
+                📅 Test Date: ${new Date().toLocaleDateString()}
+                ✅ Email System: Working perfectly!
+                
+                If you received this email, your reminder system is configured correctly.
+                
+                Best regards,
+                SafeTrack Safety Management System
+            `,
+            compliance_title: title,
+            training_date: new Date().toLocaleDateString(),
+            days_until: 'Test'
+        };
+
+        try {
+            this.showNotification('Sending test email...', 'info');
+            await this.emailService.send("service_15n321d", "template_bq11d9p", testEmailParams);
+            this.showNotification(`Test email sent successfully to ${email}!`, 'success');
+        } catch (error) {
+            console.error('Test email failed:', error);
+            this.showNotification('Test email failed. Check console for details.', 'error');
+        }
     }
 
     // Authentication methods removed - app works without login
@@ -2664,6 +2715,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.exportComplianceToCalendar = () => {
         if (window.projectManager) {
             window.projectManager.exportComplianceToCalendar();
+        }
+    };
+
+    window.testEmailReminder = () => {
+        if (window.projectManager) {
+            window.projectManager.testEmailReminder();
         }
     };
 });
