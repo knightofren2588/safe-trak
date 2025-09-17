@@ -23,7 +23,59 @@ class ProjectManager {
         this.currentDepartmentEditId = null;
         this.currentComplianceEditId = null;
         this.hasUserInteracted = localStorage.getItem('safetrack_user_interacted') === 'true'; // Flag to track if user has interacted with the app
+        
+        // Safety quotes system
+        this.safetyQuotes = [
+            { quote: "Safety is not a gadget but a state of mind.", author: "Eleanor Everet" },
+            { quote: "Safety first is safety always.", author: "Charles M. Hayes" },
+            { quote: "Prepare and prevent, don't repair and repent.", author: "Anonymous" },
+            { quote: "Safety is a cheap and effective insurance policy.", author: "Anonymous" },
+            { quote: "Working safely may get old, but so do those who practice it.", author: "Anonymous" },
+            { quote: "Safety is everyone's responsibility.", author: "Anonymous" },
+            { quote: "Your safety is everyone's business, and everyone's business is safety.", author: "Anonymous" },
+            { quote: "Safety rules are your best tools.", author: "Anonymous" },
+            { quote: "Think safety, work safely, live safely.", author: "Anonymous" },
+            { quote: "Safety is as simple as ABC - Always Be Careful.", author: "Anonymous" },
+            { quote: "The best safety device is a careful worker.", author: "Anonymous" },
+            { quote: "Safety is no accident.", author: "Anonymous" },
+            { quote: "When you gamble with safety, you bet your life.", author: "Anonymous" },
+            { quote: "Safety is the key, it's up to you and me.", author: "Anonymous" },
+            { quote: "Shortcuts cut life short.", author: "Anonymous" },
+            { quote: "Better safe than sorry.", author: "Proverb" },
+            { quote: "An ounce of prevention is worth a pound of cure.", author: "Benjamin Franklin" },
+            { quote: "Safety brings first aid to the uninjured.", author: "F.S. Hughes" },
+            { quote: "Safety is something that happens between your ears, not something you hold in your hands.", author: "Jeff Cooper" },
+            { quote: "The door to safety swings on the hinges of common sense.", author: "Anonymous" },
+            { quote: "Safety is not expensive, it's priceless.", author: "Jerry Smith" },
+            { quote: "If you think safety is expensive, try having an accident.", author: "Anonymous" },
+            { quote: "Safety is 30% common sense, 80% compliance and the rest is good luck.", author: "Barry Spud" },
+            { quote: "A spill, a slip, a hospital trip.", author: "Anonymous" },
+            { quote: "Danger is real, fear is a choice, but safety is smart.", author: "Anonymous" },
+            { quote: "Your family needs you, work safely.", author: "Anonymous" },
+            { quote: "Safety is a full-time job, don't make it a part-time practice.", author: "Anonymous" },
+            { quote: "Hard hats and safety boots are cheaper than skulls and feet.", author: "Anonymous" },
+            { quote: "Safety is learned behavior reinforced through repetition.", author: "Anonymous" },
+            { quote: "At the end of the day, safety comes first because everything else is secondary.", author: "Anonymous" }
+        ];
         this.init();
+    }
+
+    // Daily Safety Quote System
+    displayDailySafetyQuote() {
+        // Use current date as seed for consistent daily quote
+        const today = new Date();
+        const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+        const quoteIndex = dayOfYear % this.safetyQuotes.length;
+        
+        const dailyQuote = this.safetyQuotes[quoteIndex];
+        
+        const quoteElement = document.getElementById('dailySafetyQuote');
+        const authorElement = document.getElementById('dailySafetyAuthor');
+        
+        if (quoteElement && authorElement) {
+            quoteElement.textContent = `"${dailyQuote.quote}"`;
+            authorElement.textContent = `— ${dailyQuote.author}`;
+        }
     }
 
     // Calendar Integration (Email system removed)
@@ -517,6 +569,7 @@ END:VCALENDAR`;
         this.populateCategoryDropdowns();
         this.populateRoleDropdowns();
         this.populateDepartmentDropdowns();
+        this.displayDailySafetyQuote();
         
         // Render compliance data
         this.renderComplianceTable();

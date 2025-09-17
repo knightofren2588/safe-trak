@@ -4,12 +4,12 @@
    🎯 SAFETY INDUSTRY COLOR SYSTEM
 ======================================== */
 :root {
-    /* Safety Industry Standard Colors */
-    --safety-blue: #0066cc;           /* Primary safety blue */
-    --safety-orange: #ff6600;         /* Warning/caution orange */
-    --safety-red: #cc0000;            /* Danger/emergency red */
-    --safety-green: #009900;          /* Safe/complete green */
-    --safety-yellow: #ffcc00;         /* Attention yellow */
+    /* Authentic Safety Industry Colors */
+    --safety-red: #dc3545;            /* Primary safety red - danger/stop */
+    --safety-orange: #fd7e14;         /* Warning/caution orange */
+    --safety-yellow: #ffc107;         /* Attention/alert yellow */
+    --safety-green: #198754;          /* Safe/complete green */
+    --safety-blue: #0d6efd;           /* Info/secondary blue */
     
     /* Professional Grays */
     --gray-50: #f8f9fa;
@@ -23,13 +23,14 @@
     --gray-800: #212529;
     --gray-900: #000000;
     
-    /* Semantic Colors */
-    --primary: var(--safety-blue);
+    /* Semantic Colors - Safety Theme */
+    --primary: var(--safety-red);
     --secondary: var(--gray-600);
     --success: var(--safety-green);
     --warning: var(--safety-orange);
     --danger: var(--safety-red);
-    --info: #17a2b8;
+    --info: var(--safety-blue);
+    --attention: var(--safety-yellow);
     
     /* Layout */
     --border-radius: 4px;
@@ -67,14 +68,14 @@ body {
     padding: 15px;
     border-radius: var(--border-radius-lg);
     box-shadow: var(--box-shadow);
-    border-left: 4px solid var(--safety-blue);
+    border-left: 4px solid var(--safety-red);
 }
 
 /* ========================================
    🎨 HEADER - SAFETY THEMED
 ======================================== */
 .header-section {
-    background: linear-gradient(135deg, var(--safety-blue) 0%, #004499 100%);
+    background: linear-gradient(135deg, var(--safety-red) 0%, #b91c1c 100%);
     color: white;
     padding: 20px;
     margin-bottom: 20px;
@@ -96,6 +97,30 @@ body {
 }
 
 /* ========================================
+   💬 DAILY SAFETY QUOTE
+======================================== */
+.safety-quote {
+    background: rgba(255, 255, 255, 0.1);
+    border-left: 4px solid var(--safety-yellow);
+    padding: 12px 16px;
+    margin: 15px 0;
+    border-radius: var(--border-radius);
+    font-style: italic;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.safety-quote-text {
+    margin-bottom: 5px;
+}
+
+.safety-quote-author {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    font-weight: 600;
+}
+
+/* ========================================
    📊 HORIZONTAL STATS CARDS
 ======================================== */
 .stats-card {
@@ -112,7 +137,7 @@ body {
 
 .stats-card:hover {
     box-shadow: var(--box-shadow-lg);
-    border-color: var(--safety-blue);
+    border-color: var(--safety-red);
     transform: translateY(-1px);
 }
 
@@ -137,7 +162,7 @@ body {
 }
 
 .stats-card .icon-circle.primary {
-    background-color: var(--safety-blue);
+    background-color: var(--safety-red);
 }
 
 .stats-card .icon-circle.danger {
@@ -206,7 +231,7 @@ body {
 
 .project-card:hover {
     box-shadow: var(--box-shadow-lg);
-    border-left-color: var(--safety-orange);
+    border-left-color: var(--safety-yellow);
 }
 
 .project-title {
@@ -274,8 +299,8 @@ body {
 }
 
 .btn-primary {
-    background-color: var(--safety-blue);
-    border-color: var(--safety-blue);
+    background-color: var(--safety-red);
+    border-color: var(--safety-red);
     color: white;
 }
 
@@ -323,13 +348,13 @@ body {
 
 .btn-outline-primary {
     color: var(--safety-blue);
-    border-color: var(--safety-blue);
+    border-color: var(--safety-red);
     background-color: transparent;
 }
 
 .btn-outline-primary:hover {
-    background-color: var(--safety-blue);
-    border-color: var(--safety-blue);
+    background-color: var(--safety-red);
+    border-color: var(--safety-red);
     color: white;
 }
 
@@ -344,8 +369,8 @@ body {
 }
 
 .btn-safety {
-    background-color: var(--safety-blue);
-    border-color: var(--safety-blue);
+    background-color: var(--safety-red);
+    border-color: var(--safety-red);
     color: white;
     font-weight: 600;
 }
@@ -426,7 +451,7 @@ body {
 }
 
 .form-control:focus {
-    border-color: var(--safety-blue);
+    border-color: var(--safety-red);
     box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.25);
     outline: none;
 }
@@ -446,7 +471,7 @@ body {
 }
 
 .form-select:focus {
-    border-color: var(--safety-blue);
+    border-color: var(--safety-red);
     box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.25);
     outline: none;
 }
@@ -460,7 +485,7 @@ body {
 }
 
 .table thead th {
-    background-color: var(--safety-blue);
+    background-color: var(--safety-red);
     color: white;
     font-weight: 600;
     padding: 10px 8px;
@@ -490,7 +515,7 @@ body {
 }
 
 .modal-header {
-    background-color: var(--safety-blue);
+    background-color: var(--safety-red);
     color: white;
     padding: 15px 20px;
     border-bottom: none;
@@ -583,7 +608,7 @@ body {
 }
 
 .dropdown-item:active {
-    background-color: var(--safety-blue);
+    background-color: var(--safety-red);
     color: white;
 }
 
@@ -617,7 +642,7 @@ body {
 }
 
 .notification.info {
-    background-color: var(--safety-blue);
+    background-color: var(--safety-red);
 }
 
 @keyframes slideInRight {
@@ -645,7 +670,7 @@ body {
 }
 
 .screenshot-thumbnail:hover {
-    border-color: var(--safety-blue);
+    border-color: var(--safety-red);
     transform: scale(1.05);
 }
 
