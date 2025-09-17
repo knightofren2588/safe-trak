@@ -25,10 +25,7 @@ class ProjectManager {
         // Wait for cloud storage to be ready before loading data
         await this.waitForCloudStorage();
         
-        // Force cleanup old default users from cloud
-        if (this.cloudStorage.isConnected) {
-            await this.cloudStorage.forceCleanupCloudUsers();
-        }
+        // Remove old debugging code - not needed anymore
         
         // Force reset cloud storage to remove old users and projects (DISABLED for production)
         // if (this.cloudStorage.isConnected) {
@@ -44,32 +41,14 @@ class ProjectManager {
         //     this.loadSampleData();
         // }
         
-        try {
-            // Only load sample users if no users exist AND user hasn't interacted with the app
-            console.log('DEBUG - After loadAllData, users.length:', this.users.length);
-            console.log('DEBUG - hasUserInteracted:', this.hasUserInteracted);
-            console.log('DEBUG - Users array:', this.users);
-            
-            if (this.users.length === 0 && !this.hasUserInteracted) {
-                console.log('DEBUG - Loading sample users because no users found and no interaction');
-                this.loadSampleUsers();
-            } else {
-                console.log('DEBUG - NOT loading sample users');
-            }
-            
-            console.log('DEBUG - About to call render()');
-            this.render();
-            console.log('DEBUG - About to call setupEventListeners()');
-            this.setupEventListeners();
-            console.log('DEBUG - About to call updateUserInterface()');
-            this.updateUserInterface();
-            console.log('DEBUG - About to call populateUserDropdowns()');
-            this.populateUserDropdowns();
-            console.log('DEBUG - Initialization completed successfully');
-        } catch (error) {
-            console.error('ERROR in init() after loadAllData:', error);
-            console.error('Error stack:', error.stack);
+        // Only load sample users if no users exist AND user hasn't interacted with the app
+        if (this.users.length === 0 && !this.hasUserInteracted) {
+            this.loadSampleUsers();
         }
+        
+        this.render();
+        this.setupEventListeners();
+        this.updateUserInterface();
         this.populateCategoryDropdowns();
         this.populateRoleDropdowns();
         this.populateDepartmentDropdowns();
@@ -242,16 +221,9 @@ class ProjectManager {
             this.currentUser = currentUser;
             
             console.log('Data loaded successfully from cloud storage');
-            console.log('DEBUG - About to update connection status');
             
             // Update connection status after successful data load
             this.showConnectionStatus();
-            console.log('DEBUG - Connection status updated');
-            
-            // Update the user dropdown after loading users from cloud
-            console.log('DEBUG - About to call updateUserDropdown from loadAllData');
-            this.updateUserDropdown();
-            console.log('DEBUG - updateUserDropdown completed');
         } catch (error) {
             console.error('Error loading data from cloud storage:', error);
             // Fallback to local storage
@@ -910,7 +882,7 @@ class ProjectManager {
         };
         this.users.push(user);
         this.saveUsers();
-        this.updateUserDropdown();
+        this.render(); // Use render() like projects do - this updates everything!
         this.closeUserModal();
     }
 
@@ -923,7 +895,7 @@ class ProjectManager {
                 avatar: userData.name.charAt(0).toUpperCase()
             };
             this.saveUsers();
-            this.updateUserDropdown();
+            this.render(); // Use render() like projects do - this updates everything!
             this.closeUserModal();
         }
     }
@@ -960,7 +932,7 @@ class ProjectManager {
         
         this.users = this.users.filter(u => u.id !== userId);
         this.saveUsers();
-        this.updateUserDropdown();
+        this.render(); // Use render() like projects do - this updates everything!
         
         // If deleted user was current user, switch to all view
         if (this.currentUser === userId) {
