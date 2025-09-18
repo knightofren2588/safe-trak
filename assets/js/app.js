@@ -3121,6 +3121,40 @@ END:VCALENDAR`;
         document.getElementById('statusFilter').addEventListener('change', (e) => {
             this.filterProjects();
         });
+        
+        // User filter
+        document.getElementById('userFilter').addEventListener('change', (e) => {
+            this.filterProjects();
+        });
+        
+        // Date filter
+        document.getElementById('dateFilter').addEventListener('change', (e) => {
+            this.filterProjects();
+        });
+        
+        // Priority filter
+        document.getElementById('priorityFilter').addEventListener('change', (e) => {
+            this.filterProjects();
+        });
+        
+        // Category filter
+        document.getElementById('categoryFilter').addEventListener('change', (e) => {
+            this.filterProjects();
+        });
+        
+        // Progress filter
+        document.getElementById('progressFilter').addEventListener('change', (e) => {
+            this.filterProjects();
+        });
+        
+        // Custom date range filters
+        document.getElementById('startDateFilter').addEventListener('change', (e) => {
+            this.filterProjects();
+        });
+        
+        document.getElementById('endDateFilter').addEventListener('change', (e) => {
+            this.filterProjects();
+        });
 
         // User form
         document.getElementById('userForm').addEventListener('submit', (e) => {
@@ -3294,30 +3328,200 @@ END:VCALENDAR`;
     filterProjects() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
         const statusFilter = document.getElementById('statusFilter').value;
+        const userFilter = document.getElementById('userFilter').value;
+        const dateFilter = document.getElementById('dateFilter').value;
+        const priorityFilter = document.getElementById('priorityFilter').value;
+        const categoryFilter = document.getElementById('categoryFilter').value;
+        const progressFilter = document.getElementById('progressFilter').value;
+        const startDateFilter = document.getElementById('startDateFilter').value;
+        const endDateFilter = document.getElementById('endDateFilter').value;
         
         let filteredProjects = this.projects;
         
-        // Filter by current user if not viewing all projects
-        if (this.currentUser !== 'all') {
+        // Apply view mode filtering first
+        if (this.projectViewMode === 'personal') {
             filteredProjects = filteredProjects.filter(project => 
-                project.createdBy === this.currentUser
+                project.createdBy === this.currentUser || project.assignedTo === this.currentUser
+            );
+        } else if (this.projectViewMode !== 'all') {
+            // Individual user view
+            filteredProjects = filteredProjects.filter(project => 
+                project.createdBy === this.projectViewMode || project.assignedTo === this.projectViewMode
             );
         }
         
+        // Search filter
         if (searchTerm) {
             filteredProjects = filteredProjects.filter(project => 
                 project.name.toLowerCase().includes(searchTerm) ||
-                project.description.toLowerCase().includes(searchTerm)
+                (project.description && project.description.toLowerCase().includes(searchTerm)) ||
+                this.getUserName(project.createdBy).toLowerCase().includes(searchTerm) ||
+                this.getUserName(project.assignedTo).toLowerCase().includes(searchTerm)
             );
         }
         
+        // Status filter (including special statuses)
         if (statusFilter) {
+            if (statusFilter === 'overdue') {
+                filteredProjects = filteredProjects.filter(project => this.isProjectOverdue(project));
+            } else {
+                filteredProjects = filteredProjects.filter(project => project.status === statusFilter);
+            }
+        }
+        
+        // User filter
+        if (userFilter) {
             filteredProjects = filteredProjects.filter(project => 
-                project.status === statusFilter
+                project.createdBy === userFilter || project.assignedTo === userFilter
             );
+        }
+        
+        // Priority filter
+        if (priorityFilter) {
+            filteredProjects = filteredProjects.filter(project => project.priority === priorityFilter);
+        }
+        
+        // Category filter
+        if (categoryFilter) {
+            filteredProjects = filteredProjects.filter(project => project.category === categoryFilter);
+        }
+        
+        // Progress filter
+        if (progressFilter) {
+            filteredProjects = filteredProjects.filter(project => {
+                const progress = project.progress || 0;
+                switch (progressFilter) {
+                    case 'not-started': return progress === 0;
+                    case 'in-progress': return progress > 0 && progress < 100;
+                    case 'completed': return progress === 100;
+                    case 'low-progress': return progress >= 0 && progress <= 25;
+                    case 'high-progress': return progress >= 75 && progress < 100;
+                    default: return true;
+                }
+            });
+        }
+        
+        // Date range filters
+        if (dateFilter) {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            filteredProjects = filteredProjects.filter(project => {
+                const startDate = project.startDate ? new Date(project.startDate) : null;
+                const dueDate = project.dueDate ? new Date(project.dueDate) : null;
+                
+                switch (dateFilter) {
+                    case 'this-week':
+                        const weekStart = new Date(today);
+                        weekStart.setDate(today.getDate() - today.getDay());
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekStart.getDate() + 6);
+                        return startDate && startDate >= weekStart && startDate <= weekEnd;
+                        
+                    case 'this-month':
+                        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                        return startDate && startDate >= monthStart && startDate <= monthEnd;
+                        
+                    case 'last-30-days':
+                        const thirtyDaysAgo = new Date(today);
+                        thirtyDaysAgo.setDate(today.getDate() - 30);
+                        return startDate && startDate >= thirtyDaysAgo;
+                        
+                    case 'overdue-items':
+                        return this.isProjectOverdue(project);
+                        
+                    case 'due-soon':
+                        const sevenDaysFromNow = new Date(today);
+                        sevenDaysFromNow.setDate(today.getDate() + 7);
+                        return dueDate && dueDate >= today && dueDate <= sevenDaysFromNow;
+                        
+                    case 'no-deadline':
+                        return !project.dueDate;
+                        
+                    default: return true;
+                }
+            });
+        }
+        
+        // Custom date range filter
+        if (startDateFilter || endDateFilter) {
+            filteredProjects = filteredProjects.filter(project => {
+                const projectStartDate = project.startDate ? new Date(project.startDate) : null;
+                if (!projectStartDate) return false;
+                
+                if (startDateFilter && projectStartDate < new Date(startDateFilter)) return false;
+                if (endDateFilter && projectStartDate > new Date(endDateFilter)) return false;
+                return true;
+            });
         }
         
         this.renderProjectTable(filteredProjects);
+        this.updateFilterStats(filteredProjects);
+    }
+    
+    getUserName(userId) {
+        const user = this.users.find(u => u.id === userId);
+        return user ? user.name : 'Unknown';
+    }
+    
+    updateFilterStats(filteredProjects) {
+        // Update the table title to show filter results
+        const titleElement = document.getElementById('projectTableTitle');
+        if (titleElement) {
+            const total = this.projects.length;
+            const filtered = filteredProjects.length;
+            if (filtered !== total) {
+                titleElement.textContent = `Safety Projects (${filtered} of ${total})`;
+            } else {
+                titleElement.textContent = 'All Safety Projects';
+            }
+        }
+    }
+    
+    populateFilterDropdowns() {
+        // Populate user filter
+        const userFilter = document.getElementById('userFilter');
+        if (userFilter) {
+            const currentOptions = Array.from(userFilter.options).map(option => option.value);
+            const userOptions = this.users.map(user => 
+                `<option value="${user.id}" ${currentOptions.includes(user.id) ? 'selected' : ''}>${user.name}</option>`
+            ).join('');
+            userFilter.innerHTML = `<option value="">All Users</option>${userOptions}`;
+        }
+        
+        // Populate category filter
+        const categoryFilter = document.getElementById('categoryFilter');
+        if (categoryFilter && this.categories) {
+            const categoryOptions = this.categories.map(category => 
+                `<option value="${category.name}">${category.name}</option>`
+            ).join('');
+            categoryFilter.innerHTML = `<option value="">All Categories</option>${categoryOptions}`;
+        }
+    }
+    
+    clearAllFilters() {
+        // Clear all filter inputs
+        document.getElementById('searchInput').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('userFilter').value = '';
+        document.getElementById('dateFilter').value = '';
+        document.getElementById('priorityFilter').value = '';
+        document.getElementById('categoryFilter').value = '';
+        document.getElementById('progressFilter').value = '';
+        document.getElementById('startDateFilter').value = '';
+        document.getElementById('endDateFilter').value = '';
+        
+        // Collapse advanced filters
+        const advancedFilters = document.getElementById('advancedFilters');
+        if (advancedFilters && advancedFilters.classList.contains('show')) {
+            const collapse = new bootstrap.Collapse(advancedFilters);
+            collapse.hide();
+        }
+        
+        // Re-render with no filters
+        this.filterProjects();
+        this.showNotification('All filters cleared', 'info');
     }
 
     render() {
@@ -3918,6 +4122,9 @@ END:VCALENDAR`;
         
         // Populate individual user views in dropdown
         this.populateIndividualUserViews();
+        
+        // Populate filter dropdowns
+        this.populateFilterDropdowns();
         
         // Update notification badge
         this.updateNotificationBadge();
@@ -5478,6 +5685,13 @@ document.addEventListener('DOMContentLoaded', function() {
     window.deleteProjectNote = (projectId, noteId) => {
         if (window.projectManager) {
             window.projectManager.deleteProjectNote(projectId, noteId);
+        }
+    };
+
+    // Global filter functions
+    window.clearAllFilters = () => {
+        if (window.projectManager) {
+            window.projectManager.clearAllFilters();
         }
     };
 

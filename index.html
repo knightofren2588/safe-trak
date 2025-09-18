@@ -375,14 +375,46 @@
                 <div class="card-header bg-white border-bottom">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0" id="projectTableTitle">All Safety Projects</h5>
-                        <div class="d-flex gap-2">
-                            <input type="text" id="searchInput" placeholder="Search safety projects..." class="form-control" style="width: 200px;">
-                            <select id="statusFilter" class="form-select" style="width: 150px;">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <!-- Search Input -->
+                            <input type="text" id="searchInput" placeholder="Search projects..." class="form-control" style="width: 180px;">
+                            
+                            <!-- Status Filter -->
+                            <select id="statusFilter" class="form-select" style="width: 130px;">
                                 <option value="">All Status</option>
                                 <option value="active">Active</option>
-                                <option value="completed">Complete</option>
+                                <option value="completed">Completed</option>
                                 <option value="on-hold">On Hold</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="overdue">Overdue</option>
                             </select>
+                            
+                            <!-- User Filter -->
+                            <select id="userFilter" class="form-select" style="width: 140px;">
+                                <option value="">All Users</option>
+                                <!-- Will be populated dynamically -->
+                            </select>
+                            
+                            <!-- Date Range Filter -->
+                            <select id="dateFilter" class="form-select" style="width: 140px;">
+                                <option value="">All Dates</option>
+                                <option value="this-week">This Week</option>
+                                <option value="this-month">This Month</option>
+                                <option value="last-30-days">Last 30 Days</option>
+                                <option value="overdue-items">Overdue Items</option>
+                                <option value="due-soon">Due Soon (7 days)</option>
+                                <option value="no-deadline">No Deadline</option>
+                            </select>
+                            
+                            <!-- Advanced Filters Button -->
+                            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="false">
+                                <i class="fas fa-filter me-1"></i>More Filters
+                            </button>
+                            
+                            <!-- Clear Filters Button -->
+                            <button class="btn btn-outline-warning" onclick="clearAllFilters()" title="Clear All Filters">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </button>
                             
                             <!-- Import Dropdown -->
                             <div class="dropdown me-2">
@@ -426,6 +458,48 @@
                                         <i class="fas fa-print me-2 text-secondary"></i>Print Report
                                     </a></li>
                                 </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Filters (Collapsible) -->
+                <div class="collapse" id="advancedFilters">
+                    <div class="px-4 py-3 bg-light border-bottom">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label for="priorityFilter" class="form-label small">Priority</label>
+                                <select id="priorityFilter" class="form-select form-select-sm">
+                                    <option value="">All Priorities</option>
+                                    <option value="high">High Priority</option>
+                                    <option value="medium">Medium Priority</option>
+                                    <option value="low">Low Priority</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="categoryFilter" class="form-label small">Category</label>
+                                <select id="categoryFilter" class="form-select form-select-sm">
+                                    <option value="">All Categories</option>
+                                    <!-- Will be populated dynamically -->
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="progressFilter" class="form-label small">Progress Range</label>
+                                <select id="progressFilter" class="form-select form-select-sm">
+                                    <option value="">All Progress</option>
+                                    <option value="not-started">Not Started (0%)</option>
+                                    <option value="in-progress">In Progress (1-99%)</option>
+                                    <option value="completed">Completed (100%)</option>
+                                    <option value="low-progress">Low Progress (0-25%)</option>
+                                    <option value="high-progress">High Progress (75-99%)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="customDateRange" class="form-label small">Custom Date Range</label>
+                                <div class="d-flex gap-1">
+                                    <input type="date" id="startDateFilter" class="form-control form-control-sm" title="Start Date From">
+                                    <input type="date" id="endDateFilter" class="form-control form-control-sm" title="Start Date To">
+                                </div>
                             </div>
                         </div>
                     </div>
