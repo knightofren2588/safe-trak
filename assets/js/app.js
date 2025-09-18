@@ -238,7 +238,7 @@ class ProjectManager {
     // PROJECT NOTES SYSTEM
     // ========================================
     
-    openProjectNotes(projectId) {
+    async openProjectNotes(projectId) {
         // Convert projectId to number since project IDs are stored as numbers
         const numericProjectId = Number(projectId);
         this.currentNotesProjectId = numericProjectId;
@@ -250,6 +250,9 @@ class ProjectManager {
             this.showNotification('Project not found', 'error');
             return;
         }
+        
+        // Sync notes from cloud before showing modal
+        await this.syncProjectNotesFromCloud();
         
         // Update modal title
         document.getElementById('notesProjectTitle').textContent = `Project: ${project.name}`;
@@ -398,6 +401,28 @@ class ProjectManager {
         const localNotes = stored ? JSON.parse(stored) : {};
         console.log('Loaded project notes from local storage');
         return localNotes;
+    }
+    
+    async syncProjectNotesFromCloud() {
+        // Force refresh notes from cloud
+        if (this.cloudStorage.isConnected) {
+            try {
+                const cloudNotes = await this.cloudStorage.loadFromCloud('project_notes');
+                if (cloudNotes) {
+                    this.projectNotes = cloudNotes;
+                    console.log('Synced project notes from cloud:', Object.keys(cloudNotes).length, 'projects have notes');
+                    
+                    // Also update local storage
+                    localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
+                } else {
+                    console.log('No project notes found in cloud');
+                }
+            } catch (error) {
+                console.error('Failed to sync project notes from cloud:', error);
+            }
+        } else {
+            console.warn('Cannot sync project notes - not connected to cloud');
+        }
     }
 
     // ========================================
@@ -855,10 +880,13 @@ class ProjectManager {
         }).join('');
     }
     
-    selectUserProfile(userId) {
+    async selectUserProfile(userId) {
         // Update current user
         this.currentUser = userId;
         this.saveCurrentUser();
+        
+        // Sync notes from cloud when switching users
+        await this.syncProjectNotesFromCloud();
         
         // Update UI
         this.updateUserInterface();
@@ -2856,6 +2884,9 @@ END:VCALENDAR`;
             syncButton.disabled = true;
             
             const success = await this.cloudStorage.syncAllData(this);
+            
+            // Also sync project notes
+            await this.syncProjectNotesFromCloud();
             
             if (success) {
                 this.showConnectionStatus();
@@ -5404,9 +5435,9 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Global authentication functions
-    window.selectUserProfile = (userId) => {
+    window.selectUserProfile = async (userId) => {
         if (window.projectManager) {
-            window.projectManager.selectUserProfile(userId);
+            await window.projectManager.selectUserProfile(userId);
         }
     };
 
