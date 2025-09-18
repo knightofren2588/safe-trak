@@ -92,6 +92,49 @@
         </div>
     </div>
 
+    <!-- User Selection Modal -->
+    <div class="modal fade" id="userSelectionModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header text-center border-0 pb-0">
+                    <div class="w-100">
+                        <div class="mb-3">
+                            <div class="d-inline-flex p-3 rounded-circle" style="background: linear-gradient(135deg, var(--safety-blue) 0%, #0a58ca 100%);">
+                                <i class="fas fa-users text-white" style="font-size: 2rem;"></i>
+                            </div>
+                        </div>
+                        <h4 class="modal-title" style="color: var(--safety-blue);">Select Your Profile</h4>
+                        <p class="text-muted mb-0">Choose which team member profile you'll be working as</p>
+                    </div>
+                </div>
+                <div class="modal-body px-4 pb-4">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Important:</strong> This determines which projects and certifications you can see and manage.
+                    </div>
+                    
+                    <div class="row g-3" id="userSelectionGrid">
+                        <!-- User cards will be populated here -->
+                    </div>
+                    
+                    <div class="mt-4 text-center">
+                        <small class="text-muted">
+                            You can change this later using the user dropdown in the header
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <div class="w-100 text-center">
+                        <small class="text-muted">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            SafeTrack - Equitas Health Safety Management
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Header -->
     <header class="bg-white shadow-lg" style="border-bottom: 4px solid var(--safety-red);">
         <div class="pl-4 pr-6 py-6">

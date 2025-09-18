@@ -265,6 +265,96 @@ body::after {
 }
 
 /* ========================================
+   👤 USER SELECTION MODAL
+======================================== */
+.user-selection-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--border-radius-lg);
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.user-selection-card:hover {
+    border-color: var(--safety-blue);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(13, 110, 253, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.user-selection-card.selected {
+    border-color: var(--safety-red);
+    background: rgba(220, 53, 69, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(220, 53, 69, 0.2);
+}
+
+.user-selection-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--safety-blue) 0%, #0a58ca 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0 auto 15px;
+    transition: var(--transition);
+}
+
+.user-selection-card:hover .user-selection-avatar {
+    transform: scale(1.1);
+    background: linear-gradient(135deg, var(--safety-red) 0%, #b02a37 100%);
+}
+
+.user-selection-card.selected .user-selection-avatar {
+    background: linear-gradient(135deg, var(--safety-red) 0%, #b02a37 100%);
+    transform: scale(1.1);
+}
+
+.user-selection-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 5px;
+}
+
+.user-selection-role {
+    font-size: 0.9rem;
+    color: var(--gray-600);
+    margin-bottom: 10px;
+}
+
+.user-selection-stats {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+}
+
+.user-selection-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.8s ease;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.user-selection-card:hover::before {
+    left: 100%;
+}
+
+/* ========================================
    📊 HORIZONTAL STATS CARDS
 ======================================== */
 .stats-card {

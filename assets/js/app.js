@@ -77,7 +77,8 @@ class ProjectManager {
         
         if (isLoggedIn === 'true') {
             this.isAuthenticated = true;
-            this.init();
+        this.init();
+            this.showNotification('Welcome back to SafeTrack!', 'success');
         } else {
             this.showLoginModal();
         }
@@ -137,8 +138,17 @@ class ProjectManager {
             sessionStorage.setItem('safetrack_login_time', new Date().toISOString());
             
             this.hideLoginModal();
-            this.init();
-            this.showNotification('Welcome to SafeTrack!', 'success');
+            
+            // Initialize app first to load users
+            await this.init();
+            
+            // Show user selection prompt only if no user preference is saved
+            const hasUserPreference = localStorage.getItem('safetrack_current_user');
+            if (!hasUserPreference) {
+                this.showUserSelectionModal();
+            } else {
+                this.showNotification('Welcome to SafeTrack!', 'success');
+            }
         } else {
             // Failed login
             console.log('Login failed'); // Debug
@@ -172,6 +182,78 @@ class ProjectManager {
             setTimeout(() => {
                 location.reload();
             }, 1000);
+        }
+    }
+    
+    showUserSelectionModal() {
+        // Populate user selection cards
+        this.populateUserSelectionCards();
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('userSelectionModal'));
+        modal.show();
+    }
+    
+    populateUserSelectionCards() {
+        const grid = document.getElementById('userSelectionGrid');
+        if (!grid) return;
+        
+        // Default to admin if no users available
+        if (this.users.length === 0) {
+            this.currentUser = 'admin';
+            this.saveCurrentUser();
+            this.hideUserSelectionModal();
+            this.showNotification('Welcome to SafeTrack! Defaulted to Admin user.', 'success');
+            return;
+        }
+        
+        grid.innerHTML = this.users.map(user => {
+            const projectCount = this.projects.filter(p => p.createdBy === user.id || p.assignedTo === user.id).length;
+            const certCount = this.certifications.filter(c => c.userId === user.id).length;
+            
+            return `
+                <div class="col-md-6">
+                    <div class="user-selection-card" onclick="selectUserProfile('${user.id}')">
+                        <div class="user-selection-avatar">
+                            ${user.avatar || user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="user-selection-name">${this.escapeHtml(user.name)}</div>
+                        <div class="user-selection-role">${user.role || 'Team Member'}</div>
+                        <div class="user-selection-stats">
+                            <div><strong>${projectCount}</strong> Projects</div>
+                            <div><strong>${certCount}</strong> Certifications</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    selectUserProfile(userId) {
+        // Update current user
+        this.currentUser = userId;
+        this.saveCurrentUser();
+        
+        // Update UI
+        this.updateUserInterface();
+        this.updateViewModeInterface();
+        this.render();
+        this.renderCertificationTable();
+        this.updateCertificationStats();
+        
+        // Hide modal
+        this.hideUserSelectionModal();
+        
+        // Show welcome message with selected user
+        const user = this.users.find(u => u.id === userId);
+        const userName = user ? user.name : 'User';
+        this.showNotification(`Welcome to SafeTrack, ${userName}!`, 'success');
+    }
+    
+    hideUserSelectionModal() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('userSelectionModal'));
+        if (modal) {
+            modal.hide();
         }
     }
 
@@ -2663,7 +2745,7 @@ END:VCALENDAR`;
                         <span class="status-badge ${this.getEnhancedStatusClass(project)} me-2" role="status" aria-label="Project status: ${this.getStatusDisplayText(project.status)}">
                             <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
                             ${this.getStatusDisplayText(project.status)}
-                        </span>
+                    </span>
                         <select class="form-select form-select-sm status-dropdown" onchange="projectManager.changeProjectStatus(${project.id}, this.value)">
                             <option value="active" ${project.status === 'active' ? 'selected' : ''}>Active</option>
                             <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
@@ -4613,6 +4695,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.logout = () => {
         if (window.projectManager) {
             window.projectManager.logout();
+        }
+    };
+
+    window.selectUserProfile = (userId) => {
+        if (window.projectManager) {
+            window.projectManager.selectUserProfile(userId);
         }
     };
 
