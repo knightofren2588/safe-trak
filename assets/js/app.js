@@ -198,7 +198,23 @@ class ProjectManager {
         const grid = document.getElementById('userSelectionGrid');
         if (!grid) return;
         
-        // Default to admin if no users available
+        // Ensure Admin user always exists
+        const adminExists = this.users.some(u => u.id === 'admin');
+        if (!adminExists) {
+            // Create default Admin user
+            const adminUser = {
+                id: 'admin',
+                name: 'Admin User',
+                email: 'admin@equitashealth.com',
+                role: 'Administrator',
+                department: 'Safety',
+                avatar: 'A'
+            };
+            this.users.unshift(adminUser);
+            this.saveUsers();
+        }
+        
+        // If still no users (shouldn't happen now), force create admin and default
         if (this.users.length === 0) {
             this.currentUser = 'admin';
             this.saveCurrentUser();
