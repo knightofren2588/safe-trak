@@ -1736,8 +1736,9 @@ END:VCALENDAR`;
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-${this.getStatusColor(project)}">
-                        ${this.getStatusText(project)}
+                    <span class="status-badge ${this.getEnhancedStatusClass(project)}" role="status" aria-label="Project status: ${this.getStatusDisplayText(project.status)}">
+                        <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
+                        ${this.getStatusDisplayText(project.status)}
                     </span>
                     <span class="text-muted small">${project.progress}%</span>
                     <button onclick="projectManager.editProjectModal(${project.id})" class="btn btn-sm btn-outline-primary">
@@ -1805,7 +1806,7 @@ END:VCALENDAR`;
                         <span class="status-badge ${this.getEnhancedStatusClass(project)} me-2" role="status" aria-label="Project status: ${this.getStatusDisplayText(project.status)}">
                             <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
                             ${this.getStatusDisplayText(project.status)}
-                    </span>
+                        </span>
                         <select class="form-select form-select-sm status-dropdown" onchange="projectManager.changeProjectStatus(${project.id}, this.value)">
                             <option value="active" ${project.status === 'active' ? 'selected' : ''}>Active</option>
                             <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
