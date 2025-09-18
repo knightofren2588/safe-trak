@@ -196,6 +196,16 @@ class ProjectManager {
     // ADMIN PASSWORD VERIFICATION
     // ========================================
     
+    requestAdminAccess() {
+        // Store that user wants to access admin profile
+        this.pendingAdminAction = () => {
+            this.selectUserProfile('admin');
+        };
+        
+        // Show admin password modal
+        this.showAdminPasswordModal('admin profile access');
+    }
+    
     requireAdminPassword(actionCallback, actionName = 'admin function') {
         // If user is admin, check if already verified in this session
         if (this.currentUser === 'admin' && this.isAdminVerified) {
@@ -319,7 +329,7 @@ class ProjectManager {
             
             return `
                 <div class="col-md-6">
-                    <div class="user-selection-card" onclick="selectUserProfile('${user.id}')">
+                    <div class="user-selection-card" onclick="${user.id === 'admin' ? 'requestAdminAccess()' : `selectUserProfile('${user.id}')`}">
                         <div class="user-selection-avatar">
                             ${user.avatar || user.name.charAt(0).toUpperCase()}
                         </div>
@@ -329,6 +339,7 @@ class ProjectManager {
                             <div><strong>${projectCount}</strong> Projects</div>
                             <div><strong>${certCount}</strong> Certifications</div>
                         </div>
+                        ${user.id === 'admin' ? '<div class="admin-badge"><i class="fas fa-shield-alt me-1"></i>Admin Access</div>' : ''}
                     </div>
                 </div>
             `;
@@ -2476,35 +2487,33 @@ END:VCALENDAR`;
     }
 
     resetAllData() {
-        // Require admin password verification
-        this.requireAdminPassword(() => {
-            if (confirm('Are you sure you want to reset all data? This will delete all users, projects, categories, roles, and departments. This action cannot be undone.')) {
-                // Clear all stored data
-                localStorage.removeItem('safetrack_projects');
-                localStorage.removeItem('safetrack_users');
-                localStorage.removeItem('safetrack_categories');
-                localStorage.removeItem('safetrack_roles');
-                localStorage.removeItem('safetrack_departments');
-                localStorage.removeItem('safetrack_current_user');
-                localStorage.removeItem('safetrack_user_interacted');
-                
-                // Force reset to only Admin User
-        this.users = [
-            {
-                id: "admin",
-                name: "Admin User",
-                email: "admin@equitashealth.com",
-                avatar: "A"
-            }
-        ];
-        this.projects = []; // Start with empty projects
-        this.saveUsers();
+        // Admin access already verified at profile selection
+        if (confirm('Are you sure you want to reset all data? This will delete all users, projects, categories, roles, and departments. This action cannot be undone.')) {
+            // Clear all stored data
+            localStorage.removeItem('safetrack_projects');
+            localStorage.removeItem('safetrack_users');
+            localStorage.removeItem('safetrack_categories');
+            localStorage.removeItem('safetrack_roles');
+            localStorage.removeItem('safetrack_departments');
+            localStorage.removeItem('safetrack_current_user');
+            localStorage.removeItem('safetrack_user_interacted');
+            
+            // Force reset to only Admin User
+            this.users = [
+                {
+                    id: "admin",
+                    name: "Admin User",
+                    email: "admin@equitashealth.com",
+                    avatar: "A"
+                }
+            ];
+            this.projects = []; // Start with empty projects
+            this.saveUsers();
             this.saveProjects();
-        
-                // Reload the page to reset everything
-                location.reload();
-            }
-        }, 'data reset');
+            
+            // Reload the page to reset everything
+            location.reload();
+        }
     }
 
     loadSampleData() {
@@ -3409,12 +3418,10 @@ END:VCALENDAR`;
     }
 
     openUserManagement() {
-        // Require admin password verification
-        this.requireAdminPassword(() => {
-            this.renderUserManagementTable();
-            const modal = new bootstrap.Modal(document.getElementById('userManagementModal'));
-            modal.show();
-        }, 'user management');
+        // Admin access already verified at profile selection
+        this.renderUserManagementTable();
+        const modal = new bootstrap.Modal(document.getElementById('userManagementModal'));
+        modal.show();
     }
 
     populateUserDropdowns() {
@@ -4849,6 +4856,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.selectUserProfile = (userId) => {
         if (window.projectManager) {
             window.projectManager.selectUserProfile(userId);
+        }
+    };
+
+    window.requestAdminAccess = () => {
+        if (window.projectManager) {
+            window.projectManager.requestAdminAccess();
         }
     };
 
