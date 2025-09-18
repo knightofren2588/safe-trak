@@ -527,7 +527,7 @@ class ProjectManager {
             'admin': '#dc3545',        // Red (safety theme)
             'marcena': '#198754',      // Green
             'mike': '#0d6efd',         // Blue
-            'matt': '#6f42c1',         // Purple
+            'matt': '#ffc107',         // Yellow
             'tyson': '#fd7e14',        // Orange
             'default': '#6c757d'       // Gray for unknown users
         };
@@ -3404,10 +3404,10 @@ END:VCALENDAR`;
                 </td>
                 <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     ${this.canUserEditProject(project) ? `
-                        <div class="btn-group btn-group-sm">
+                    <div class="btn-group btn-group-sm">
                             <button onclick="projectManager.editProjectModal(${project.id})" class="btn btn-outline-primary" title="Edit Project">
-                                <i class="fas fa-edit"></i>
-                            </button>
+                            <i class="fas fa-edit"></i>
+                        </button>
                             <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-outline-success" title="Update Progress">
                                 <i class="fas fa-chart-line"></i>
                             </button>
@@ -3418,9 +3418,9 @@ END:VCALENDAR`;
                                 <i class="fas fa-images"></i>
                             </button>` : ''}
                             <button onclick="projectManager.deleteProject(${project.id})" class="btn btn-outline-danger" title="Delete Project">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                     ` : `
                         <div class="btn-group btn-group-sm">
                             <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary" title="Project Notes">
