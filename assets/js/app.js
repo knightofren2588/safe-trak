@@ -565,6 +565,7 @@ class ProjectManager {
             'marcena': '#198754',      // Green
             'mike': '#0d6efd',         // Blue
             'matt': '#ffc107',         // Yellow
+            'matthoyt': '#ffc107',     // Yellow (actual user ID)
             'tyson': '#fd7e14',        // Orange
             'default': '#6c757d'       // Gray for unknown users
         };
@@ -572,25 +573,18 @@ class ProjectManager {
         // Convert userId to lowercase for consistent matching
         const normalizedUserId = userId.toLowerCase();
         
-        // Debug logging to see what's happening
-        console.log(`Getting color for user: "${userId}" (normalized: "${normalizedUserId}")`);
-        
         // Use user ID to get consistent color, or generate from hash if not predefined
         if (userColors[normalizedUserId]) {
-            console.log(`Found color for ${normalizedUserId}: ${userColors[normalizedUserId]}`);
             return userColors[normalizedUserId];
         }
         
         // Generate consistent color from user ID hash
-        console.log(`No predefined color found for ${normalizedUserId}, using hash-based color`);
         const colors = ['#198754', '#0d6efd', '#fd7e14', '#20c997', '#6f42c1', '#d63384'];
         let hash = 0;
         for (let i = 0; i < userId.length; i++) {
             hash = userId.charCodeAt(i) + ((hash << 5) - hash);
         }
-        const hashColor = colors[Math.abs(hash) % colors.length];
-        console.log(`Hash-based color for ${userId}: ${hashColor}`);
-        return hashColor;
+        return colors[Math.abs(hash) % colors.length];
     }
     
     getUserColorLight(userId) {
