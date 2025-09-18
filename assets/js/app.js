@@ -87,6 +87,7 @@ class ProjectManager {
         // Define role hierarchy (higher number = higher priority)
         const roleHierarchy = {
             'Administrator': 100,
+            'Associate Director of Safety': 95,
             'Associate Director of Security': 90,
             'Associate Director': 85,
             'Director': 80,
@@ -101,11 +102,14 @@ class ProjectManager {
             if (a.id === 'admin') return -1;
             if (b.id === 'admin') return 1;
             
-            // Get role priorities
-            const aRole = a.role || 'Team Member';
-            const bRole = b.role || 'Team Member';
+            // Get role priorities (trim whitespace and handle case variations)
+            const aRole = (a.role || 'Team Member').trim();
+            const bRole = (b.role || 'Team Member').trim();
             const aPriority = roleHierarchy[aRole] || roleHierarchy['default'];
             const bPriority = roleHierarchy[bRole] || roleHierarchy['default'];
+            
+            // Debug logging
+            console.log(`Comparing ${a.name} (${aRole}, priority: ${aPriority}) vs ${b.name} (${bRole}, priority: ${bPriority})`);
             
             // Sort by priority (descending), then by name (ascending)
             if (aPriority !== bPriority) {
