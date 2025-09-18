@@ -205,28 +205,9 @@
                         </button>
                     </div>
                     
-                    <!-- User Selection Dropdown -->
-                    <div class="dropdown me-3">
-                        <button class="btn btn-outline-safety dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-user me-2"></i>
-                            <span id="currentUserName">Select User</span>
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="userDropdown">
-                            <li><h6 class="dropdown-header">Safety Team Members</h6></li>
-                            <li><a class="dropdown-item" href="#" onclick="switchUser('admin')">
-                                <i class="fas fa-user-shield me-2"></i>Admin User
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="openUserModal()">
-                                <i class="fas fa-plus me-2"></i>Add New User
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="openUserManagement()">
-                                <i class="fas fa-users-cog me-2"></i>Manage Users
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                    </div>
+                    <!-- User switching removed for security - users locked to selected profile -->
                     
-                    <!-- View Toggle Switch -->
+                    <!-- Project View Toggle -->
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="viewToggle" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-eye me-2"></i>
@@ -238,13 +219,16 @@
                                 <i class="fas fa-user me-2"></i>My Projects Only
                             </a></li>
                             <li><a class="dropdown-item" href="#" onclick="toggleProjectView('all')">
-                                <i class="fas fa-users me-2"></i>All Projects View
+                                <i class="fas fa-users me-2"></i>All Team Projects
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="openUserManagement()">
+                                <i class="fas fa-users-cog me-2"></i>Manage Team Members
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="#" onclick="resetAllData()">
                                 <i class="fas fa-trash me-2"></i>Reset All Data
                             </a></li>
-                            <!-- Logout removed - no authentication system -->
                         </ul>
                     </div>
                     <button class="btn btn-safety btn-enhanced btn-press hover-lift" onclick="openProjectModal()" 

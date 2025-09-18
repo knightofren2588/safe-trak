@@ -65,6 +65,9 @@ class ProjectManager {
         
         // Simple authentication system
         this.isAuthenticated = false;
+        
+        // Project view mode (personal vs all team projects)
+        this.projectViewMode = localStorage.getItem('safetrack_project_view_mode') || 'personal';
     }
 
     // ========================================
@@ -2479,8 +2482,8 @@ END:VCALENDAR`;
     updateProjectTableTitle() {
         const titleElement = document.getElementById('projectTableTitle');
         if (titleElement) {
-            if (this.currentUser === 'all') {
-                titleElement.textContent = 'All Safety Projects';
+            if (this.projectViewMode === 'all') {
+                titleElement.textContent = 'All Team Safety Projects';
             } else {
                 const user = this.users.find(u => u.id === this.currentUser);
                 const userName = user ? user.name : 'User';
@@ -2659,9 +2662,11 @@ END:VCALENDAR`;
     renderDashboardStats() {
         let projectsToCount = this.projects;
         
-        // Filter by current user if not viewing all projects
-        if (this.currentUser !== 'all') {
-            projectsToCount = projectsToCount.filter(p => p.createdBy === this.currentUser);
+        // Filter by current user if not viewing all team projects
+        if (this.projectViewMode !== 'all') {
+            projectsToCount = projectsToCount.filter(p => 
+                p.createdBy === this.currentUser || p.assignedTo === this.currentUser
+            );
         }
         
         const activeProjects = projectsToCount.filter(p => p.status === 'active').length;
@@ -2719,10 +2724,11 @@ END:VCALENDAR`;
     renderProjectTable(projectsToRender = null) {
         const tbody = document.getElementById('projectTableBody');
         
-        // If no specific projects provided, filter by current user
+        // If no specific projects provided, filter based on view mode
         let projects = projectsToRender;
         if (!projects) {
-            if (this.currentUser === 'all') {
+            if (this.projectViewMode === 'all') {
+                // Show all projects but organized by user
                 projects = this.projects;
             } else {
                 // Show only projects created by or assigned to current user
@@ -3163,75 +3169,39 @@ END:VCALENDAR`;
     }
 
     switchUser(userId) {
-        // Only allow switching to actual users, never to 'all'
-        if (userId !== 'all') {
-            this.currentUser = userId;
-            localStorage.setItem('lastActualUser', userId);
-        }
-        this.saveCurrentUser();
-        this.updateUserInterface();
-        this.updateViewModeInterface();
-        this.render();
-        // TEMPORARILY DISABLED: Certification features
-        // this.renderCertificationTable();
-        // this.updateCertificationStats();
+        // DISABLED: User switching removed for security
+        // Users are locked to their selected profile after login
+        console.log('User switching disabled for security - users locked to selected profile');
+        this.showNotification('User switching disabled. Logout to change user profile.', 'warning');
     }
 
     toggleProjectView(viewMode) {
-        if (viewMode === 'all') {
-            // Save current actual user before switching to 'all' mode
-            if (this.currentUser !== 'all') {
-                localStorage.setItem('lastActualUser', this.currentUser);
-            }
-            this.currentUser = 'all';
-        } else {
-            // Switching to personal view - restore the last actual user or default to admin
-            const lastActualUser = localStorage.getItem('lastActualUser') || 'admin';
-            this.currentUser = lastActualUser;
-        }
-        this.saveCurrentUser();
-        this.updateUserInterface();
+        // Store the view mode without changing the current user
+        this.projectViewMode = viewMode;
+        localStorage.setItem('safetrack_project_view_mode', viewMode);
+        
         this.updateViewModeInterface();
-        this.render();
-        // TEMPORARILY DISABLED: Certification features
-        // this.renderCertificationTable();
-        // this.updateCertificationStats();
+        this.render(); // Re-render projects with new view mode
     }
 
     updateUserInterface() {
-        const currentUserName = document.getElementById('currentUserName');
         const welcomeUsername = document.getElementById('welcomeUsername');
         const welcomeUserRole = document.getElementById('welcomeUserRole');
         
-        // User dropdown should NEVER show "All" - only actual user names
-        if (this.currentUser === 'all') {
-            // When in "All Projects" mode, show the last selected actual user or default
-            const lastActualUser = localStorage.getItem('lastActualUser') || 'admin';
-            const user = this.users.find(u => u.id === lastActualUser);
-            const userName = user ? user.name : 'Admin User';
-            const userRole = user ? (user.role || 'Team Member') : 'Administrator';
-            
-            currentUserName.textContent = userName;
-            if (welcomeUsername) welcomeUsername.textContent = userName;
-            if (welcomeUserRole) welcomeUserRole.textContent = userRole;
-        } else {
-            const user = this.users.find(u => u.id === this.currentUser);
-            const userName = user ? user.name : 'Select User';
-            const userRole = user ? (user.role || 'Team Member') : 'Administrator';
-            
-            currentUserName.textContent = userName;
-            if (welcomeUsername) welcomeUsername.textContent = userName;
-            if (welcomeUserRole) welcomeUserRole.textContent = userRole;
-            
-            // Remember the last actual user selected
-            localStorage.setItem('lastActualUser', this.currentUser);
-        }
+        // Always show the current actual user (no more 'all' user switching)
+        const user = this.users.find(u => u.id === this.currentUser);
+        const userName = user ? user.name : 'Admin User';
+        const userRole = user ? (user.role || 'Team Member') : 'Administrator';
+        
+        // Update welcome banner
+        if (welcomeUsername) welcomeUsername.textContent = userName;
+        if (welcomeUserRole) welcomeUserRole.textContent = userRole;
     }
 
     updateViewModeInterface() {
         const currentViewMode = document.getElementById('currentViewMode');
-        if (this.currentUser === 'all') {
-            currentViewMode.textContent = 'All Projects View';
+        if (this.projectViewMode === 'all') {
+            currentViewMode.textContent = 'All Team Projects';
         } else {
             currentViewMode.textContent = 'My Projects';
         }
