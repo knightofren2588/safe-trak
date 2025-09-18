@@ -2277,43 +2277,55 @@ END:VCALENDAR`;
                 ).join('');
         }
         
-        // Update main user dropdown in header
-        const dropdown = document.querySelector('.dropdown-menu');
-        
-        if (dropdown) {
-            // Clear existing content
-            dropdown.innerHTML = '';
-            
-            // Add header
-            dropdown.innerHTML += '<li><h6 class="dropdown-header">Project Views</h6></li>';
-            
-            // Add "All Projects View" with active indicator
-            const allActiveClass = this.currentUser === 'all' ? ' active' : '';
-            dropdown.innerHTML += `<li><a class="dropdown-item${allActiveClass}" href="#" onclick="switchUser('all')"><i class="fas fa-users me-2"></i>All Projects View</a></li>`;
-            dropdown.innerHTML += '<li><hr class="dropdown-divider"></li>';
-            dropdown.innerHTML += '<li><h6 class="dropdown-header">Individual Views</h6></li>';
-            
-            // Add each user with active indicator and project count
-            this.users.forEach(user => {
-                const escapedId = user.id.replace(/'/g, "\\'");
-                const escapedName = this.escapeHtml(user.name);
-                const activeClass = this.currentUser === user.id ? ' active' : '';
-                const userIcon = user.id === 'admin' ? 'fas fa-user-shield' : 'fas fa-user';
-                
-                // Count projects for this user
-                const userProjectCount = this.projects.filter(p => p.createdBy === user.id || p.assignedTo === user.id).length;
-                const projectBadge = userProjectCount > 0 ? ` <span class="badge bg-secondary">${userProjectCount}</span>` : '';
-                
-                dropdown.innerHTML += `<li><a class="dropdown-item${activeClass}" href="#" onclick="switchUser('${escapedId}')"><i class="${userIcon} me-2"></i>${escapedName}${projectBadge}</a></li>`;
-            });
-            
-            // Add management options
-            dropdown.innerHTML += '<li><hr class="dropdown-divider"></li>';
-            dropdown.innerHTML += '<li><a class="dropdown-item" href="#" onclick="openUserModal()"><i class="fas fa-plus me-2"></i>Add New User</a></li>';
-            dropdown.innerHTML += '<li><a class="dropdown-item" href="#" onclick="openUserManagement()"><i class="fas fa-users-cog me-2"></i>Manage Users</a></li>';
-            dropdown.innerHTML += '<li><hr class="dropdown-divider"></li>';
-            dropdown.innerHTML += '<li><a class="dropdown-item text-danger" href="#" onclick="resetAllData()"><i class="fas fa-redo-alt me-2"></i>Reset All Data</a></li>';
+        // Update compliance assignment dropdown
+        const complianceAssignedTo = document.getElementById('complianceAssignedTo');
+        if (complianceAssignedTo) {
+            complianceAssignedTo.innerHTML = '<option value="">Select Team Member</option>' +
+                this.users.map(user => 
+                    `<option value="${user.id}">${user.name}${user.role ? ` (${user.role})` : ''}</option>`
+                ).join('');
         }
+        
+        // DO NOT touch the header user dropdown - it's handled by static HTML and updateUserInterface()
+        // The user dropdown should remain separate from project view toggle
+        
+        // Update the user dropdown with dynamic users
+        this.updateUserDropdownUsers();
+    }
+    
+    updateUserDropdownUsers() {
+        // Find the user dropdown specifically (not the view toggle dropdown)
+        const userDropdown = document.querySelector('#userDropdown + .dropdown-menu');
+        if (!userDropdown) return;
+        
+        // Find the divider after the existing users
+        const existingDivider = userDropdown.querySelector('hr.dropdown-divider');
+        if (!existingDivider) return;
+        
+        // Remove any dynamically added users (everything between header and first divider)
+        const header = userDropdown.querySelector('.dropdown-header');
+        if (header && header.nextElementSibling) {
+            let nextElement = header.nextElementSibling;
+            while (nextElement && nextElement !== existingDivider) {
+                const toRemove = nextElement;
+                nextElement = nextElement.nextElementSibling;
+                if (toRemove.querySelector('a[onclick*="switchUser"]') && !toRemove.querySelector('a[onclick*="openUser"]')) {
+                    toRemove.remove();
+                }
+            }
+        }
+        
+        // Add dynamic users (excluding admin which is already in static HTML)
+        const dynamicUsers = this.users.filter(user => user.id !== 'admin');
+        dynamicUsers.forEach(user => {
+            const li = document.createElement('li');
+            const escapedId = user.id.replace(/'/g, "\\'");
+            const escapedName = this.escapeHtml(user.name);
+            li.innerHTML = `<a class="dropdown-item" href="#" onclick="switchUser('${escapedId}')">
+                <i class="fas fa-user me-2"></i>${escapedName}
+            </a>`;
+            existingDivider.parentNode.insertBefore(li, existingDivider);
+        });
     }
 
     handleScreenshotUpload() {
