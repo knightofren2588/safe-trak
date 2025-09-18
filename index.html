@@ -407,7 +407,7 @@
                             </select>
                             
                             <!-- Advanced Filters Button -->
-                            <button class="btn btn-outline-secondary" type="button" id="moreFiltersBtn" data-bs-toggle="collapse" data-bs-target="#advancedFilters" aria-expanded="false" aria-controls="advancedFilters" onclick="toggleAdvancedFilters()">
+                            <button class="btn btn-outline-secondary" type="button" id="moreFiltersBtn" onclick="toggleAdvancedFilters()">
                                 <i class="fas fa-filter me-1"></i>More Filters
                             </button>
                             
@@ -464,7 +464,7 @@
                 </div>
                 
                 <!-- Advanced Filters (Collapsible) -->
-                <div class="collapse" id="advancedFilters">
+                <div id="advancedFilters" style="display: none;">
                     <div class="px-4 py-3 bg-light border-bottom">
                         <div class="row g-3">
                             <div class="col-md-3">
