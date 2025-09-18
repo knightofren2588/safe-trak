@@ -2129,7 +2129,11 @@ END:VCALENDAR`;
     }
 
     switchUser(userId) {
-        this.currentUser = userId;
+        // Only allow switching to actual users, never to 'all'
+        if (userId !== 'all') {
+            this.currentUser = userId;
+            localStorage.setItem('lastActualUser', userId);
+        }
         this.saveCurrentUser();
         this.updateUserInterface();
         this.updateViewModeInterface();
@@ -2138,12 +2142,15 @@ END:VCALENDAR`;
 
     toggleProjectView(viewMode) {
         if (viewMode === 'all') {
+            // Save current actual user before switching to 'all' mode
+            if (this.currentUser !== 'all') {
+                localStorage.setItem('lastActualUser', this.currentUser);
+            }
             this.currentUser = 'all';
         } else {
-            // If switching to personal view but currently on 'all', switch to admin
-            if (this.currentUser === 'all') {
-                this.currentUser = 'admin';
-            }
+            // Switching to personal view - restore the last actual user or default to admin
+            const lastActualUser = localStorage.getItem('lastActualUser') || 'admin';
+            this.currentUser = lastActualUser;
         }
         this.saveCurrentUser();
         this.updateUserInterface();
@@ -2153,11 +2160,18 @@ END:VCALENDAR`;
 
     updateUserInterface() {
         const currentUserName = document.getElementById('currentUserName');
+        
+        // User dropdown should NEVER show "All" - only actual user names
         if (this.currentUser === 'all') {
-            currentUserName.textContent = 'All Users';
+            // When in "All Projects" mode, show the last selected actual user or default
+            const lastActualUser = localStorage.getItem('lastActualUser') || 'admin';
+            const user = this.users.find(u => u.id === lastActualUser);
+            currentUserName.textContent = user ? user.name : 'Admin User';
         } else {
             const user = this.users.find(u => u.id === this.currentUser);
             currentUserName.textContent = user ? user.name : 'Select User';
+            // Remember the last actual user selected
+            localStorage.setItem('lastActualUser', this.currentUser);
         }
     }
 
