@@ -70,7 +70,7 @@ class ProjectManager {
         this.projectViewMode = localStorage.getItem('safetrack_project_view_mode') || 'personal';
         
         // Project notes system
-        this.projectNotes = this.loadProjectNotes();
+        this.projectNotes = {};
         this.currentNotesProjectId = null;
         this.userNotifications = this.loadUserNotifications();
         
@@ -313,7 +313,7 @@ class ProjectManager {
         `).join('');
     }
     
-    addProjectNote(projectId, noteText) {
+    async addProjectNote(projectId, noteText) {
         if (!noteText.trim()) {
             this.showNotification('Please enter a note', 'warning');
             return;
@@ -336,7 +336,7 @@ class ProjectManager {
         }
         
         this.projectNotes[numericProjectId].unshift(note); // Add to beginning
-        this.saveProjectNotes();
+        await this.saveProjectNotes();
         this.renderProjectNotes(numericProjectId);
         
         // Add notification for project owner(s)
@@ -348,7 +348,7 @@ class ProjectManager {
         this.showNotification('Note added successfully', 'success');
     }
     
-    deleteProjectNote(projectId, noteId) {
+    async deleteProjectNote(projectId, noteId) {
         if (!confirm('Are you sure you want to delete this note?')) {
             return;
         }
@@ -358,19 +358,46 @@ class ProjectManager {
         
         if (this.projectNotes[numericProjectId]) {
             this.projectNotes[numericProjectId] = this.projectNotes[numericProjectId].filter(note => note.id !== noteId);
-            this.saveProjectNotes();
+            await this.saveProjectNotes();
             this.renderProjectNotes(numericProjectId);
             this.showNotification('Note deleted', 'success');
         }
     }
     
-    saveProjectNotes() {
+    async saveProjectNotes() {
+        // Save to local storage
         localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
+        
+        // Save to cloud storage if connected
+        if (this.cloudStorage.isConnected) {
+            try {
+                await this.cloudStorage.saveToCloud('project_notes', this.projectNotes);
+                console.log('Project notes saved to cloud');
+            } catch (error) {
+                console.error('Failed to save project notes to cloud:', error);
+            }
+        }
     }
     
-    loadProjectNotes() {
+    async loadProjectNotes() {
+        // Try to load from cloud first
+        if (this.cloudStorage.isConnected) {
+            try {
+                const cloudNotes = await this.cloudStorage.loadFromCloud('project_notes');
+                if (cloudNotes && Object.keys(cloudNotes).length > 0) {
+                    console.log('Loaded project notes from cloud');
+                    return cloudNotes;
+                }
+            } catch (error) {
+                console.error('Failed to load project notes from cloud:', error);
+            }
+        }
+        
+        // Fallback to local storage
         const stored = localStorage.getItem('safetrack_project_notes');
-        return stored ? JSON.parse(stored) : {};
+        const localNotes = stored ? JSON.parse(stored) : {};
+        console.log('Loaded project notes from local storage');
+        return localNotes;
     }
 
     // ========================================
@@ -5203,6 +5230,15 @@ window.openProjectModal = () => {
 document.addEventListener('DOMContentLoaded', function() {
     window.projectManager = new ProjectManager();
     
+    // Load project notes after initialization
+    window.projectManager.loadProjectNotes().then(notes => {
+        window.projectManager.projectNotes = notes;
+        console.log('Project notes loaded successfully');
+    }).catch(error => {
+        console.error('Failed to load project notes:', error);
+        window.projectManager.projectNotes = {};
+    });
+    
     // Check authentication after ProjectManager is created
     window.projectManager.checkAuthentication();
     
@@ -5486,11 +5522,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Project notes form submission handler
-    document.getElementById('addNoteForm').addEventListener('submit', function(e) {
+    document.getElementById('addNoteForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const noteText = document.getElementById('noteText').value;
         if (noteText && window.projectManager && window.projectManager.currentNotesProjectId) {
-            window.projectManager.addProjectNote(window.projectManager.currentNotesProjectId, noteText);
+            await window.projectManager.addProjectNote(window.projectManager.currentNotesProjectId, noteText);
         }
     });
 });
