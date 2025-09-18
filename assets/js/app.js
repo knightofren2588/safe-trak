@@ -2728,7 +2728,7 @@ END:VCALENDAR`;
         let projects = projectsToRender;
         if (!projects) {
             if (this.projectViewMode === 'all') {
-                // Show all projects but organized by user
+                // Show all projects (read-only view for non-owners)
                 projects = this.projects;
             } else {
                 // Show only projects created by or assigned to current user
@@ -2780,12 +2780,16 @@ END:VCALENDAR`;
                             <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
                             ${this.getStatusDisplayText(project.status)}
                     </span>
-                        <select class="form-select form-select-sm status-dropdown" onchange="projectManager.changeProjectStatus(${project.id}, this.value)">
-                            <option value="active" ${project.status === 'active' ? 'selected' : ''}>Active</option>
-                            <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
-                            <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Completed</option>
-                            <option value="cancelled" ${project.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-                        </select>
+                        ${this.canUserEditProject(project) ? `
+                            <select class="form-select form-select-sm status-dropdown" onchange="projectManager.changeProjectStatus(${project.id}, this.value)">
+                                <option value="active" ${project.status === 'active' ? 'selected' : ''}>Active</option>
+                                <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
+                                <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                <option value="cancelled" ${project.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                            </select>
+                        ` : `
+                            <span class="text-muted small">${this.getStatusDisplayText(project.status)}</span>
+                        `}
                     </div>
                 </td>
                 <td>
@@ -2823,44 +2827,62 @@ END:VCALENDAR`;
                     ` : '<span class="text-muted small">No screenshots</span>'}
                 </td>
                 <td>
-                    <div class="d-flex flex-wrap gap-1">
-                        <button onclick="projectManager.changeProjectStatus(${project.id}, 'active')" 
-                                class="status-change-btn active" title="Set to Active">
-                            <i class="fas fa-play"></i>
-                        </button>
-                        <button onclick="projectManager.changeProjectStatus(${project.id}, 'on-hold')" 
-                                class="status-change-btn on-hold" title="Set to On Hold">
-                            <i class="fas fa-pause"></i>
-                        </button>
-                        <button onclick="projectManager.changeProjectStatus(${project.id}, 'completed')" 
-                                class="status-change-btn completed" title="Mark as Completed">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button onclick="projectManager.changeProjectStatus(${project.id}, 'cancelled')" 
-                                class="status-change-btn cancelled" title="Cancel Project">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
+                    ${this.canUserEditProject(project) ? `
+                        <div class="d-flex flex-wrap gap-1">
+                            <button onclick="projectManager.changeProjectStatus(${project.id}, 'active')" 
+                                    class="status-change-btn active" title="Set to Active">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button onclick="projectManager.changeProjectStatus(${project.id}, 'on-hold')" 
+                                    class="status-change-btn on-hold" title="Set to On Hold">
+                                <i class="fas fa-pause"></i>
+                            </button>
+                            <button onclick="projectManager.changeProjectStatus(${project.id}, 'completed')" 
+                                    class="status-change-btn completed" title="Mark as Completed">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button onclick="projectManager.changeProjectStatus(${project.id}, 'cancelled')" 
+                                    class="status-change-btn cancelled" title="Cancel Project">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    ` : `
+                        <span class="text-muted small">View Only</span>
+                    `}
                 </td>
                 <td>
-                    <div class="btn-group btn-group-sm">
-                        <button onclick="projectManager.editProjectModal(${project.id})" class="btn btn-outline-primary" title="Edit Project">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-outline-success" title="Update Progress">
-                            <i class="fas fa-chart-line"></i>
-                        </button>
-                        ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
-                            <i class="fas fa-images"></i>
-                        </button>` : ''}
-                        <button onclick="projectManager.deleteProject(${project.id})" class="btn btn-outline-danger" title="Delete Project">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
+                    ${this.canUserEditProject(project) ? `
+                        <div class="btn-group btn-group-sm">
+                            <button onclick="projectManager.editProjectModal(${project.id})" class="btn btn-outline-primary" title="Edit Project">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-outline-success" title="Update Progress">
+                                <i class="fas fa-chart-line"></i>
+                            </button>
+                            ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
+                                <i class="fas fa-images"></i>
+                            </button>` : ''}
+                            <button onclick="projectManager.deleteProject(${project.id})" class="btn btn-outline-danger" title="Delete Project">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    ` : `
+                        <div class="btn-group btn-group-sm">
+                            ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
+                                <i class="fas fa-images"></i>
+                            </button>` : ''}
+                            <span class="text-muted small">View Only</span>
+                        </div>
+                    `}
                 </td>
             </tr>
         `;
         }).join('');
+    }
+
+    canUserEditProject(project) {
+        // Users can only edit projects they created or are assigned to
+        return project.createdBy === this.currentUser || project.assignedTo === this.currentUser;
     }
 
     editProjectModal(id) {
@@ -3196,6 +3218,16 @@ END:VCALENDAR`;
         // Update welcome banner
         if (welcomeUsername) welcomeUsername.textContent = userName;
         if (welcomeUserRole) welcomeUserRole.textContent = userRole;
+        
+        // Show/hide admin-only options
+        const adminOptions = document.getElementById('adminOnlyOptions');
+        if (adminOptions) {
+            if (this.currentUser === 'admin') {
+                adminOptions.style.display = 'block';
+            } else {
+                adminOptions.style.display = 'none';
+            }
+        }
     }
 
     updateViewModeInterface() {
