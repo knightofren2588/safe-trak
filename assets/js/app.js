@@ -941,71 +941,7 @@ END:VCALENDAR`;
         this.showConnectionStatus();
     }
 
-    // Authentication handlers
-    async handleLogin() {
-        const username = document.getElementById('loginUsername').value;
-        const password = document.getElementById('loginPassword').value;
-        const errorDiv = document.getElementById('loginError');
-
-        this.showLoginLoading(true);
-        errorDiv.classList.add('d-none');
-
-        const result = await this.cloudStorage.signInWithUsernameAndPassword(username, password);
-        
-        if (result.success) {
-            // Success - auth state listener will handle UI updates
-            this.clearLoginForm();
-        } else {
-            errorDiv.textContent = result.error;
-            errorDiv.classList.remove('d-none');
-        }
-        
-        this.showLoginLoading(false);
-    }
-
-    async handleRegister() {
-        console.log('handleRegister called');
-        const username = document.getElementById('registerUsername').value;
-        const password = document.getElementById('registerPassword').value;
-        const displayName = document.getElementById('registerName').value;
-        const errorDiv = document.getElementById('loginError');
-
-        console.log('Registration data:', { username, password: '***', displayName });
-
-        // Basic validation
-        if (username.length < 3) {
-            errorDiv.textContent = 'Username must be at least 3 characters long';
-            errorDiv.classList.remove('d-none');
-            return;
-        }
-
-        if (password.length < 6) {
-            errorDiv.textContent = 'Password must be at least 6 characters long';
-            errorDiv.classList.remove('d-none');
-            return;
-        }
-
-        this.showLoginLoading(true);
-        errorDiv.classList.add('d-none');
-
-        console.log('Calling createUserWithUsernameAndPassword...');
-        const result = await this.cloudStorage.createUserWithUsernameAndPassword(username, password, displayName);
-        console.log('Registration result:', result);
-        
-        if (result.success) {
-            console.log('Registration successful');
-            // Success - auth state listener will handle UI updates
-            this.clearLoginForm();
-        } else {
-            console.log('Registration failed:', result.error);
-            errorDiv.textContent = result.error;
-            errorDiv.classList.remove('d-none');
-        }
-        
-        this.showLoginLoading(false);
-    }
-
-    // Logout method removed - no authentication system
+    // Old authentication methods removed
 
     // Export functionality
     exportToExcel() {
