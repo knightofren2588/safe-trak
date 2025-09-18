@@ -115,7 +115,7 @@ class ProjectManager {
         if (main) main.style.display = 'block';
     }
     
-    handleLogin(username, password) {
+    async handleLogin(username, password) {
         // Hardcoded credentials
         const validCredentials = [
             { username: 'Safety', password: 'BeSafe2025!' }
@@ -4409,17 +4409,7 @@ END:VCALENDAR`;
 }
 
 // Modal functions
-function openProjectModal() {
-    // Reset form for new project
-    document.getElementById('projectForm').reset();
-    document.getElementById('modalTitle').textContent = 'New Safety Project';
-    document.getElementById('submitText').textContent = 'Create Safety Project';
-    projectManager.currentEditId = null;
-    
-    // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('projectModal'));
-    modal.show();
-}
+// openProjectModal moved to global window function above
 
 function openUserModal() {
     // Reset form for new user
@@ -4520,6 +4510,26 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         document.getElementById(targetTab).classList.remove('d-none');
     });
 });
+
+// Critical global functions that need to be available immediately
+window.logout = () => {
+    if (window.projectManager) {
+        window.projectManager.logout();
+    }
+};
+
+window.openProjectModal = () => {
+    if (window.projectManager) {
+        window.projectManager.openProjectModal();
+    } else {
+        // Fallback if projectManager not ready
+        document.getElementById('projectForm').reset();
+        document.getElementById('modalTitle').textContent = 'New Safety Project';
+        document.getElementById('submitText').textContent = 'Create Safety Project';
+        const modal = new bootstrap.Modal(document.getElementById('projectModal'));
+        modal.show();
+    }
+};
 
 // User management is now handled by the dropdown
 
@@ -4692,12 +4702,6 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Global authentication functions
-    window.logout = () => {
-        if (window.projectManager) {
-            window.projectManager.logout();
-        }
-    };
-
     window.selectUserProfile = (userId) => {
         if (window.projectManager) {
             window.projectManager.selectUserProfile(userId);
