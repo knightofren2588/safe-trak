@@ -2588,7 +2588,7 @@ END:VCALENDAR`;
                         <i class="fas ${this.getCategoryIcon(project.category)}"></i>
                     </div>
                     <div>
-                        <h6 class="mb-1 fw-bold">${project.name}</h6>
+                        <h6 class="mb-1 fw-bold">${this.escapeHtml(project.name)}</h6>
                         <small class="text-muted">Due: ${this.formatDate(project.dueDate)}</small>
                     </div>
                 </div>
@@ -2653,8 +2653,8 @@ END:VCALENDAR`;
                             <i class="fas ${this.getCategoryIcon(project.category)} small"></i>
                         </div>
                         <div>
-                            <div class="fw-bold">${project.name}</div>
-                            <small class="text-muted">${project.description || 'No description'}</small>
+                            <div class="fw-bold">${this.escapeHtml(project.name)}</div>
+                            <small class="text-muted">${this.escapeHtml(project.description || 'No description')}</small>
                         </div>
                     </div>
                 </td>
@@ -3140,7 +3140,7 @@ END:VCALENDAR`;
                     <div class="d-flex align-items-center">
                         <div class="user-avatar me-3" title="${user.name}">${user.avatar}</div>
                         <div>
-                            <div class="fw-bold">${user.name}</div>
+                            <div class="fw-bold">${this.escapeHtml(user.name)}</div>
                             <small class="text-muted">ID: ${user.id}</small>
                         </div>
                     </div>
