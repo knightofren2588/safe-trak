@@ -354,16 +354,16 @@ body::after {
    👤 USER SELECTION MODAL
 ======================================== */
 .user-selection-card {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
     border: 2px solid var(--gray-200);
-    border-radius: var(--border-radius-lg);
-    padding: 20px;
+    border-radius: 12px;
     text-align: center;
     transition: all 0.3s ease;
     cursor: pointer;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .user-selection-card:hover {
@@ -442,33 +442,63 @@ body::after {
 
 /* Compact user selection cards */
 .user-selection-card-compact {
-    padding: 15px;
-    min-height: auto;
+    padding: 20px 15px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
 }
 
 .user-selection-avatar-compact {
-    width: 45px;
-    height: 45px;
-    font-size: 1.2rem;
-    margin-bottom: 10px;
+    width: 50px;
+    height: 50px;
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.user-selection-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    line-height: 1.2;
+}
+
+.user-selection-role {
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    margin-bottom: 12px;
+    line-height: 1.3;
+    min-height: 2.6em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .user-selection-stats-compact {
     font-size: 0.75rem;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
+    color: var(--gray-500);
+    margin-top: auto;
 }
 
 .user-selection-stats-compact span {
     display: block;
+    line-height: 1.2;
 }
 
 .admin-badge-compact {
-    padding: 2px 6px;
-    font-size: 0.6rem;
-    top: 8px;
-    right: 8px;
+    padding: 3px 8px;
+    font-size: 0.65rem;
+    top: 10px;
+    right: 10px;
+    border-radius: 12px;
+    font-weight: 600;
 }
 
 .admin-badge {

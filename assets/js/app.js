@@ -108,9 +108,6 @@ class ProjectManager {
             const aPriority = roleHierarchy[aRole] || roleHierarchy['default'];
             const bPriority = roleHierarchy[bRole] || roleHierarchy['default'];
             
-            // Debug logging
-            console.log(`Comparing ${a.name} (${aRole}, priority: ${aPriority}) vs ${b.name} (${bRole}, priority: ${bPriority})`);
-            
             // Sort by priority (descending), then by name (ascending)
             if (aPriority !== bPriority) {
                 return bPriority - aPriority;
@@ -809,7 +806,7 @@ class ProjectManager {
             const certCount = this.certifications.filter(c => c.userId === user.id).length;
             
             return `
-                <div class="col-md-4 col-lg-3">
+                <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
                     <div class="user-selection-card user-selection-card-compact" onclick="${user.id === 'admin' ? 'requestAdminAccess()' : `selectUserProfile('${user.id}')`}">
                         <div class="user-selection-avatar user-selection-avatar-compact">
                             ${user.avatar || user.name.charAt(0).toUpperCase()}
