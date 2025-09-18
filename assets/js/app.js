@@ -63,7 +63,113 @@ class ProjectManager {
         this.initializeQuoteSystem();
         this.currentQuoteIndex = 0;
         
-        this.init();
+        // Simple authentication system
+        this.isAuthenticated = false;
+        this.checkAuthentication();
+    }
+
+    // ========================================
+    // SIMPLE AUTHENTICATION SYSTEM
+    // ========================================
+    
+    checkAuthentication() {
+        // Check if user is already logged in (session storage)
+        const isLoggedIn = sessionStorage.getItem('safetrack_authenticated');
+        
+        if (isLoggedIn === 'true') {
+            this.isAuthenticated = true;
+            this.init();
+        } else {
+            this.showLoginModal();
+        }
+    }
+    
+    showLoginModal() {
+        // Hide the main app
+        const mainContent = document.querySelector('header');
+        const nav = document.querySelector('nav');
+        const main = document.querySelector('main');
+        
+        if (mainContent) mainContent.style.display = 'none';
+        if (nav) nav.style.display = 'none';
+        if (main) main.style.display = 'none';
+        
+        // Show login modal
+        const modal = new bootstrap.Modal(document.getElementById('loginModal'));
+        modal.show();
+    }
+    
+    hideLoginModal() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        // Show the main app
+        const mainContent = document.querySelector('header');
+        const nav = document.querySelector('nav');
+        const main = document.querySelector('main');
+        
+        if (mainContent) mainContent.style.display = 'block';
+        if (nav) nav.style.display = 'block';
+        if (main) main.style.display = 'block';
+    }
+    
+    handleLogin(username, password) {
+        // Hardcoded credentials (you can change these)
+        const validCredentials = [
+            { username: 'admin', password: 'SafeTrack2024!' },
+            { username: 'safety', password: 'Equitas@Safety' },
+            { username: 'manager', password: 'Manager#2024' }
+        ];
+        
+        // Check credentials
+        const isValid = validCredentials.some(cred => 
+            cred.username === username && cred.password === password
+        );
+        
+        if (isValid) {
+            // Successful login
+            this.isAuthenticated = true;
+            sessionStorage.setItem('safetrack_authenticated', 'true');
+            sessionStorage.setItem('safetrack_login_time', new Date().toISOString());
+            
+            this.hideLoginModal();
+            this.init();
+            this.showNotification('Welcome to SafeTrack!', 'success');
+        } else {
+            // Failed login
+            this.showLoginError();
+        }
+    }
+    
+    showLoginError() {
+        const errorDiv = document.getElementById('loginError');
+        errorDiv.classList.remove('d-none');
+        
+        // Clear form
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginUsername').focus();
+        
+        // Hide error after 5 seconds
+        setTimeout(() => {
+            errorDiv.classList.add('d-none');
+        }, 5000);
+    }
+    
+    logout() {
+        if (confirm('Are you sure you want to logout?')) {
+            this.isAuthenticated = false;
+            sessionStorage.removeItem('safetrack_authenticated');
+            sessionStorage.removeItem('safetrack_login_time');
+            
+            this.showNotification('Logged out successfully', 'info');
+            
+            // Reload page to reset everything
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
     }
 
     // ========================================
@@ -4561,6 +4667,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    // Global authentication functions
+    window.logout = () => {
+        if (window.projectManager) {
+            window.projectManager.logout();
+        }
+    };
+
     // Certification form submission handler
     document.getElementById('certificationForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -4599,6 +4712,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (quoteText) {
             window.projectManager.addCustomQuote(quoteText, author);
             this.reset(); // Clear the form
+        }
+    });
+
+    // Login form submission handler
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        
+        if (username && password) {
+            window.projectManager.handleLogin(username, password);
         }
     });
 });
