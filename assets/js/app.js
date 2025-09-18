@@ -566,6 +566,7 @@ END:VCALENDAR`;
         this.render();
         this.setupEventListeners();
         this.updateUserInterface();
+        this.updateViewModeInterface();
         this.populateCategoryDropdowns();
         this.populateRoleDropdowns();
         this.populateDepartmentDropdowns();
@@ -2131,16 +2132,41 @@ END:VCALENDAR`;
         this.currentUser = userId;
         this.saveCurrentUser();
         this.updateUserInterface();
+        this.updateViewModeInterface();
+        this.render();
+    }
+
+    toggleProjectView(viewMode) {
+        if (viewMode === 'all') {
+            this.currentUser = 'all';
+        } else {
+            // If switching to personal view but currently on 'all', switch to admin
+            if (this.currentUser === 'all') {
+                this.currentUser = 'admin';
+            }
+        }
+        this.saveCurrentUser();
+        this.updateUserInterface();
+        this.updateViewModeInterface();
         this.render();
     }
 
     updateUserInterface() {
         const currentUserName = document.getElementById('currentUserName');
         if (this.currentUser === 'all') {
-            currentUserName.textContent = 'All Projects View';
+            currentUserName.textContent = 'All Users';
         } else {
             const user = this.users.find(u => u.id === this.currentUser);
             currentUserName.textContent = user ? user.name : 'Select User';
+        }
+    }
+
+    updateViewModeInterface() {
+        const currentViewMode = document.getElementById('currentViewMode');
+        if (this.currentUser === 'all') {
+            currentViewMode.textContent = 'All Projects View';
+        } else {
+            currentViewMode.textContent = 'My Projects';
         }
     }
 
@@ -2153,6 +2179,7 @@ END:VCALENDAR`;
         
         // Update the current user interface
         this.updateUserInterface();
+        this.updateViewModeInterface();
     }
 
     getUserById(userId) {
@@ -3407,6 +3434,12 @@ function syncData() {
 function switchUser(userId) {
     if (window.projectManager) {
         window.projectManager.switchUser(userId);
+    }
+}
+
+function toggleProjectView(viewMode) {
+    if (window.projectManager) {
+        window.projectManager.toggleProjectView(viewMode);
     }
 }
 
