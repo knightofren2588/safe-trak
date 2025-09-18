@@ -201,19 +201,23 @@ class ProjectManager {
     // ========================================
     
     openProjectNotes(projectId) {
-        this.currentNotesProjectId = projectId;
-        const project = this.projects.find(p => p.id === projectId);
+        // Convert projectId to number since project IDs are stored as numbers
+        const numericProjectId = Number(projectId);
+        this.currentNotesProjectId = numericProjectId;
+        
+        const project = this.projects.find(p => p.id === numericProjectId);
         
         if (!project) {
+            console.error('Project not found. Looking for ID:', numericProjectId, 'Available projects:', this.projects.map(p => ({id: p.id, name: p.name})));
             this.showNotification('Project not found', 'error');
             return;
         }
         
         // Update modal title
-        document.getElementById('notesProjectTitle').textContent = `Project: ${project.title}`;
+        document.getElementById('notesProjectTitle').textContent = `Project: ${project.name}`;
         
         // Clear and populate notes
-        this.renderProjectNotes(projectId);
+        this.renderProjectNotes(numericProjectId);
         
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('projectNotesModal'));
@@ -238,13 +242,24 @@ class ProjectManager {
             <div class="note-item border rounded p-3 mb-3" style="background: rgba(13, 110, 253, 0.05);">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div class="note-header">
-                        <strong class="text-primary">
-                            <i class="fas fa-user-circle me-1"></i>
-                            ${this.escapeHtml(note.authorName)}
-                        </strong>
-                        <small class="text-muted ms-2">
+                        <div class="d-flex align-items-center mb-1">
+                            <div class="user-avatar-small me-2" style="background: linear-gradient(135deg, var(--safety-blue) 0%, #0a58ca 100%);">
+                                ${note.authorName ? note.authorName.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <strong class="text-primary">
+                                ${this.escapeHtml(note.authorName || 'Unknown User')}
+                            </strong>
+                        </div>
+                        <small class="text-muted">
                             <i class="fas fa-clock me-1"></i>
-                            ${new Date(note.timestamp).toLocaleString()}
+                            ${new Date(note.timestamp).toLocaleString('en-US', {
+                                weekday: 'short',
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit', 
+                                minute: '2-digit'
+                            })}
                         </small>
                     </div>
                     ${note.authorId === this.currentUser ? `
@@ -253,7 +268,7 @@ class ProjectManager {
                         </button>
                     ` : ''}
                 </div>
-                <div class="note-content">
+                <div class="note-content mt-2">
                     ${this.escapeHtml(note.text).replace(/\n/g, '<br>')}
                 </div>
             </div>
@@ -266,6 +281,9 @@ class ProjectManager {
             return;
         }
         
+        // Ensure projectId is numeric for consistency
+        const numericProjectId = Number(projectId);
+        
         const currentUserData = this.users.find(u => u.id === this.currentUser);
         const note = {
             id: Date.now().toString(),
@@ -275,13 +293,13 @@ class ProjectManager {
             timestamp: new Date().toISOString()
         };
         
-        if (!this.projectNotes[projectId]) {
-            this.projectNotes[projectId] = [];
+        if (!this.projectNotes[numericProjectId]) {
+            this.projectNotes[numericProjectId] = [];
         }
         
-        this.projectNotes[projectId].unshift(note); // Add to beginning
+        this.projectNotes[numericProjectId].unshift(note); // Add to beginning
         this.saveProjectNotes();
-        this.renderProjectNotes(projectId);
+        this.renderProjectNotes(numericProjectId);
         
         // Clear form
         document.getElementById('noteText').value = '';
@@ -294,10 +312,13 @@ class ProjectManager {
             return;
         }
         
-        if (this.projectNotes[projectId]) {
-            this.projectNotes[projectId] = this.projectNotes[projectId].filter(note => note.id !== noteId);
+        // Ensure projectId is numeric for consistency
+        const numericProjectId = Number(projectId);
+        
+        if (this.projectNotes[numericProjectId]) {
+            this.projectNotes[numericProjectId] = this.projectNotes[numericProjectId].filter(note => note.id !== noteId);
             this.saveProjectNotes();
-            this.renderProjectNotes(projectId);
+            this.renderProjectNotes(numericProjectId);
             this.showNotification('Note deleted', 'success');
         }
     }
