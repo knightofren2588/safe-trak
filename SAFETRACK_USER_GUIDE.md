@@ -5,7 +5,7 @@
 
 ## 🎯 **OVERVIEW**
 
-**SafeTrack** is a comprehensive safety management system designed specifically for **Equitas Health**. It provides professional-grade project tracking, certification management, compliance monitoring, and reporting capabilities with a focus on workplace safety.
+**SafeTrack** is a comprehensive safety management system. It provides professional-grade project tracking, certification management, compliance monitoring, and reporting capabilities with a focus on workplace safety.
 
 ### **🏢 Built For:**
 - Healthcare organizations
@@ -395,7 +395,7 @@ SafeTrack is designed to evolve with your needs. Consider requesting:
 
 ## 🎉 **CONCLUSION**
 
-**SafeTrack** provides Equitas Health with a comprehensive, secure, and user-friendly safety management solution. The system is designed to grow with your organization and can be customized to meet specific safety compliance requirements.
+**SafeTrack** provides a comprehensive, secure, and user-friendly safety management solution. The system is designed to grow with your organization and can be customized to meet specific safety compliance requirements.
 
 ### **🎯 Key Benefits**
 - **Centralized safety management** → All safety data in one place
@@ -433,7 +433,7 @@ SafeTrack has been thoroughly tested and is ready for real-world deployment. The
 
 ---
 
-**🛡️ SafeTrack - Professional Safety Management for Equitas Health**  
+**🛡️ SafeTrack - Professional Safety Management System**  
 *Built with security, compliance, and user experience in mind.*
 
 ---

@@ -1,6 +1,6 @@
 # 🛡️ SafeTrack - Safety Management System
 
-**Professional safety management application for Equitas Health**
+**Professional safety management application**
 
 ---
 
@@ -95,6 +95,6 @@ For technical support, feature requests, or bug reports, please refer to the **[
 
 ---
 
-**🎯 SafeTrack is production-ready and designed specifically for Equitas Health's safety management needs.**
+**🎯 SafeTrack is production-ready for professional safety management needs.**
 
 *Secure • Professional • User-Friendly • Compliance-Ready*

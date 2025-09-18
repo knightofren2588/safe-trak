@@ -319,7 +319,7 @@ class CloudStorageService {
             const adminUser = {
                 id: "admin",
                 name: "Admin User",
-                email: "admin@equitashealth.com",
+                email: "admin@safetrack.com",
                 avatar: "A"
             };
             
