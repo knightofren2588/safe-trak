@@ -65,7 +65,6 @@ class ProjectManager {
         
         // Simple authentication system
         this.isAuthenticated = false;
-        this.checkAuthentication();
     }
 
     // ========================================
@@ -121,13 +120,18 @@ class ProjectManager {
             { username: 'Safety', password: 'BeSafe2025!' }
         ];
         
+        console.log('Login attempt - Username:', username, 'Password length:', password.length); // Debug
+        
         // Check credentials
         const isValid = validCredentials.some(cred => 
             cred.username === username && cred.password === password
         );
         
+        console.log('Credentials check result:', isValid); // Debug
+        
         if (isValid) {
             // Successful login
+            console.log('Login successful, setting authentication'); // Debug
             this.isAuthenticated = true;
             sessionStorage.setItem('safetrack_authenticated', 'true');
             sessionStorage.setItem('safetrack_login_time', new Date().toISOString());
@@ -137,6 +141,7 @@ class ProjectManager {
             this.showNotification('Welcome to SafeTrack!', 'success');
         } else {
             // Failed login
+            console.log('Login failed'); // Debug
             this.showLoginError();
         }
     }
@@ -4504,6 +4509,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 document.addEventListener('DOMContentLoaded', function() {
     window.projectManager = new ProjectManager();
     
+    // Check authentication after ProjectManager is created
+    window.projectManager.checkAuthentication();
+    
     // Remove authentication setup - app works normally
     
     // Make emergency clear function available globally
@@ -4713,15 +4721,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Login form submission handler
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const username = document.getElementById('loginUsername').value.trim();
-        const password = document.getElementById('loginPassword').value;
-        
-        if (username && password) {
-            window.projectManager.handleLogin(username, password);
-        }
-    });
+    // Setup login form handler after ProjectManager is created
+    if (document.getElementById('loginForm')) {
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            console.log('Login attempt:', username); // Debug log
+            
+            if (username && password && window.projectManager) {
+                window.projectManager.handleLogin(username, password);
+            } else {
+                console.error('Missing username, password, or projectManager not ready');
+            }
+        });
+    }
 });
