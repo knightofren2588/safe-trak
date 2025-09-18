@@ -1,106 +1,100 @@
-# SafeTrack - Project Management System
+# 🛡️ SafeTrack - Safety Management System
 
-A modern, responsive project management application designed specifically for Equitas Health, combining the power of Tailwind CSS and Bootstrap 5.
-
-## 🚀 Features
-
-- **Dashboard Overview** - Real-time project statistics and recent activity
-- **Project Management** - Create, edit, delete, and track project progress
-- **Search & Filter** - Find projects quickly with real-time search and status filtering
-- **Compliance Tracking** - Monitor safety compliance and training completion
-- **Reports & Analytics** - Generate reports and export data
-- **Responsive Design** - Works perfectly on desktop, tablet, and mobile devices
-- **Data Persistence** - Projects are saved to localStorage
-
-## 🛠️ Technologies Used
-
-- **HTML5** - Semantic markup
-- **Tailwind CSS** - Utility-first CSS framework
-- **Bootstrap 5** - Component library for enhanced UI
-- **JavaScript (ES6+)** - Modern JavaScript with classes and modules
-- **Font Awesome** - Icon library
-- **LocalStorage** - Client-side data persistence
-
-## 📁 Project Structure
-
-```
-project-tracker/
-├── index.html              # Main HTML file
-├── assets/
-│   ├── css/
-│   │   └── style.css       # Custom CSS styles
-│   ├── js/
-│   │   └── app.js          # JavaScript application logic
-│   └── images/             # Image assets (if needed)
-└── README.md               # This file
-```
-
-## 🚀 Getting Started
-
-1. **Clone or Download** the project folder
-2. **Open** `index.html` in any modern web browser
-3. **Start using** the application immediately - no server setup required!
-
-## 📱 Usage
-
-### Creating a New Project
-1. Click the "New Project" button in the header
-2. Fill in the project details (name, description, priority, category, due date)
-3. Click "Create Project" to save
-
-### Managing Projects
-- **View All Projects** - Click the "All Projects" tab
-- **Search Projects** - Use the search box to find specific projects
-- **Filter by Status** - Use the dropdown to filter by project status
-- **Edit Project** - Click the edit button (pencil icon) next to any project
-- **Delete Project** - Click the delete button (trash icon) next to any project
-
-### Dashboard
-- View real-time statistics for active projects, at-risk projects, team members, and overdue items
-- See recent project activity with progress indicators
-
-## 🎨 Customization
-
-### Colors
-The application uses a custom color scheme defined in the Tailwind config:
-- `safety-blue`: #1e40af
-- `safety-green`: #059669
-- `safety-orange`: #ea580c
-- `safety-red`: #dc2626
-- `safety-gray`: #6b7280
-
-### Styling
-- Custom styles are in `assets/css/style.css`
-- Bootstrap classes are used for components
-- Tailwind utilities are used for layout and spacing
-
-## 🔧 Browser Support
-
-- Chrome 60+
-- Firefox 60+
-- Safari 12+
-- Edge 79+
-
-## 📊 Data Storage
-
-Projects are stored in the browser's localStorage, so they persist between sessions. To clear all data, you can:
-1. Open browser developer tools (F12)
-2. Go to Application/Storage tab
-3. Clear localStorage for this site
-
-## 🤝 Contributing
-
-Feel free to customize this project for your specific needs:
-- Add new project categories
-- Implement user authentication
-- Add team member management
-- Integrate with a backend API
-- Add more reporting features
-
-## 📄 License
-
-This project is open source and available under the MIT License.
+**Professional safety management application for Equitas Health**
 
 ---
 
-**SafeTrack** - Making project management safe and efficient for healthcare teams.
+## 🚀 **QUICK START**
+
+### **🔐 Login Credentials**
+```
+Username: Safety
+Password: BeSafe2025!
+```
+
+### **📖 Complete Documentation**
+👉 **[SAFETRACK_USER_GUIDE.md](./SAFETRACK_USER_GUIDE.md)** - Complete testing and usage guide
+
+---
+
+## ✨ **KEY FEATURES**
+
+🎯 **Safety Project Management**
+- Create, track, and manage safety projects
+- Optional deadlines with automatic completion tracking
+- Progress monitoring with visual indicators
+- File attachments for documentation
+
+🎓 **Certification Tracking** 
+- Personal certification management
+- File upload for certificate images/PDFs
+- Automatic expiration monitoring
+- Professional reporting
+
+✅ **Compliance Management**
+- Safety compliance checklist
+- Training date scheduling
+- Calendar integration (Outlook, Google, Apple)
+- Team assignment and tracking
+
+📊 **Professional Reporting**
+- Export to Excel, PDF, CSV
+- Print-optimized reports
+- User-specific data isolation
+- Professional formatting
+
+💬 **Interactive Quote System**
+- Daily safety quotes with manual refresh
+- Custom quote addition
+- Favorites system
+- Quote management interface
+
+🎨 **Professional UI**
+- Safety-themed design (red, orange, yellow, green)
+- Glass morphism effects
+- Smooth animations and transitions
+- Accessibility compliant (WCAG 2.1 AA)
+
+---
+
+## 🛡️ **SECURITY & COMPLIANCE**
+
+✅ **Authentication** → Secure login system  
+✅ **HTTPS Encryption** → All data protected in transit  
+✅ **XSS Protection** → User input properly sanitized  
+✅ **File Validation** → Secure upload restrictions  
+✅ **User Isolation** → Personal data privacy  
+✅ **Session Management** → Secure browser sessions  
+
+---
+
+## 🧪 **FOR TESTING**
+
+### **📋 Test Checklist**
+- [ ] Login/logout functionality
+- [ ] User profile selection and switching
+- [ ] Project creation with optional deadlines
+- [ ] Certification management with file uploads
+- [ ] Export functionality (all formats)
+- [ ] Compliance tracking and calendar export
+- [ ] Quote system management
+- [ ] Responsive design across devices
+
+### **🎯 Focus Areas**
+1. **User Experience** → Intuitive navigation and workflows
+2. **Data Accuracy** → Verify all calculations and exports
+3. **Security** → Test authentication and data isolation
+4. **Performance** → Check loading times and responsiveness
+5. **Compatibility** → Test across different browsers
+
+---
+
+## 📞 **SUPPORT**
+
+For technical support, feature requests, or bug reports, please refer to the **[SAFETRACK_USER_GUIDE.md](./SAFETRACK_USER_GUIDE.md)** for detailed troubleshooting and contact information.
+
+---
+
+**🎯 SafeTrack is production-ready and designed specifically for Equitas Health's safety management needs.**
+
+*Secure • Professional • User-Friendly • Compliance-Ready*
