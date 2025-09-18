@@ -2598,6 +2598,18 @@ END:VCALENDAR`;
         }
     }
 
+    openProjectModal() {
+        // Reset form for new project
+        document.getElementById('projectForm').reset();
+        document.getElementById('modalTitle').textContent = 'New Safety Project';
+        document.getElementById('submitText').textContent = 'Create Safety Project';
+        this.currentEditId = null;
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('projectModal'));
+        modal.show();
+    }
+
     closeModal() {
         const modal = bootstrap.Modal.getInstance(document.getElementById('projectModal'));
         if (modal) {
