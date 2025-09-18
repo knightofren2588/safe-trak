@@ -72,6 +72,7 @@ class ProjectManager {
         // Project notes system
         this.projectNotes = this.loadProjectNotes();
         this.currentNotesProjectId = null;
+        this.userNotifications = this.loadUserNotifications();
         
         // Admin verification system
         this.isAdminVerified = false;
@@ -301,6 +302,9 @@ class ProjectManager {
         this.saveProjectNotes();
         this.renderProjectNotes(numericProjectId);
         
+        // Add notification for project owner(s)
+        this.addNotificationForProjectOwner(numericProjectId, this.currentUser, note.text);
+        
         // Clear form
         document.getElementById('noteText').value = '';
         
@@ -330,6 +334,225 @@ class ProjectManager {
     loadProjectNotes() {
         const stored = localStorage.getItem('safetrack_project_notes');
         return stored ? JSON.parse(stored) : {};
+    }
+
+    // ========================================
+    // USER NOTIFICATIONS SYSTEM
+    // ========================================
+    
+    loadUserNotifications() {
+        const stored = localStorage.getItem('safetrack_user_notifications');
+        return stored ? JSON.parse(stored) : {};
+    }
+    
+    saveUserNotifications() {
+        localStorage.setItem('safetrack_user_notifications', JSON.stringify(this.userNotifications));
+    }
+    
+    addNotificationForProjectOwner(projectId, noteAuthor, noteText) {
+        const numericProjectId = Number(projectId);
+        const project = this.projects.find(p => p.id === numericProjectId);
+        
+        if (!project) return;
+        
+        // Notify project creator and assigned user (if different)
+        const usersToNotify = [project.createdBy];
+        if (project.assignedTo && project.assignedTo !== project.createdBy) {
+            usersToNotify.push(project.assignedTo);
+        }
+        
+        // Don't notify the author of the note
+        const filteredUsers = usersToNotify.filter(userId => userId !== noteAuthor);
+        
+        filteredUsers.forEach(userId => {
+            if (!this.userNotifications[userId]) {
+                this.userNotifications[userId] = [];
+            }
+            
+            const notification = {
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                type: 'note_added',
+                projectId: numericProjectId,
+                projectName: project.name,
+                noteAuthor: noteAuthor,
+                noteAuthorName: this.users.find(u => u.id === noteAuthor)?.name || noteAuthor,
+                notePreview: noteText.substring(0, 100) + (noteText.length > 100 ? '...' : ''),
+                timestamp: new Date().toISOString(),
+                read: false
+            };
+            
+            this.userNotifications[userId].unshift(notification);
+        });
+        
+        this.saveUserNotifications();
+    }
+    
+    getUnreadNotificationCount(userId) {
+        const userNotifications = this.userNotifications[userId] || [];
+        return userNotifications.filter(n => !n.read).length;
+    }
+    
+    markNotificationAsRead(notificationId) {
+        Object.keys(this.userNotifications).forEach(userId => {
+            this.userNotifications[userId] = this.userNotifications[userId].map(notification => {
+                if (notification.id === notificationId) {
+                    notification.read = true;
+                }
+                return notification;
+            });
+        });
+        this.saveUserNotifications();
+    }
+    
+    showUserNotifications() {
+        const notifications = this.userNotifications[this.currentUser] || [];
+        
+        if (notifications.length === 0) {
+            this.showNotification('No notifications', 'info');
+            return;
+        }
+        
+        // Create notifications modal content
+        const notificationsHtml = notifications.map(notification => `
+            <div class="notification-item ${notification.read ? 'read' : 'unread'} border rounded p-3 mb-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="notification-content flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-sticky-note text-primary me-2"></i>
+                            <strong class="text-primary">New note on "${notification.projectName}"</strong>
+                            ${!notification.read ? '<span class="badge bg-danger ms-2">New</span>' : ''}
+                        </div>
+                        <p class="mb-2 text-muted">
+                            <strong>${notification.noteAuthorName}</strong> added: "${notification.notePreview}"
+                        </p>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            ${new Date(notification.timestamp).toLocaleString()}
+                        </small>
+                    </div>
+                    <div class="notification-actions ms-3">
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewProjectFromNotification(${notification.projectId}, '${notification.id}')">
+                            <i class="fas fa-eye me-1"></i>View Project
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Show in a modal or alert (for now, let's use a simple modal approach)
+        this.showNotificationModal(notificationsHtml);
+    }
+    
+    showNotificationModal(content) {
+        // Create a temporary modal for notifications
+        const modalHtml = `
+            <div class="modal fade" id="notificationsModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-bell me-2"></i>Your Notifications
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${content}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="markAllNotificationsRead()">
+                                <i class="fas fa-check-double me-1"></i>Mark All Read
+                            </button>
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('notificationsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('notificationsModal'));
+        modal.show();
+        
+        // Clean up modal after it's hidden
+        document.getElementById('notificationsModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+    
+    markAllNotificationsRead() {
+        if (this.userNotifications[this.currentUser]) {
+            this.userNotifications[this.currentUser].forEach(notification => {
+                notification.read = true;
+            });
+            this.saveUserNotifications();
+            this.updateNotificationBadge();
+            
+            // Close modal and show success
+            const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
+            if (modal) modal.hide();
+            this.showNotification('All notifications marked as read', 'success');
+        }
+    }
+    
+    updateNotificationBadge() {
+        const badge = document.getElementById('notificationBadge');
+        const count = this.getUnreadNotificationCount(this.currentUser);
+        
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    }
+
+    // ========================================
+    // USER COLOR CODING SYSTEM
+    // ========================================
+    
+    getUserColor(userId) {
+        // Define a set of professional colors for different users
+        const userColors = {
+            'admin': '#dc3545',        // Red (safety theme)
+            'marcena': '#198754',      // Green
+            'mike': '#0d6efd',         // Blue
+            'matt': '#fd7e14',         // Orange
+            'default': '#6c757d'       // Gray for unknown users
+        };
+        
+        // Use user ID to get consistent color, or generate from hash if not predefined
+        if (userColors[userId]) {
+            return userColors[userId];
+        }
+        
+        // Generate consistent color from user ID hash
+        const colors = ['#198754', '#0d6efd', '#fd7e14', '#20c997', '#6f42c1', '#d63384'];
+        let hash = 0;
+        for (let i = 0; i < userId.length; i++) {
+            hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+    }
+    
+    getUserColorLight(userId) {
+        const color = this.getUserColor(userId);
+        // Convert hex to rgba with low opacity for backgrounds
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        return `rgba(${r}, ${g}, ${b}, 0.1)`;
     }
     
     // ========================================
@@ -3046,7 +3269,7 @@ END:VCALENDAR`;
             ).join('') : '';
             
             return `
-            <tr class="fade-in">
+            <tr class="fade-in" style="border-left: 4px solid ${this.getUserColor(project.createdBy)}; background: ${this.getUserColorLight(project.createdBy)};">
                 <td>
                     <div class="d-flex align-items-center">
                         <div class="bg-${this.getCategoryColor(project.category)} text-white p-2 rounded me-3">
@@ -3521,6 +3744,9 @@ END:VCALENDAR`;
         
         // Populate individual user views in dropdown
         this.populateIndividualUserViews();
+        
+        // Update notification badge
+        this.updateNotificationBadge();
     }
 
     updateViewModeInterface() {
@@ -5069,6 +5295,34 @@ document.addEventListener('DOMContentLoaded', function() {
     window.deleteProjectNote = (projectId, noteId) => {
         if (window.projectManager) {
             window.projectManager.deleteProjectNote(projectId, noteId);
+        }
+    };
+
+    // Global notification functions
+    window.showUserNotifications = () => {
+        if (window.projectManager) {
+            window.projectManager.showUserNotifications();
+        }
+    };
+
+    window.markAllNotificationsRead = () => {
+        if (window.projectManager) {
+            window.projectManager.markAllNotificationsRead();
+        }
+    };
+
+    window.viewProjectFromNotification = (projectId, notificationId) => {
+        if (window.projectManager) {
+            // Mark notification as read
+            window.projectManager.markNotificationAsRead(notificationId);
+            window.projectManager.updateNotificationBadge();
+            
+            // Close notifications modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
+            if (modal) modal.hide();
+            
+            // Open project notes
+            window.projectManager.openProjectNotes(projectId);
         }
     };
 

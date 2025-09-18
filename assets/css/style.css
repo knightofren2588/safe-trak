@@ -499,6 +499,75 @@ body::after {
 }
 
 /* ========================================
+   🔔 NOTIFICATIONS SYSTEM
+======================================== */
+.notification-item {
+    transition: all 0.2s ease;
+}
+
+.notification-item.unread {
+    background: rgba(13, 110, 253, 0.05);
+    border-left: 4px solid var(--safety-blue);
+}
+
+.notification-item.read {
+    background: rgba(108, 117, 125, 0.05);
+    border-left: 4px solid #6c757d;
+}
+
+.notification-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.notification-content {
+    line-height: 1.4;
+}
+
+#notificationBadge {
+    font-size: 0.7rem;
+    min-width: 18px;
+    height: 18px;
+    line-height: 18px;
+    padding: 0;
+}
+
+/* ========================================
+   🎨 USER COLOR CODING
+======================================== */
+.project-row-colored {
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.project-row-colored:hover {
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.project-row-colored::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--user-color, #6c757d);
+    border-radius: 0 2px 2px 0;
+}
+
+/* Color legend helper */
+.user-color-legend {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* ========================================
    📊 HORIZONTAL STATS CARDS
 ======================================== */
 .stats-card {
