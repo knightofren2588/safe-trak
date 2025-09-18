@@ -163,7 +163,7 @@ body::after {
     background: linear-gradient(135deg, rgba(220, 53, 69, 0.15) 0%, rgba(220, 53, 69, 0.08) 100%);
     border: 2px solid rgba(220, 53, 69, 0.3);
     border-radius: 12px;
-    padding: 20px 60px 20px 80px;
+    padding: 20px 60px 20px 65px;
     text-align: right;
     position: relative;
     overflow: hidden;
@@ -229,7 +229,7 @@ body::after {
     content: '👋';
     position: absolute;
     top: 50%;
-    left: 30px;
+    left: 25px;
     transform: translateY(-50%);
     font-size: 1.4rem;
     opacity: 0.8;
