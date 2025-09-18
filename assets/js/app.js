@@ -116,11 +116,9 @@ class ProjectManager {
     }
     
     handleLogin(username, password) {
-        // Hardcoded credentials (you can change these)
+        // Hardcoded credentials
         const validCredentials = [
-            { username: 'admin', password: 'SafeTrack2024!' },
-            { username: 'safety', password: 'Equitas@Safety' },
-            { username: 'manager', password: 'Manager#2024' }
+            { username: 'Safety', password: 'BeSafe2025!' }
         ];
         
         // Check credentials
