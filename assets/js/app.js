@@ -4380,7 +4380,6 @@ END:VCALENDAR`;
         document.getElementById('projectNameDisplay').value = project.name;
         document.getElementById('progressSlider').value = project.progress;
         document.getElementById('progressValue').textContent = project.progress;
-        document.getElementById('progressNotes').value = project.progressNotes || '';
         
         // Add event listener for slider
         const slider = document.getElementById('progressSlider');
@@ -4402,11 +4401,9 @@ END:VCALENDAR`;
         if (!project) return;
 
         const newProgress = parseInt(document.getElementById('progressSlider').value);
-        const progressNotes = document.getElementById('progressNotes').value;
 
         // Update project progress
         project.progress = newProgress;
-        project.progressNotes = progressNotes;
         project.lastProgressUpdate = new Date().toISOString();
 
         // Auto-complete project if progress reaches 100%
