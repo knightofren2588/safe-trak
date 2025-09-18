@@ -563,7 +563,7 @@ class ProjectManager {
         const r = parseInt(hex.substr(0, 2), 16);
         const g = parseInt(hex.substr(2, 2), 16);
         const b = parseInt(hex.substr(4, 2), 16);
-        return `rgba(${r}, ${g}, ${b}, 0.15)`;
+        return `rgba(${r}, ${g}, ${b}, 0.25)`;
     }
     
     renderUserColorLegend() {
@@ -3404,10 +3404,10 @@ END:VCALENDAR`;
                 </td>
                 <td>
                     ${this.canUserEditProject(project) ? `
-                        <div class="btn-group btn-group-sm">
+                    <div class="btn-group btn-group-sm">
                             <button onclick="projectManager.editProjectModal(${project.id})" class="btn btn-outline-primary" title="Edit Project">
-                                <i class="fas fa-edit"></i>
-                            </button>
+                            <i class="fas fa-edit"></i>
+                        </button>
                             <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-outline-success" title="Update Progress">
                                 <i class="fas fa-chart-line"></i>
                             </button>
@@ -3418,9 +3418,9 @@ END:VCALENDAR`;
                                 <i class="fas fa-images"></i>
                             </button>` : ''}
                             <button onclick="projectManager.deleteProject(${project.id})" class="btn btn-outline-danger" title="Delete Project">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                     ` : `
                         <div class="btn-group btn-group-sm">
                             <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary" title="Project Notes">

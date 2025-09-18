@@ -550,6 +550,7 @@ body::after {
 .project-row-user-colored td {
     border-top: none !important;
     vertical-align: middle;
+    background-color: inherit !important;
 }
 
 .project-row-user-colored:first-child td {
@@ -594,7 +595,21 @@ body::after {
 
 /* Override Bootstrap table hover for our colored rows */
 .table-hover tbody .project-row-user-colored:hover td {
-    background-color: inherit;
+    background-color: inherit !important;
+}
+
+/* Override Bootstrap table striping for colored rows */
+.table-striped tbody .project-row-user-colored:nth-of-type(odd) td {
+    background-color: inherit !important;
+}
+
+.table-striped tbody .project-row-user-colored:nth-of-type(even) td {
+    background-color: inherit !important;
+}
+
+/* Ensure our colored rows always show their background */
+.project-row-user-colored {
+    background-color: inherit !important;
 }
 
 /* ========================================
