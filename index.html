@@ -221,6 +221,11 @@
                             <li><a class="dropdown-item" href="#" onclick="toggleProjectView('all')">
                                 <i class="fas fa-users me-2"></i>All Team Projects
                             </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Individual Views</h6></li>
+                            <div id="individualUserViews">
+                                <!-- Dynamic individual user views will be populated here -->
+                            </div>
                             <!-- Admin-only options -->
                             <div id="adminOnlyOptions" style="display: none;">
                                 <li><hr class="dropdown-divider"></li>
@@ -1532,8 +1537,63 @@
         </div>
     </div>
 
-    <!-- Admin Password Verification Modal -->
-    <div class="modal fade" id="adminPasswordModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+        <!-- Project Notes Modal -->
+        <div class="modal fade" id="projectNotesModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-sticky-note text-primary me-2"></i>
+                            Project Notes & Comments
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <h6 id="notesProjectTitle" class="text-muted mb-3"></h6>
+                        </div>
+                        
+                        <!-- Add New Note -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add New Note</h6>
+                            </div>
+                            <div class="card-body">
+                                <form id="addNoteForm">
+                                    <div class="mb-3">
+                                        <label for="noteText" class="form-label">Note/Comment</label>
+                                        <textarea class="form-control" id="noteText" rows="3" placeholder="Add your note or comment..." required></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-plus me-1"></i>Add Note
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <!-- Existing Notes -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-comments me-2"></i>Notes & Comments</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="notesList">
+                                    <!-- Notes will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Password Verification Modal -->
+        <div class="modal fade" id="adminPasswordModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-sm">
             <div class="modal-content">
                 <div class="modal-header text-center border-0 pb-0">

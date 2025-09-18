@@ -69,6 +69,10 @@ class ProjectManager {
         // Project view mode (personal vs all team projects)
         this.projectViewMode = localStorage.getItem('safetrack_project_view_mode') || 'personal';
         
+        // Project notes system
+        this.projectNotes = this.loadProjectNotes();
+        this.currentNotesProjectId = null;
+        
         // Admin verification system
         this.isAdminVerified = false;
         this.pendingAdminAction = null;
@@ -190,6 +194,154 @@ class ProjectManager {
                 location.reload();
             }, 1000);
         }
+    }
+
+    // ========================================
+    // PROJECT NOTES SYSTEM
+    // ========================================
+    
+    openProjectNotes(projectId) {
+        this.currentNotesProjectId = projectId;
+        const project = this.projects.find(p => p.id === projectId);
+        
+        if (!project) {
+            this.showNotification('Project not found', 'error');
+            return;
+        }
+        
+        // Update modal title
+        document.getElementById('notesProjectTitle').textContent = `Project: ${project.title}`;
+        
+        // Clear and populate notes
+        this.renderProjectNotes(projectId);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('projectNotesModal'));
+        modal.show();
+    }
+    
+    renderProjectNotes(projectId) {
+        const notesList = document.getElementById('notesList');
+        const notes = this.projectNotes[projectId] || [];
+        
+        if (notes.length === 0) {
+            notesList.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-comment-slash fa-2x mb-3"></i>
+                    <p>No notes or comments yet.<br>Add the first note above!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        notesList.innerHTML = notes.map(note => `
+            <div class="note-item border rounded p-3 mb-3" style="background: rgba(13, 110, 253, 0.05);">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="note-header">
+                        <strong class="text-primary">
+                            <i class="fas fa-user-circle me-1"></i>
+                            ${this.escapeHtml(note.authorName)}
+                        </strong>
+                        <small class="text-muted ms-2">
+                            <i class="fas fa-clock me-1"></i>
+                            ${new Date(note.timestamp).toLocaleString()}
+                        </small>
+                    </div>
+                    ${note.authorId === this.currentUser ? `
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProjectNote('${projectId}', '${note.id}')" title="Delete note">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="note-content">
+                    ${this.escapeHtml(note.text).replace(/\n/g, '<br>')}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    addProjectNote(projectId, noteText) {
+        if (!noteText.trim()) {
+            this.showNotification('Please enter a note', 'warning');
+            return;
+        }
+        
+        const currentUserData = this.users.find(u => u.id === this.currentUser);
+        const note = {
+            id: Date.now().toString(),
+            text: noteText.trim(),
+            authorId: this.currentUser,
+            authorName: currentUserData ? currentUserData.name : this.currentUser,
+            timestamp: new Date().toISOString()
+        };
+        
+        if (!this.projectNotes[projectId]) {
+            this.projectNotes[projectId] = [];
+        }
+        
+        this.projectNotes[projectId].unshift(note); // Add to beginning
+        this.saveProjectNotes();
+        this.renderProjectNotes(projectId);
+        
+        // Clear form
+        document.getElementById('noteText').value = '';
+        
+        this.showNotification('Note added successfully', 'success');
+    }
+    
+    deleteProjectNote(projectId, noteId) {
+        if (!confirm('Are you sure you want to delete this note?')) {
+            return;
+        }
+        
+        if (this.projectNotes[projectId]) {
+            this.projectNotes[projectId] = this.projectNotes[projectId].filter(note => note.id !== noteId);
+            this.saveProjectNotes();
+            this.renderProjectNotes(projectId);
+            this.showNotification('Note deleted', 'success');
+        }
+    }
+    
+    saveProjectNotes() {
+        localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
+    }
+    
+    loadProjectNotes() {
+        const stored = localStorage.getItem('safetrack_project_notes');
+        return stored ? JSON.parse(stored) : {};
+    }
+    
+    // ========================================
+    // INDIVIDUAL USER VIEWS
+    // ========================================
+    
+    populateIndividualUserViews() {
+        const container = document.getElementById('individualUserViews');
+        if (!container) return;
+        
+        // Get all users except current user (to avoid showing "View My Projects" when already on personal view)
+        const otherUsers = this.users.filter(user => user.id !== this.currentUser);
+        
+        container.innerHTML = otherUsers.map(user => {
+            const projectCount = this.projects.filter(p => p.createdBy === user.id || p.assignedTo === user.id).length;
+            const userInitial = user.avatar || user.name.charAt(0).toUpperCase();
+            
+            return `
+                <li>
+                    <a class="dropdown-item" href="#" onclick="toggleProjectView('${user.id}')">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar-small me-2" style="background: linear-gradient(135deg, var(--safety-blue) 0%, #0a58ca 100%);">
+                                ${userInitial}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="fw-medium">${this.escapeHtml(user.name)}</div>
+                                <small class="text-muted">${projectCount} project${projectCount !== 1 ? 's' : ''}</small>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+            `;
+        }).join('');
     }
     
     // ========================================
@@ -2764,9 +2916,14 @@ END:VCALENDAR`;
         let projectsToCount = this.projects;
         
         // Filter by current user if not viewing all team projects
-        if (this.projectViewMode !== 'all') {
+        if (this.projectViewMode === 'personal') {
             projectsToCount = projectsToCount.filter(p => 
                 p.createdBy === this.currentUser || p.assignedTo === this.currentUser
+            );
+        } else if (this.projectViewMode !== 'all') {
+            // Individual user view - filter for specific user
+            projectsToCount = projectsToCount.filter(p => 
+                p.createdBy === this.projectViewMode || p.assignedTo === this.projectViewMode
             );
         }
         
@@ -2831,10 +2988,15 @@ END:VCALENDAR`;
             if (this.projectViewMode === 'all') {
                 // Show all projects (read-only view for non-owners)
                 projects = this.projects;
-            } else {
+            } else if (this.projectViewMode === 'personal') {
                 // Show only projects created by or assigned to current user
                 projects = this.projects.filter(project => 
                     project.createdBy === this.currentUser || project.assignedTo === this.currentUser
+                );
+            } else {
+                // Individual user view - show projects created by or assigned to specific user
+                projects = this.projects.filter(project => 
+                    project.createdBy === this.projectViewMode || project.assignedTo === this.projectViewMode
                 );
             }
         }
@@ -2960,6 +3122,9 @@ END:VCALENDAR`;
                             <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-outline-success" title="Update Progress">
                                 <i class="fas fa-chart-line"></i>
                             </button>
+                            <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary" title="Project Notes">
+                                <i class="fas fa-sticky-note"></i>
+                            </button>
                             ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
                                 <i class="fas fa-images"></i>
                             </button>` : ''}
@@ -2969,10 +3134,13 @@ END:VCALENDAR`;
                         </div>
                     ` : `
                         <div class="btn-group btn-group-sm">
+                            <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary" title="Project Notes">
+                                <i class="fas fa-sticky-note"></i>
+                            </button>
                             ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
                                 <i class="fas fa-images"></i>
                             </button>` : ''}
-                            <span class="text-muted small">View Only</span>
+                            <span class="text-muted small ms-2">View Only</span>
                         </div>
                     `}
                 </td>
@@ -3329,14 +3497,25 @@ END:VCALENDAR`;
                 adminOptions.style.display = 'none';
             }
         }
+        
+        // Populate individual user views in dropdown
+        this.populateIndividualUserViews();
     }
 
     updateViewModeInterface() {
         const currentViewMode = document.getElementById('currentViewMode');
         if (this.projectViewMode === 'all') {
             currentViewMode.textContent = 'All Team Projects';
-        } else {
+        } else if (this.projectViewMode === 'personal') {
             currentViewMode.textContent = 'My Projects';
+        } else {
+            // Individual user view
+            const user = this.users.find(u => u.id === this.projectViewMode);
+            if (user) {
+                currentViewMode.textContent = `${user.name}'s Projects`;
+            } else {
+                currentViewMode.textContent = 'User Projects';
+            }
         }
     }
 
@@ -4865,6 +5044,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    // Global project notes functions
+    window.deleteProjectNote = (projectId, noteId) => {
+        if (window.projectManager) {
+            window.projectManager.deleteProjectNote(projectId, noteId);
+        }
+    };
+
     // Certification form submission handler
     document.getElementById('certificationForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -4932,6 +5118,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (password && window.projectManager) {
             window.projectManager.verifyAdminPassword(password);
+        }
+    });
+
+    // Project notes form submission handler
+    document.getElementById('addNoteForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const noteText = document.getElementById('noteText').value;
+        if (noteText && window.projectManager && window.projectManager.currentNotesProjectId) {
+            window.projectManager.addProjectNote(window.projectManager.currentNotesProjectId, noteText);
         }
     });
 });

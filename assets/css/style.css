@@ -455,6 +455,49 @@ body::after {
     box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
 }
 
+.user-avatar-small {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* ========================================
+   📝 PROJECT NOTES SYSTEM
+======================================== */
+.note-item {
+    transition: all 0.2s ease;
+}
+
+.note-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.note-header {
+    margin-bottom: 8px;
+}
+
+.note-content {
+    line-height: 1.5;
+    color: var(--gray-700);
+}
+
+.note-item .btn-outline-danger {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.note-item:hover .btn-outline-danger {
+    opacity: 1;
+}
+
 /* ========================================
    📊 HORIZONTAL STATS CARDS
 ======================================== */
