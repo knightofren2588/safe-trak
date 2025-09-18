@@ -254,8 +254,9 @@ class ProjectManager {
         this.updateUserInterface();
         this.updateViewModeInterface();
         this.render();
-        this.renderCertificationTable();
-        this.updateCertificationStats();
+        // TEMPORARILY DISABLED: Certification features
+        // this.renderCertificationTable();
+        // this.updateCertificationStats();
         
         // Hide modal
         this.hideUserSelectionModal();
@@ -1002,11 +1003,9 @@ END:VCALENDAR`;
         // Load data from cloud storage
         await this.loadAllData();
         
-        // Load compliance items
-        this.complianceItems = this.loadComplianceItems();
-        
-        // Load certifications
-        this.certifications = this.loadCertifications();
+        // TEMPORARILY DISABLED: Compliance and Certification loading
+        // this.complianceItems = this.loadComplianceItems();
+        // this.certifications = this.loadCertifications();
         
         // Don't load sample data - start with empty state
         // if (this.projects.length === 0 && !this.hasUserInteracted) {
@@ -1027,13 +1026,11 @@ END:VCALENDAR`;
         this.populateDepartmentDropdowns();
         this.displayDailySafetyQuote();
         
-        // Render compliance data
-        this.renderComplianceTable();
-        this.updateComplianceStats();
-        
-        // Render certification data
-        this.renderCertificationTable();
-        this.updateCertificationStats();
+        // TEMPORARILY DISABLED: Compliance and Certification features
+        // this.renderComplianceTable();
+        // this.updateComplianceStats();
+        // this.renderCertificationTable();
+        // this.updateCertificationStats();
         
         // Show connection status
         this.showConnectionStatus();
@@ -1599,8 +1596,9 @@ END:VCALENDAR`;
         
         this.certifications.push(certification);
         await this.saveCertifications();
-        this.renderCertificationTable();
-        this.updateCertificationStats();
+        // TEMPORARILY DISABLED: Certification features
+        // this.renderCertificationTable();
+        // this.updateCertificationStats();
         this.closeCertificationModal();
         this.showNotification(`Certification "${certification.name}" added successfully!`, 'success');
     }
@@ -3174,8 +3172,9 @@ END:VCALENDAR`;
         this.updateUserInterface();
         this.updateViewModeInterface();
         this.render();
-        this.renderCertificationTable();
-        this.updateCertificationStats();
+        // TEMPORARILY DISABLED: Certification features
+        // this.renderCertificationTable();
+        // this.updateCertificationStats();
     }
 
     toggleProjectView(viewMode) {
@@ -3194,8 +3193,9 @@ END:VCALENDAR`;
         this.updateUserInterface();
         this.updateViewModeInterface();
         this.render();
-        this.renderCertificationTable();
-        this.updateCertificationStats();
+        // TEMPORARILY DISABLED: Certification features
+        // this.renderCertificationTable();
+        // this.updateCertificationStats();
     }
 
     updateUserInterface() {
