@@ -783,3 +783,428 @@ body {
     transform: scale(1.08) rotate(2deg);
     box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
 }
+
+/* ========================================
+   🎯 ENHANCED STATUS SYSTEM
+======================================== */
+
+/* Status Badges with Safety Colors */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: var(--transition);
+    border: 1px solid transparent;
+}
+
+.status-badge-active {
+    background: linear-gradient(135deg, var(--safety-green) 0%, #146c43 100%);
+    color: white;
+    border-color: var(--safety-green);
+}
+
+.status-badge-pending {
+    background: linear-gradient(135deg, var(--safety-yellow) 0%, #e0a800 100%);
+    color: #000;
+    border-color: var(--safety-yellow);
+}
+
+.status-badge-at-risk {
+    background: linear-gradient(135deg, var(--safety-orange) 0%, #e8590c 100%);
+    color: white;
+    border-color: var(--safety-orange);
+}
+
+.status-badge-overdue {
+    background: linear-gradient(135deg, var(--safety-red) 0%, #b02a37 100%);
+    color: white;
+    border-color: var(--safety-red);
+    animation: pulse-danger 2s infinite;
+}
+
+.status-badge-completed {
+    background: linear-gradient(135deg, var(--success) 0%, #146c43 100%);
+    color: white;
+    border-color: var(--success);
+}
+
+.status-badge-cancelled {
+    background: linear-gradient(135deg, var(--gray-500) 0%, #495057 100%);
+    color: white;
+    border-color: var(--gray-500);
+}
+
+/* Priority Indicators */
+.priority-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.priority-high {
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--safety-red);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.priority-medium {
+    background: rgba(253, 126, 20, 0.1);
+    color: var(--safety-orange);
+    border: 1px solid rgba(253, 126, 20, 0.3);
+}
+
+.priority-low {
+    background: rgba(25, 135, 84, 0.1);
+    color: var(--safety-green);
+    border: 1px solid rgba(25, 135, 84, 0.3);
+}
+
+/* Enhanced Progress Bars */
+.progress-enhanced {
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar-enhanced {
+    height: 100%;
+    background: linear-gradient(90deg, var(--safety-green) 0%, #20c997 100%);
+    border-radius: 4px;
+    transition: width 0.6s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar-enhanced::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 33%, rgba(255, 255, 255, 0.3) 33%, rgba(255, 255, 255, 0.3) 66%, transparent 66%);
+    background-size: 20px 20px;
+    animation: progress-shine 2s linear infinite;
+}
+
+/* Risk Level Indicators */
+.risk-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.risk-low {
+    background: rgba(25, 135, 84, 0.1);
+    color: var(--safety-green);
+    border-left: 3px solid var(--safety-green);
+}
+
+.risk-medium {
+    background: rgba(253, 126, 20, 0.1);
+    color: var(--safety-orange);
+    border-left: 3px solid var(--safety-orange);
+}
+
+.risk-high {
+    background: rgba(220, 53, 69, 0.1);
+    color: var(--safety-red);
+    border-left: 3px solid var(--safety-red);
+}
+
+.risk-critical {
+    background: rgba(220, 53, 69, 0.2);
+    color: var(--safety-red);
+    border-left: 3px solid var(--safety-red);
+    animation: pulse-danger 2s infinite;
+}
+
+/* ========================================
+   ♿ ACCESSIBILITY ENHANCEMENTS (WCAG 2.1 AA)
+======================================== */
+
+/* Focus Indicators */
+*:focus {
+    outline: 2px solid var(--safety-blue);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+button:focus,
+.btn:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--safety-blue);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .status-badge,
+    .priority-indicator,
+    .risk-indicator {
+        border-width: 2px;
+        font-weight: 700;
+    }
+    
+    .progress-bar-enhanced {
+        border: 2px solid var(--safety-green);
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Screen Reader Only Content */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.sr-only-focusable:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: inherit;
+    margin: inherit;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+}
+
+/* ========================================
+   ✨ PROFESSIONAL ANIMATIONS & MICRO-INTERACTIONS
+======================================== */
+
+/* Smooth Transitions */
+.smooth-transition {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fade In Animation */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Slide In Animation */
+.slide-in {
+    animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Hover Lift Effect */
+.hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Button Press Effect */
+.btn-press {
+    transition: transform 0.1s ease;
+}
+
+.btn-press:active {
+    transform: translateY(1px);
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--gray-300);
+    border-radius: 50%;
+    border-top-color: var(--safety-blue);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Pulse Animations */
+@keyframes pulse-danger {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+@keyframes pulse-success {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+@keyframes progress-shine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* Notification Toast */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius-lg);
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1050;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+.toast-success {
+    border-left: 4px solid var(--safety-green);
+}
+
+.toast-warning {
+    border-left: 4px solid var(--safety-orange);
+}
+
+.toast-error {
+    border-left: 4px solid var(--safety-red);
+}
+
+.toast-info {
+    border-left: 4px solid var(--safety-blue);
+}
+
+/* Enhanced Card Interactions */
+.card-interactive {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1px solid var(--gray-200);
+}
+
+.card-interactive:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--safety-blue);
+}
+
+/* Status Indicators with Icons */
+.status-with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-icon-active {
+    background: var(--safety-green);
+    animation: pulse-success 2s infinite;
+}
+
+.status-icon-pending {
+    background: var(--safety-yellow);
+}
+
+.status-icon-at-risk {
+    background: var(--safety-orange);
+}
+
+.status-icon-overdue {
+    background: var(--safety-red);
+    animation: pulse-danger 1.5s infinite;
+}
+
+/* Enhanced Form Elements */
+.form-control-enhanced {
+    transition: all 0.2s ease;
+    border: 1px solid var(--gray-300);
+}
+
+.form-control-enhanced:focus {
+    border-color: var(--safety-blue);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+    transform: scale(1.01);
+}
+
+.form-control-enhanced:invalid {
+    border-color: var(--safety-red);
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25);
+}
+
+/* Professional Button Enhancements */
+.btn-enhanced {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.btn-enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-enhanced:hover::before {
+    left: 100%;
+}

@@ -1556,6 +1556,7 @@ END:VCALENDAR`;
         this.saveProjects();
         this.render();
         this.closeModal();
+        this.showNotification(`Safety project "${project.name}" created successfully!`, 'success');
     }
 
     editProject(id, projectData) {
@@ -1569,6 +1570,7 @@ END:VCALENDAR`;
             this.saveProjects();
             this.render();
             this.closeModal();
+            this.showNotification(`Safety project "${projectData.name}" updated successfully!`, 'success');
         }
     }
 
@@ -1800,9 +1802,10 @@ END:VCALENDAR`;
                 </td>
                 <td>
                     <div class="d-flex align-items-center">
-                        <span class="status-badge bg-${this.getStatusColor(project)} text-white me-2">
+                        <span class="status-badge ${this.getEnhancedStatusClass(project)} me-2" role="status" aria-label="Project status: ${this.getStatusDisplayText(project.status)}">
+                            <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
                             ${this.getStatusDisplayText(project.status)}
-                    </span>
+                        </span>
                         <select class="form-select form-select-sm status-dropdown" onchange="projectManager.changeProjectStatus(${project.id}, this.value)">
                             <option value="active" ${project.status === 'active' ? 'selected' : ''}>Active</option>
                             <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
@@ -1813,10 +1816,11 @@ END:VCALENDAR`;
                 </td>
                 <td>
                     <div class="d-flex align-items-center">
-                        <div class="progress me-2 progress-clickable" style="width: 120px; height: 12px;" 
-                             onclick="projectManager.openProgressModal(${project.id})" title="Click to update progress">
-                            <div class="progress-bar bg-${this.getProgressColor(project.progress)} progress-bar-enhanced" 
-                                 style="width: ${project.progress}%"></div>
+                        <div class="progress-enhanced me-2 progress-clickable" style="width: 120px; cursor: pointer;" 
+                             onclick="projectManager.openProgressModal(${project.id})" title="Click to update progress"
+                             role="progressbar" aria-valuenow="${project.progress}" aria-valuemin="0" aria-valuemax="100"
+                             aria-label="Project progress: ${project.progress}%">
+                            <div class="progress-bar-enhanced" style="width: ${project.progress}%"></div>
                         </div>
                         <div class="d-flex flex-column">
                             <span class="text-muted small fw-bold">${project.progress}%</span>
@@ -1943,6 +1947,66 @@ END:VCALENDAR`;
         if (this.isProjectOverdue(project)) return 'danger';
         if (this.isProjectAtRisk(project)) return 'warning';
         return 'primary';
+    }
+
+    getEnhancedStatusClass(project) {
+        if (project.status === 'completed') return 'status-badge-completed';
+        if (project.status === 'cancelled') return 'status-badge-cancelled';
+        if (this.isProjectOverdue(project)) return 'status-badge-overdue';
+        if (this.isProjectAtRisk(project)) return 'status-badge-at-risk';
+        if (project.status === 'on-hold') return 'status-badge-pending';
+        return 'status-badge-active';
+    }
+
+    getStatusIconClass(project) {
+        if (project.status === 'completed') return 'status-icon-active';
+        if (this.isProjectOverdue(project)) return 'status-icon-overdue';
+        if (this.isProjectAtRisk(project)) return 'status-icon-at-risk';
+        return 'status-icon-pending';
+    }
+
+    // Enhanced notification system for better user feedback
+    showNotification(message, type = 'info', duration = 4000) {
+        // Remove any existing notifications
+        const existingToast = document.querySelector('.toast-notification');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        // Create new notification
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${type}`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'polite');
+        
+        const icon = this.getNotificationIcon(type);
+        toast.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="${icon} me-2" aria-hidden="true"></i>
+                <span>${message}</span>
+                <button type="button" class="btn-close ms-auto" aria-label="Close notification" onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Auto-remove after duration
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.style.animation = 'slideOutRight 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, duration);
+    }
+
+    getNotificationIcon(type) {
+        const icons = {
+            'success': 'fas fa-check-circle text-success',
+            'warning': 'fas fa-exclamation-triangle text-warning', 
+            'error': 'fas fa-exclamation-circle text-danger',
+            'info': 'fas fa-info-circle text-info'
+        };
+        return icons[type] || icons.info;
     }
 
     getStatusText(project) {
