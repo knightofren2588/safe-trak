@@ -160,30 +160,57 @@ body::after {
    👋 WELCOME BANNER
 ======================================== */
 .welcome-banner {
-    background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 100%);
-    border: 1px solid rgba(220, 53, 69, 0.2);
-    border-radius: var(--border-radius-lg);
-    padding: 12px 20px;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.15) 0%, rgba(220, 53, 69, 0.08) 100%);
+    border: 2px solid rgba(220, 53, 69, 0.3);
+    border-radius: 12px;
+    padding: 24px 40px;
     text-align: right;
     position: relative;
     overflow: hidden;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(10px);
+    min-width: 320px;
+    box-shadow: 
+        0 6px 20px rgba(220, 53, 69, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.welcome-banner:hover {
+    transform: translateY(-1px);
+    box-shadow: 
+        0 8px 25px rgba(220, 53, 69, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .welcome-message {
-    font-size: 0.9rem;
+    font-size: 1.1rem;
     color: var(--gray-600);
-    font-weight: 500;
-    margin-bottom: 2px;
+    font-weight: 600;
+    margin-bottom: 6px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
 }
 
 .welcome-username {
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-size: 2.2rem;
+    font-weight: 900;
     color: var(--safety-red);
-    line-height: 1.2;
+    line-height: 1;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--safety-red) 0%, #b02a37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.welcome-role {
+    font-size: 0.95rem;
+    color: var(--safety-orange);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    opacity: 0.95;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
@@ -192,19 +219,27 @@ body::after {
     position: absolute;
     top: 0;
     right: 0;
-    width: 4px;
+    width: 6px;
     height: 100%;
-    background: linear-gradient(180deg, var(--safety-red) 0%, var(--safety-orange) 100%);
+    background: linear-gradient(180deg, var(--safety-red) 0%, var(--safety-orange) 50%, var(--safety-yellow) 100%);
+    border-radius: 0 10px 10px 0;
 }
 
 .welcome-banner::after {
     content: '👋';
     position: absolute;
     top: 50%;
-    left: 15px;
+    left: 20px;
     transform: translateY(-50%);
-    font-size: 1.2rem;
-    opacity: 0.7;
+    font-size: 1.5rem;
+    opacity: 0.8;
+    animation: wave 2s ease-in-out infinite;
+}
+
+@keyframes wave {
+    0%, 100% { transform: translateY(-50%) rotate(0deg); }
+    25% { transform: translateY(-50%) rotate(20deg); }
+    75% { transform: translateY(-50%) rotate(-10deg); }
 }
 
 /* ========================================

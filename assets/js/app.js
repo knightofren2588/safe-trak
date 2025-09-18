@@ -3185,6 +3185,7 @@ END:VCALENDAR`;
     updateUserInterface() {
         const currentUserName = document.getElementById('currentUserName');
         const welcomeUsername = document.getElementById('welcomeUsername');
+        const welcomeUserRole = document.getElementById('welcomeUserRole');
         
         // User dropdown should NEVER show "All" - only actual user names
         if (this.currentUser === 'all') {
@@ -3192,13 +3193,20 @@ END:VCALENDAR`;
             const lastActualUser = localStorage.getItem('lastActualUser') || 'admin';
             const user = this.users.find(u => u.id === lastActualUser);
             const userName = user ? user.name : 'Admin User';
+            const userRole = user ? (user.role || 'Team Member') : 'Administrator';
+            
             currentUserName.textContent = userName;
             if (welcomeUsername) welcomeUsername.textContent = userName;
+            if (welcomeUserRole) welcomeUserRole.textContent = userRole;
         } else {
             const user = this.users.find(u => u.id === this.currentUser);
             const userName = user ? user.name : 'Select User';
+            const userRole = user ? (user.role || 'Team Member') : 'Administrator';
+            
             currentUserName.textContent = userName;
             if (welcomeUsername) welcomeUsername.textContent = userName;
+            if (welcomeUserRole) welcomeUserRole.textContent = userRole;
+            
             // Remember the last actual user selected
             localStorage.setItem('lastActualUser', this.currentUser);
         }
