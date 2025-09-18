@@ -185,8 +185,16 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <!-- Connection Status Indicator -->
+                <div class="flex flex-col items-end space-y-3">
+                    <!-- Welcome Banner -->
+                    <div id="welcomeBanner" class="welcome-banner text-right">
+                        <div class="welcome-message">Welcome,</div>
+                        <div class="welcome-username" id="welcomeUsername">Admin User</div>
+                    </div>
+                    
+                    <!-- Controls Row -->
+                    <div class="flex items-center space-x-4">
+                        <!-- Connection Status Indicator -->
                     <div id="connectionStatus" class="d-flex align-items-center me-3">
                         <div id="connectionIndicator" class="badge bg-warning me-2">
                             <i class="fas fa-cloud-upload-alt me-1"></i>Connecting...
@@ -245,6 +253,7 @@
                     <button class="btn btn-outline-danger btn-sm ms-2" onclick="logout()" title="Logout" aria-label="Logout">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
+                    </div>
                 </div>
             </div>
         </div>

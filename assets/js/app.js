@@ -3184,16 +3184,21 @@ END:VCALENDAR`;
 
     updateUserInterface() {
         const currentUserName = document.getElementById('currentUserName');
+        const welcomeUsername = document.getElementById('welcomeUsername');
         
         // User dropdown should NEVER show "All" - only actual user names
         if (this.currentUser === 'all') {
             // When in "All Projects" mode, show the last selected actual user or default
             const lastActualUser = localStorage.getItem('lastActualUser') || 'admin';
             const user = this.users.find(u => u.id === lastActualUser);
-            currentUserName.textContent = user ? user.name : 'Admin User';
+            const userName = user ? user.name : 'Admin User';
+            currentUserName.textContent = userName;
+            if (welcomeUsername) welcomeUsername.textContent = userName;
         } else {
             const user = this.users.find(u => u.id === this.currentUser);
-            currentUserName.textContent = user ? user.name : 'Select User';
+            const userName = user ? user.name : 'Select User';
+            currentUserName.textContent = userName;
+            if (welcomeUsername) welcomeUsername.textContent = userName;
             // Remember the last actual user selected
             localStorage.setItem('lastActualUser', this.currentUser);
         }
