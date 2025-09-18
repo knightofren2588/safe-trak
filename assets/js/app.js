@@ -1805,7 +1805,7 @@ END:VCALENDAR`;
                         <span class="status-badge ${this.getEnhancedStatusClass(project)} me-2" role="status" aria-label="Project status: ${this.getStatusDisplayText(project.status)}">
                             <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
                             ${this.getStatusDisplayText(project.status)}
-                        </span>
+                    </span>
                         <select class="form-select form-select-sm status-dropdown" onchange="projectManager.changeProjectStatus(${project.id}, this.value)">
                             <option value="active" ${project.status === 'active' ? 'selected' : ''}>Active</option>
                             <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
@@ -2366,23 +2366,15 @@ END:VCALENDAR`;
         const existingDivider = userDropdown.querySelector('hr.dropdown-divider');
         if (!existingDivider) return;
         
-        // Remove any dynamically added users (everything between header and first divider)
-        const header = userDropdown.querySelector('.dropdown-header');
-        if (header && header.nextElementSibling) {
-            let nextElement = header.nextElementSibling;
-            while (nextElement && nextElement !== existingDivider) {
-                const toRemove = nextElement;
-                nextElement = nextElement.nextElementSibling;
-                if (toRemove.querySelector('a[onclick*="switchUser"]') && !toRemove.querySelector('a[onclick*="openUser"]')) {
-                    toRemove.remove();
-                }
-            }
-        }
+        // Remove ALL dynamically added users by finding elements marked with data-dynamic-user
+        const dynamicUserElements = userDropdown.querySelectorAll('li[data-dynamic-user]');
+        dynamicUserElements.forEach(li => li.remove());
         
         // Add dynamic users (excluding admin which is already in static HTML)
         const dynamicUsers = this.users.filter(user => user.id !== 'admin');
         dynamicUsers.forEach(user => {
             const li = document.createElement('li');
+            li.setAttribute('data-dynamic-user', 'true'); // Mark as dynamic for easy removal
             const escapedId = user.id.replace(/'/g, "\\'");
             const escapedName = this.escapeHtml(user.name);
             li.innerHTML = `<a class="dropdown-item" href="#" onclick="switchUser('${escapedId}')">
