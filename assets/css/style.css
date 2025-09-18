@@ -535,36 +535,66 @@ body::after {
 /* ========================================
    🎨 USER COLOR CODING
 ======================================== */
-.project-row-colored {
-    transition: all 0.2s ease;
+.project-row-user-colored {
+    transition: all 0.3s ease;
     position: relative;
+    border-radius: 0 8px 8px 0;
 }
 
-.project-row-colored:hover {
-    transform: translateX(2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.project-row-user-colored:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 2;
 }
 
-.project-row-colored::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: var(--user-color, #6c757d);
-    border-radius: 0 2px 2px 0;
+.project-row-user-colored td {
+    border-top: none !important;
+    vertical-align: middle;
 }
 
-/* Color legend helper */
+.project-row-user-colored:first-child td {
+    border-top: none !important;
+}
+
+/* Color legend */
 .user-color-legend {
     display: inline-block;
-    width: 12px;
-    height: 12px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     margin-right: 8px;
     border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.legend-item {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    padding: 4px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.legend-item:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.legend-text {
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+/* Enhanced table styling for colored rows */
+.table-hover .project-row-user-colored:hover {
+    background-color: inherit !important;
+}
+
+/* Override Bootstrap table hover for our colored rows */
+.table-hover tbody .project-row-user-colored:hover td {
+    background-color: inherit;
 }
 
 /* ========================================

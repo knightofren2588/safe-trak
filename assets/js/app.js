@@ -555,6 +555,47 @@ class ProjectManager {
         return `rgba(${r}, ${g}, ${b}, 0.1)`;
     }
     
+    getUserColorMedium(userId) {
+        const color = this.getUserColor(userId);
+        // Convert hex to rgba with medium opacity for more visible backgrounds
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substr(0, 2), 16);
+        const g = parseInt(hex.substr(2, 2), 16);
+        const b = parseInt(hex.substr(4, 2), 16);
+        return `rgba(${r}, ${g}, ${b}, 0.15)`;
+    }
+    
+    renderUserColorLegend() {
+        const legendContainer = document.getElementById('userColorLegend');
+        if (!legendContainer) return;
+        
+        // Get unique users from projects
+        const uniqueUsers = [...new Set(this.projects.map(p => p.createdBy))];
+        const legendItems = uniqueUsers.map(userId => {
+            const user = this.users.find(u => u.id === userId);
+            const userName = user ? user.name : userId;
+            const userColor = this.getUserColor(userId);
+            const projectCount = this.projects.filter(p => p.createdBy === userId).length;
+            
+            return `
+                <div class="legend-item d-flex align-items-center me-4 mb-2">
+                    <div class="user-color-legend" style="background: ${userColor};"></div>
+                    <span class="legend-text">
+                        <strong>${this.escapeHtml(userName)}</strong>
+                        <small class="text-muted ms-1">(${projectCount} project${projectCount !== 1 ? 's' : ''})</small>
+                    </span>
+                </div>
+            `;
+        }).join('');
+        
+        legendContainer.innerHTML = `
+            <div class="d-flex flex-wrap align-items-center">
+                <small class="text-muted me-3 fw-bold">Project Owners:</small>
+                ${legendItems}
+            </div>
+        `;
+    }
+    
     // ========================================
     // INDIVIDUAL USER VIEWS
     // ========================================
@@ -3253,6 +3294,9 @@ END:VCALENDAR`;
             return;
         }
 
+        // Update the color legend
+        this.renderUserColorLegend();
+        
         tbody.innerHTML = projects.map(project => {
             const creator = this.users.find(u => u.id === project.createdBy);
             const creatorName = creator ? creator.name : 'Unknown';
@@ -3269,7 +3313,7 @@ END:VCALENDAR`;
             ).join('') : '';
             
             return `
-            <tr class="fade-in" style="border-left: 4px solid ${this.getUserColor(project.createdBy)}; background: ${this.getUserColorLight(project.createdBy)};">
+            <tr class="fade-in project-row-user-colored" style="background: ${this.getUserColorMedium(project.createdBy)}; border-left: 4px solid ${this.getUserColor(project.createdBy)};">
                 <td>
                     <div class="d-flex align-items-center">
                         <div class="bg-${this.getCategoryColor(project.category)} text-white p-2 rounded me-3">
