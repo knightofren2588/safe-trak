@@ -98,9 +98,9 @@ class ProjectManager {
         };
         
         return [...users].sort((a, b) => {
-            // Admin always comes first
-            if (a.id === 'admin') return -1;
-            if (b.id === 'admin') return 1;
+            // Admin always comes last
+            if (a.id === 'admin') return 1;
+            if (b.id === 'admin') return -1;
             
             // Get role priorities (trim whitespace and handle case variations)
             const aRole = (a.role || 'Team Member').trim();
@@ -837,18 +837,18 @@ class ProjectManager {
             const certCount = this.certifications.filter(c => c.userId === user.id).length;
             
             return `
-                <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
-                    <div class="user-selection-card user-selection-card-compact" onclick="${user.id === 'admin' ? 'requestAdminAccess()' : `selectUserProfile('${user.id}')`}">
-                        <div class="user-selection-avatar user-selection-avatar-compact">
+                <div class="col-md-6">
+                    <div class="user-selection-card" onclick="${user.id === 'admin' ? 'requestAdminAccess()' : `selectUserProfile('${user.id}')`}">
+                        <div class="user-selection-avatar">
                             ${user.avatar || user.name.charAt(0).toUpperCase()}
                         </div>
                         <div class="user-selection-name">${this.escapeHtml(user.name)}</div>
                         <div class="user-selection-role">${user.role || 'Team Member'}</div>
-                        <div class="user-selection-stats user-selection-stats-compact">
-                            <span><strong>${projectCount}</strong> Projects</span>
-                            <span><strong>${certCount}</strong> Certifications</span>
+                        <div class="user-selection-stats">
+                            <div><strong>${projectCount}</strong> Projects</div>
+                            <div><strong>${certCount}</strong> Certifications</div>
                         </div>
-                        ${user.id === 'admin' ? '<div class="admin-badge admin-badge-compact"><i class="fas fa-shield-alt me-1"></i>Admin</div>' : ''}
+                        ${user.id === 'admin' ? '<div class="admin-badge"><i class="fas fa-shield-alt me-1"></i>Admin Access</div>' : ''}
                     </div>
                 </div>
             `;
