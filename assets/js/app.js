@@ -5695,6 +5695,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    window.toggleAdvancedFilters = () => {
+        const advancedFilters = document.getElementById('advancedFilters');
+        const button = document.getElementById('moreFiltersBtn');
+        
+        if (advancedFilters) {
+            if (advancedFilters.classList.contains('show')) {
+                // Hide the filters
+                const collapse = new bootstrap.Collapse(advancedFilters);
+                collapse.hide();
+                button.innerHTML = '<i class="fas fa-filter me-1"></i>More Filters';
+            } else {
+                // Show the filters
+                const collapse = new bootstrap.Collapse(advancedFilters);
+                collapse.show();
+                button.innerHTML = '<i class="fas fa-filter me-1"></i>Hide Filters';
+            }
+        }
+    };
+
     // Global notification functions
     window.showUserNotifications = () => {
         if (window.projectManager) {
