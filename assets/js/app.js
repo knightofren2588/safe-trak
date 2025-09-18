@@ -68,6 +68,10 @@ class ProjectManager {
         
         // Project view mode (personal vs all team projects)
         this.projectViewMode = localStorage.getItem('safetrack_project_view_mode') || 'personal';
+        
+        // Admin verification system
+        this.isAdminVerified = false;
+        this.pendingAdminAction = null;
     }
 
     // ========================================
@@ -186,6 +190,89 @@ class ProjectManager {
                 location.reload();
             }, 1000);
         }
+    }
+    
+    // ========================================
+    // ADMIN PASSWORD VERIFICATION
+    // ========================================
+    
+    requireAdminPassword(actionCallback, actionName = 'admin function') {
+        // If user is admin, check if already verified in this session
+        if (this.currentUser === 'admin' && this.isAdminVerified) {
+            actionCallback();
+            return;
+        }
+        
+        // If user is not admin, deny access
+        if (this.currentUser !== 'admin') {
+            this.showNotification('Admin access required. Only administrators can perform this action.', 'error');
+            return;
+        }
+        
+        // Store the action to execute after verification
+        this.pendingAdminAction = actionCallback;
+        
+        // Show admin password modal
+        this.showAdminPasswordModal(actionName);
+    }
+    
+    showAdminPasswordModal(actionName) {
+        // Clear any previous error
+        document.getElementById('adminPasswordError').classList.add('d-none');
+        document.getElementById('adminPassword').value = '';
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('adminPasswordModal'));
+        modal.show();
+        
+        // Focus on password field
+        setTimeout(() => {
+            document.getElementById('adminPassword').focus();
+        }, 500);
+    }
+    
+    verifyAdminPassword(password) {
+        // Admin password (you can change this)
+        const adminPassword = 'AdminSafe2025!';
+        
+        if (password === adminPassword) {
+            // Correct admin password
+            this.isAdminVerified = true;
+            
+            // Hide modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('adminPasswordModal'));
+            if (modal) modal.hide();
+            
+            // Execute pending action
+            if (this.pendingAdminAction) {
+                this.pendingAdminAction();
+                this.pendingAdminAction = null;
+            }
+            
+            this.showNotification('Admin access verified', 'success');
+            
+            // Reset verification after 30 minutes for security
+            setTimeout(() => {
+                this.isAdminVerified = false;
+            }, 30 * 60 * 1000);
+        } else {
+            // Wrong password
+            this.showAdminPasswordError();
+        }
+    }
+    
+    showAdminPasswordError() {
+        const errorDiv = document.getElementById('adminPasswordError');
+        errorDiv.classList.remove('d-none');
+        
+        // Clear password field
+        document.getElementById('adminPassword').value = '';
+        document.getElementById('adminPassword').focus();
+        
+        // Hide error after 5 seconds
+        setTimeout(() => {
+            errorDiv.classList.add('d-none');
+        }, 5000);
     }
     
     showUserSelectionModal() {
@@ -2389,16 +2476,19 @@ END:VCALENDAR`;
     }
 
     resetAllData() {
-        // Clear all stored data
-        localStorage.removeItem('safetrack_projects');
-        localStorage.removeItem('safetrack_users');
-        localStorage.removeItem('safetrack_categories');
-        localStorage.removeItem('safetrack_roles');
-        localStorage.removeItem('safetrack_departments');
-        localStorage.removeItem('safetrack_current_user');
-        localStorage.removeItem('safetrack_user_interacted');
-        
-        // Force reset to only Admin User
+        // Require admin password verification
+        this.requireAdminPassword(() => {
+            if (confirm('Are you sure you want to reset all data? This will delete all users, projects, categories, roles, and departments. This action cannot be undone.')) {
+                // Clear all stored data
+                localStorage.removeItem('safetrack_projects');
+                localStorage.removeItem('safetrack_users');
+                localStorage.removeItem('safetrack_categories');
+                localStorage.removeItem('safetrack_roles');
+                localStorage.removeItem('safetrack_departments');
+                localStorage.removeItem('safetrack_current_user');
+                localStorage.removeItem('safetrack_user_interacted');
+                
+                // Force reset to only Admin User
         this.users = [
             {
                 id: "admin",
@@ -2411,8 +2501,10 @@ END:VCALENDAR`;
         this.saveUsers();
             this.saveProjects();
         
-        // Reload the page to reset everything
-        location.reload();
+                // Reload the page to reset everything
+                location.reload();
+            }
+        }, 'data reset');
     }
 
     loadSampleData() {
@@ -3317,9 +3409,12 @@ END:VCALENDAR`;
     }
 
     openUserManagement() {
-        this.renderUserManagementTable();
-        const modal = new bootstrap.Modal(document.getElementById('userManagementModal'));
-        modal.show();
+        // Require admin password verification
+        this.requireAdminPassword(() => {
+            this.renderUserManagementTable();
+            const modal = new bootstrap.Modal(document.getElementById('userManagementModal'));
+            modal.show();
+        }, 'user management');
     }
 
     populateUserDropdowns() {
@@ -4815,4 +4910,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Admin password form submission handler
+    document.getElementById('adminPasswordForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const password = document.getElementById('adminPassword').value;
+        
+        if (password && window.projectManager) {
+            window.projectManager.verifyAdminPassword(password);
+        }
+    });
 });
