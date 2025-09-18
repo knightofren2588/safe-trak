@@ -527,7 +527,8 @@ class ProjectManager {
             'admin': '#dc3545',        // Red (safety theme)
             'marcena': '#198754',      // Green
             'mike': '#0d6efd',         // Blue
-            'matt': '#fd7e14',         // Orange
+            'matt': '#6f42c1',         // Purple
+            'tyson': '#fd7e14',        // Orange
             'default': '#6c757d'       // Gray for unknown users
         };
         
