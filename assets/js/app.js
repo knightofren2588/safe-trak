@@ -58,25 +58,269 @@ class ProjectManager {
             { quote: "Safety is learned behavior reinforced through repetition.", author: "Anonymous" },
             { quote: "At the end of the day, safety comes first because everything else is secondary.", author: "Anonymous" }
         ];
+        
+        // Initialize enhanced quote system
+        this.initializeQuoteSystem();
+        this.currentQuoteIndex = 0;
+        
         this.init();
     }
 
-    // Daily Safety Quote System
+    // ========================================
+    // ENHANCED QUOTE SYSTEM
+    // ========================================
+    
+    initializeQuoteSystem() {
+        // Expand the built-in quote collection
+        this.builtInQuotes = [
+            ...this.safetyQuotes,
+            // Add more inspirational safety quotes
+            { quote: "Excellence is never an accident. It is always the result of high intention, sincere effort, and intelligent execution.", author: "Aristotle" },
+            { quote: "The way to get started is to quit talking and begin doing.", author: "Walt Disney" },
+            { quote: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
+            { quote: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
+            { quote: "Everything you've ever wanted is on the other side of fear.", author: "George Addair" },
+            { quote: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+            { quote: "The only impossible journey is the one you never begin.", author: "Tony Robbins" },
+            { quote: "In the middle of difficulty lies opportunity.", author: "Albert Einstein" },
+            { quote: "Success is walking from failure to failure with no loss of enthusiasm.", author: "Winston Churchill" },
+            { quote: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
+            { quote: "Quality is not an act, it is a habit.", author: "Aristotle" },
+            { quote: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese Proverb" },
+            { quote: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
+            { quote: "A goal without a plan is just a wish.", author: "Antoine de Saint-Exupéry" },
+            { quote: "You miss 100% of the shots you don't take.", author: "Wayne Gretzky" }
+        ];
+        
+        // Load custom quotes and favorites from storage
+        this.customQuotes = this.loadCustomQuotes();
+        this.favoriteQuotes = this.loadFavoriteQuotes();
+        
+        // Combine all quotes
+        this.allQuotes = [...this.builtInQuotes, ...this.customQuotes];
+    }
+    
     displayDailySafetyQuote() {
-        // Use current date as seed for consistent daily quote
-        const today = new Date();
-        const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
-        const quoteIndex = dayOfYear % this.safetyQuotes.length;
+        // Use true randomization on each visit instead of daily consistency
+        const randomIndex = Math.floor(Math.random() * this.allQuotes.length);
+        this.currentQuoteIndex = randomIndex;
         
-        const dailyQuote = this.safetyQuotes[quoteIndex];
-        
+        const currentQuote = this.allQuotes[randomIndex];
+        this.updateQuoteDisplay(currentQuote);
+    }
+    
+    updateQuoteDisplay(quote) {
         const quoteElement = document.getElementById('dailySafetyQuote');
         const authorElement = document.getElementById('dailySafetyAuthor');
         
         if (quoteElement && authorElement) {
-            quoteElement.textContent = `"${dailyQuote.quote}"`;
-            authorElement.textContent = `— ${dailyQuote.author}`;
+            quoteElement.textContent = `"${quote.quote}"`;
+            authorElement.textContent = `— ${quote.author}`;
         }
+        
+        // Update modal display if open
+        const currentQuoteDisplay = document.getElementById('currentQuoteDisplay');
+        const currentAuthorDisplay = document.getElementById('currentAuthorDisplay');
+        
+        if (currentQuoteDisplay && currentAuthorDisplay) {
+            currentQuoteDisplay.textContent = `"${quote.quote}"`;
+            currentAuthorDisplay.textContent = quote.author;
+        }
+    }
+    
+    getNewQuote() {
+        // Get a different random quote
+        let newIndex;
+        do {
+            newIndex = Math.floor(Math.random() * this.allQuotes.length);
+        } while (newIndex === this.currentQuoteIndex && this.allQuotes.length > 1);
+        
+        this.currentQuoteIndex = newIndex;
+        const newQuote = this.allQuotes[newIndex];
+        this.updateQuoteDisplay(newQuote);
+        
+        // Show notification
+        this.showNotification('New quote loaded!', 'info', 2000);
+    }
+    
+    openQuoteModal() {
+        this.updateQuoteStats();
+        this.showAllQuotes();
+        
+        const modal = new bootstrap.Modal(document.getElementById('quoteModal'));
+        modal.show();
+    }
+    
+    addCustomQuote(quoteText, author) {
+        const newQuote = {
+            quote: quoteText,
+            author: author || 'Anonymous',
+            custom: true,
+            id: Date.now()
+        };
+        
+        this.customQuotes.push(newQuote);
+        this.allQuotes = [...this.builtInQuotes, ...this.customQuotes];
+        this.saveCustomQuotes();
+        
+        this.showNotification('Custom quote added successfully!', 'success');
+        this.updateQuoteStats();
+        this.showAllQuotes();
+    }
+    
+    addToFavorites() {
+        const currentQuote = this.allQuotes[this.currentQuoteIndex];
+        if (!currentQuote) return;
+        
+        // Check if already in favorites
+        const alreadyFavorite = this.favoriteQuotes.some(fav => 
+            fav.quote === currentQuote.quote && fav.author === currentQuote.author
+        );
+        
+        if (alreadyFavorite) {
+            this.showNotification('Quote is already in favorites!', 'warning');
+            return;
+        }
+        
+        const favoriteQuote = {
+            ...currentQuote,
+            favorite: true,
+            favoriteId: Date.now()
+        };
+        
+        this.favoriteQuotes.push(favoriteQuote);
+        this.saveFavoriteQuotes();
+        
+        this.showNotification('Quote added to favorites!', 'success');
+        this.updateQuoteStats();
+    }
+    
+    updateQuoteStats() {
+        document.getElementById('totalQuotes').textContent = this.allQuotes.length;
+        document.getElementById('builtinQuotes').textContent = this.builtInQuotes.length;
+        document.getElementById('customQuotes').textContent = this.customQuotes.length;
+        document.getElementById('favoriteQuotes').textContent = this.favoriteQuotes.length;
+    }
+    
+    showAllQuotes() {
+        this.renderQuoteList(this.allQuotes, 'all');
+    }
+    
+    showBuiltinQuotes() {
+        this.renderQuoteList(this.builtInQuotes, 'builtin');
+    }
+    
+    showCustomQuotes() {
+        this.renderQuoteList(this.customQuotes, 'custom');
+    }
+    
+    showFavoriteQuotes() {
+        this.renderQuoteList(this.favoriteQuotes, 'favorite');
+    }
+    
+    renderQuoteList(quotes, type) {
+        const quoteList = document.getElementById('quoteList');
+        if (!quotes.length) {
+            quoteList.innerHTML = `<div class="text-center text-muted p-3">No ${type} quotes found.</div>`;
+            return;
+        }
+        
+        quoteList.innerHTML = quotes.map((quote, index) => {
+            const isCustom = quote.custom;
+            const isFavorite = this.favoriteQuotes.some(fav => 
+                fav.quote === quote.quote && fav.author === quote.author
+            );
+            
+            return `
+                <div class="quote-item ${isCustom ? 'custom' : ''} ${isFavorite ? 'favorite' : ''}" onclick="projectManager.selectQuote(${this.allQuotes.indexOf(quote)})">
+                    <div class="quote-item-text">"${this.escapeHtml(quote.quote)}"</div>
+                    <div class="quote-item-author">— ${this.escapeHtml(quote.author)}</div>
+                    <div class="quote-item-actions">
+                        <button class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); projectManager.selectQuote(${this.allQuotes.indexOf(quote)})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        ${!isFavorite ? `<button class="btn btn-outline-warning btn-sm" onclick="event.stopPropagation(); projectManager.addQuoteToFavorites(${this.allQuotes.indexOf(quote)})">
+                            <i class="fas fa-heart"></i>
+                        </button>` : ''}
+                        ${isCustom ? `<button class="btn btn-outline-danger btn-sm" onclick="event.stopPropagation(); projectManager.deleteCustomQuote(${quote.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    selectQuote(index) {
+        if (index >= 0 && index < this.allQuotes.length) {
+            this.currentQuoteIndex = index;
+            this.updateQuoteDisplay(this.allQuotes[index]);
+        }
+    }
+    
+    addQuoteToFavorites(index) {
+        const quote = this.allQuotes[index];
+        if (quote) {
+            const favoriteQuote = {
+                ...quote,
+                favorite: true,
+                favoriteId: Date.now()
+            };
+            
+            this.favoriteQuotes.push(favoriteQuote);
+            this.saveFavoriteQuotes();
+            this.showNotification('Quote added to favorites!', 'success');
+            this.updateQuoteStats();
+            this.showAllQuotes(); // Refresh the display
+        }
+    }
+    
+    deleteCustomQuote(quoteId) {
+        if (confirm('Are you sure you want to delete this custom quote?')) {
+            this.customQuotes = this.customQuotes.filter(q => q.id !== quoteId);
+            this.allQuotes = [...this.builtInQuotes, ...this.customQuotes];
+            this.saveCustomQuotes();
+            
+            this.showNotification('Custom quote deleted', 'success');
+            this.updateQuoteStats();
+            this.showCustomQuotes(); // Refresh the display
+        }
+    }
+    
+    resetQuotesToDefault() {
+        if (confirm('This will remove all custom quotes and favorites. Are you sure?')) {
+            this.customQuotes = [];
+            this.favoriteQuotes = [];
+            this.allQuotes = [...this.builtInQuotes];
+            
+            localStorage.removeItem('safetrack_custom_quotes');
+            localStorage.removeItem('safetrack_favorite_quotes');
+            
+            this.showNotification('Quotes reset to default collection', 'success');
+            this.updateQuoteStats();
+            this.showAllQuotes();
+            
+            // Display a new random quote
+            this.getNewQuote();
+        }
+    }
+    
+    saveCustomQuotes() {
+        localStorage.setItem('safetrack_custom_quotes', JSON.stringify(this.customQuotes));
+    }
+    
+    loadCustomQuotes() {
+        const stored = localStorage.getItem('safetrack_custom_quotes');
+        return stored ? JSON.parse(stored) : [];
+    }
+    
+    saveFavoriteQuotes() {
+        localStorage.setItem('safetrack_favorite_quotes', JSON.stringify(this.favoriteQuotes));
+    }
+    
+    loadFavoriteQuotes() {
+        const stored = localStorage.getItem('safetrack_favorite_quotes');
+        return stored ? JSON.parse(stored) : [];
     }
 
     // Calendar Integration (Email system removed)
@@ -4268,6 +4512,55 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
+    // Global quote management functions
+    window.getNewQuote = () => {
+        if (window.projectManager) {
+            window.projectManager.getNewQuote();
+        }
+    };
+
+    window.openQuoteModal = () => {
+        if (window.projectManager) {
+            window.projectManager.openQuoteModal();
+        }
+    };
+
+    window.addToFavorites = () => {
+        if (window.projectManager) {
+            window.projectManager.addToFavorites();
+        }
+    };
+
+    window.showAllQuotes = () => {
+        if (window.projectManager) {
+            window.projectManager.showAllQuotes();
+        }
+    };
+
+    window.showBuiltinQuotes = () => {
+        if (window.projectManager) {
+            window.projectManager.showBuiltinQuotes();
+        }
+    };
+
+    window.showCustomQuotes = () => {
+        if (window.projectManager) {
+            window.projectManager.showCustomQuotes();
+        }
+    };
+
+    window.showFavoriteQuotes = () => {
+        if (window.projectManager) {
+            window.projectManager.showFavoriteQuotes();
+        }
+    };
+
+    window.resetQuotesToDefault = () => {
+        if (window.projectManager) {
+            window.projectManager.resetQuotesToDefault();
+        }
+    };
+
     // Certification form submission handler
     document.getElementById('certificationForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -4291,6 +4584,21 @@ document.addEventListener('DOMContentLoaded', function() {
             window.projectManager.editCertification(window.projectManager.currentCertificationEditId, certificationData);
         } else {
             window.projectManager.addCertification(certificationData);
+        }
+    });
+
+    // Custom quote form submission handler
+    document.getElementById('customQuoteForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!window.projectManager) return;
+        
+        const quoteText = document.getElementById('customQuoteText').value.trim();
+        const author = document.getElementById('customQuoteAuthor').value.trim();
+        
+        if (quoteText) {
+            window.projectManager.addCustomQuote(quoteText, author);
+            this.reset(); // Clear the form
         }
     });
 });
