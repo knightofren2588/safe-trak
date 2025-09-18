@@ -678,12 +678,12 @@ class ProjectManager {
     
     getUserColorMedium(userId) {
         const color = this.getUserColor(userId);
-        // Convert hex to rgba with medium opacity for more visible backgrounds
+        // Convert hex to rgba with lighter opacity for better readability
         const hex = color.replace('#', '');
         const r = parseInt(hex.substr(0, 2), 16);
         const g = parseInt(hex.substr(2, 2), 16);
         const b = parseInt(hex.substr(4, 2), 16);
-        return `rgba(${r}, ${g}, ${b}, 0.25)`;
+        return `rgba(${r}, ${g}, ${b}, 0.08)`;
     }
     
     renderUserColorLegend() {
@@ -3443,7 +3443,7 @@ END:VCALENDAR`;
             ).join('') : '';
             
             return `
-            <tr class="fade-in project-row-user-colored" style="background: ${this.getUserColorMedium(project.createdBy)} !important; border-left: 4px solid ${this.getUserColor(project.createdBy)};">
+            <tr class="fade-in project-row-user-colored" style="background: ${this.getUserColorMedium(project.createdBy)} !important; border-left: 5px solid ${this.getUserColor(project.createdBy)}; box-shadow: inset 0 0 0 1px ${this.getUserColorLight(project.createdBy)};">
                 <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     <div class="d-flex align-items-center">
                         <div class="bg-${this.getCategoryColor(project.category)} text-white p-2 rounded me-3">
