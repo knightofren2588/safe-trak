@@ -1087,14 +1087,15 @@ END:VCALENDAR`;
             
             // Prepare table data
             const exportData = this.prepareExportData();
-            const tableColumns = ['Project', 'Status', 'Progress', 'Assigned To', 'Start Date', 'Due Date'];
+            const tableColumns = ['Project', 'Status', 'Progress', 'Assigned To', 'Start Date', 'Due Date', 'Completed'];
             const tableRows = exportData.map(project => [
                 project.Project,
                 project.Status,
                 project.Progress,
                 project['Assigned To'],
                 project['Start Date'],
-                project['Due Date']
+                project['Due Date'],
+                project['Completion Date'] || '—'
             ]);
             
             // Add table
@@ -1250,7 +1251,8 @@ END:VCALENDAR`;
                 'Assigned To': assignedUser ? assignedUser.name : (project.assignedTo || 'Unassigned'),
                 'Created By': createdByUser ? createdByUser.name : 'Unknown',
                 'Start Date': project.startDate ? new Date(project.startDate).toLocaleDateString() : '',
-                'Due Date': project.dueDate ? new Date(project.dueDate).toLocaleDateString() : '',
+                'Due Date': project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'No deadline',
+                'Completion Date': project.completionDate ? new Date(project.completionDate).toLocaleDateString() : '',
                 'Category': project.category || '',
                 'Created Date': new Date(project.createdAt).toLocaleDateString(),
                 'Screenshots': project.screenshots ? project.screenshots.length : 0
@@ -2797,7 +2799,8 @@ END:VCALENDAR`;
                     </div>
                 </td>
                 <td class="text-muted">${this.formatDate(project.startDate)}</td>
-                <td class="text-muted">${this.formatDate(project.dueDate)}</td>
+                <td class="text-muted">${project.dueDate ? this.formatDate(project.dueDate) : '<span class="text-muted">No deadline</span>'}</td>
+                <td class="text-muted">${project.completionDate ? this.formatDate(project.completionDate) : '<span class="text-muted">—</span>'}</td>
                 <td>
                     <div class="d-flex align-items-center">
                         <div class="user-avatar me-2" title="${assignedToName}">${assignedToAvatar}</div>
@@ -2868,7 +2871,8 @@ END:VCALENDAR`;
         document.getElementById('projectPriority').value = project.priority;
         document.getElementById('projectCategory').value = project.category;
         document.getElementById('projectStartDate').value = project.startDate || '';
-        document.getElementById('projectDueDate').value = project.dueDate;
+        document.getElementById('projectDueDate').value = project.dueDate || '';
+        document.getElementById('projectCompletionDate').value = project.completionDate || '';
         document.getElementById('projectAssignedTo').value = project.assignedTo || '';
         document.getElementById('projectStatus').value = project.status || 'active';
         
@@ -3524,11 +3528,13 @@ END:VCALENDAR`;
         if (newStatus === 'completed') {
             project.progress = 100;
             project.completedAt = new Date().toISOString();
+            project.completionDate = new Date().toISOString().split('T')[0]; // Store as YYYY-MM-DD
         } else if (newStatus === 'cancelled') {
             project.cancelledAt = new Date().toISOString();
         } else if (newStatus === 'active' && oldStatus === 'completed') {
             // If reactivating a completed project, reset completion date
             project.completedAt = null;
+            project.completionDate = null;
         }
 
         this.saveProjects();

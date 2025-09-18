@@ -446,6 +446,7 @@
                                     <th class="border-0">Progress</th>
                                     <th class="border-0">Start Date</th>
                                     <th class="border-0">Due Date</th>
+                                    <th class="border-0">Completed</th>
                                     <th class="border-0">Assigned To</th>
                                     <th class="border-0">Screenshots</th>
                                     <th class="border-0">Quick Actions</th>
@@ -797,8 +798,14 @@
                                 <input type="date" class="form-control" id="projectStartDate" name="startDate" required>
                             </div>
                             <div class="col-md-6">
-                                <label for="projectDueDate" class="form-label">Safety Deadline *</label>
-                                <input type="date" class="form-control" id="projectDueDate" name="dueDate" required>
+                                <label for="projectDueDate" class="form-label">Safety Deadline <small class="text-muted">(Optional)</small></label>
+                                <input type="date" class="form-control" id="projectDueDate" name="dueDate">
+                                <div class="form-text">Leave blank if no specific deadline</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="projectCompletionDate" class="form-label">Completion Date <small class="text-muted">(Auto-filled)</small></label>
+                                <input type="date" class="form-control" id="projectCompletionDate" name="completionDate" readonly>
+                                <div class="form-text">Automatically set when project is marked as completed</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="projectAssignedTo" class="form-label">Assigned To</label>
