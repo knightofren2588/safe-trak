@@ -374,8 +374,21 @@ class ProjectManager {
         // Save to cloud storage if connected
         if (this.cloudStorage.isConnected) {
             try {
-                await this.cloudStorage.saveToCloud('project_notes', this.projectNotes);
-                console.log('Project notes saved to cloud');
+                // Convert notes format for cloud storage
+                // Cloud expects {id: item} format, so we'll use project IDs as document IDs
+                const cloudData = {};
+                Object.entries(this.projectNotes).forEach(([projectId, notes]) => {
+                    if (notes && notes.length > 0) {
+                        cloudData[projectId] = {
+                            projectId: projectId,
+                            notes: notes,
+                            lastUpdated: new Date().toISOString()
+                        };
+                    }
+                });
+                
+                await this.cloudStorage.saveToCloud('project_notes', cloudData);
+                console.log('Project notes saved to cloud:', Object.keys(cloudData).length, 'projects with notes');
             } catch (error) {
                 console.error('Failed to save project notes to cloud:', error);
             }
@@ -386,10 +399,17 @@ class ProjectManager {
         // Try to load from cloud first
         if (this.cloudStorage.isConnected) {
             try {
-                const cloudNotes = await this.cloudStorage.loadFromCloud('project_notes');
-                if (cloudNotes && Object.keys(cloudNotes).length > 0) {
-                    console.log('Loaded project notes from cloud');
-                    return cloudNotes;
+                const cloudData = await this.cloudStorage.loadFromCloud('project_notes');
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    // Convert cloud format back to our internal format
+                    const notes = {};
+                    Object.entries(cloudData).forEach(([projectId, data]) => {
+                        if (data.notes) {
+                            notes[projectId] = data.notes;
+                        }
+                    });
+                    console.log('Loaded project notes from cloud:', Object.keys(notes).length, 'projects with notes');
+                    return notes;
                 }
             } catch (error) {
                 console.error('Failed to load project notes from cloud:', error);
@@ -407,10 +427,17 @@ class ProjectManager {
         // Force refresh notes from cloud
         if (this.cloudStorage.isConnected) {
             try {
-                const cloudNotes = await this.cloudStorage.loadFromCloud('project_notes');
-                if (cloudNotes) {
-                    this.projectNotes = cloudNotes;
-                    console.log('Synced project notes from cloud:', Object.keys(cloudNotes).length, 'projects have notes');
+                const cloudData = await this.cloudStorage.loadFromCloud('project_notes');
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    // Convert cloud format back to our internal format
+                    const notes = {};
+                    Object.entries(cloudData).forEach(([projectId, data]) => {
+                        if (data.notes) {
+                            notes[projectId] = data.notes;
+                        }
+                    });
+                    this.projectNotes = notes;
+                    console.log('Synced project notes from cloud:', Object.keys(notes).length, 'projects have notes');
                     
                     // Also update local storage
                     localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
