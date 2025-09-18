@@ -3314,8 +3314,8 @@ END:VCALENDAR`;
             ).join('') : '';
             
             return `
-            <tr class="fade-in project-row-user-colored" style="background: ${this.getUserColorMedium(project.createdBy)}; border-left: 4px solid ${this.getUserColor(project.createdBy)};">
-                <td>
+            <tr class="fade-in project-row-user-colored" style="background: ${this.getUserColorMedium(project.createdBy)} !important; border-left: 4px solid ${this.getUserColor(project.createdBy)};">
+                <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     <div class="d-flex align-items-center">
                         <div class="bg-${this.getCategoryColor(project.category)} text-white p-2 rounded me-3">
                             <i class="fas ${this.getCategoryIcon(project.category)} small"></i>
@@ -3326,7 +3326,7 @@ END:VCALENDAR`;
                         </div>
                     </div>
                 </td>
-                <td>
+                <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     <div class="d-flex align-items-center">
                         <span class="status-badge ${this.getEnhancedStatusClass(project)} me-2" role="status" aria-label="Project status: ${this.getStatusDisplayText(project.status)}">
                             <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
@@ -3344,7 +3344,7 @@ END:VCALENDAR`;
                         `}
                     </div>
                 </td>
-                <td>
+                <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     <div class="d-flex align-items-center">
                         <div class="progress-enhanced me-2 progress-clickable" style="width: 120px; cursor: pointer;" 
                              onclick="projectManager.openProgressModal(${project.id})" title="Click to update progress"
@@ -3358,10 +3358,10 @@ END:VCALENDAR`;
                         </div>
                     </div>
                 </td>
-                <td class="text-muted">${this.formatDate(project.startDate)}</td>
-                <td class="text-muted">${project.dueDate ? this.formatDate(project.dueDate) : '<span class="text-muted">No deadline</span>'}</td>
-                <td class="text-muted">${project.completionDate ? this.formatDate(project.completionDate) : '<span class="text-muted">—</span>'}</td>
-                <td>
+                <td class="text-muted" style="background: ${this.getUserColorMedium(project.createdBy)} !important;">${this.formatDate(project.startDate)}</td>
+                <td class="text-muted" style="background: ${this.getUserColorMedium(project.createdBy)} !important;">${project.dueDate ? this.formatDate(project.dueDate) : '<span class="text-muted">No deadline</span>'}</td>
+                <td class="text-muted" style="background: ${this.getUserColorMedium(project.createdBy)} !important;">${project.completionDate ? this.formatDate(project.completionDate) : '<span class="text-muted">—</span>'}</td>
+                <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     <div class="d-flex align-items-center">
                         <div class="user-avatar me-2" title="${assignedToName}">${assignedToAvatar}</div>
                         <div>
@@ -3370,7 +3370,7 @@ END:VCALENDAR`;
                         </div>
                     </div>
                 </td>
-                <td>
+                <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     ${screenshotCount > 0 ? `
                         <div class="screenshot-gallery">
                             ${screenshotThumbnails}
@@ -3378,7 +3378,7 @@ END:VCALENDAR`;
                         </div>
                     ` : '<span class="text-muted small">No screenshots</span>'}
                 </td>
-                <td>
+                <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     ${this.canUserEditProject(project) ? `
                         <div class="d-flex flex-wrap gap-1">
                             <button onclick="projectManager.changeProjectStatus(${project.id}, 'active')" 
@@ -3402,12 +3402,12 @@ END:VCALENDAR`;
                         <span class="text-muted small">View Only</span>
                     `}
                 </td>
-                <td>
+                <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     ${this.canUserEditProject(project) ? `
-                    <div class="btn-group btn-group-sm">
+                        <div class="btn-group btn-group-sm">
                             <button onclick="projectManager.editProjectModal(${project.id})" class="btn btn-outline-primary" title="Edit Project">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                                <i class="fas fa-edit"></i>
+                            </button>
                             <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-outline-success" title="Update Progress">
                                 <i class="fas fa-chart-line"></i>
                             </button>
@@ -3418,9 +3418,9 @@ END:VCALENDAR`;
                                 <i class="fas fa-images"></i>
                             </button>` : ''}
                             <button onclick="projectManager.deleteProject(${project.id})" class="btn btn-outline-danger" title="Delete Project">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     ` : `
                         <div class="btn-group btn-group-sm">
                             <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary" title="Project Notes">
