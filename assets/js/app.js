@@ -8,6 +8,7 @@ class ProjectManager {
         this.roles = [];
         this.departments = [];
         this.complianceItems = [];
+        this.certifications = [];
         this.currentUser = 'admin'; // Default to admin user's view
         this.currentEditId = null;
         this.currentUserEditId = null;
@@ -553,6 +554,9 @@ END:VCALENDAR`;
         // Load compliance items
         this.complianceItems = this.loadComplianceItems();
         
+        // Load certifications
+        this.certifications = this.loadCertifications();
+        
         // Don't load sample data - start with empty state
         // if (this.projects.length === 0 && !this.hasUserInteracted) {
         //     this.loadSampleData();
@@ -575,6 +579,10 @@ END:VCALENDAR`;
         // Render compliance data
         this.renderComplianceTable();
         this.updateComplianceStats();
+        
+        // Render certification data
+        this.renderCertificationTable();
+        this.updateCertificationStats();
         
         // Show connection status
         this.showConnectionStatus();
@@ -1173,6 +1181,290 @@ END:VCALENDAR`;
             'other': '<i class="fas fa-circle text-muted"></i>'
         };
         return icons[type] || icons['other'];
+    }
+
+    // ========================================
+    // CERTIFICATION MANAGEMENT
+    // ========================================
+    
+    openCertificationModal() {
+        // Reset form
+        document.getElementById('certificationForm').reset();
+        document.getElementById('certificationModalTitle').textContent = 'New Certification';
+        document.getElementById('certificationSubmitText').textContent = 'Add Certification';
+        document.getElementById('certificationFilePreview').innerHTML = '';
+        this.currentCertificationEditId = null;
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('certificationModal'));
+        modal.show();
+    }
+
+    async addCertification(certificationData) {
+        const certification = {
+            id: Date.now(),
+            ...certificationData,
+            userId: this.currentUser,
+            createdAt: new Date().toISOString()
+        };
+        
+        this.certifications.push(certification);
+        await this.saveCertifications();
+        this.renderCertificationTable();
+        this.updateCertificationStats();
+        this.closeCertificationModal();
+        this.showNotification(`Certification "${certification.name}" added successfully!`, 'success');
+    }
+
+    editCertification(certificationId, certificationData) {
+        const index = this.certifications.findIndex(c => c.id === certificationId);
+        if (index !== -1) {
+            this.certifications[index] = {
+                ...this.certifications[index],
+                ...certificationData
+            };
+            this.saveCertifications();
+            this.renderCertificationTable();
+            this.updateCertificationStats();
+            this.closeCertificationModal();
+            this.showNotification('Certification updated successfully!', 'success');
+        }
+    }
+
+    closeCertificationModal() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('certificationModal'));
+        if (modal) {
+            modal.hide();
+        }
+    }
+
+    deleteCertification(certificationId) {
+        if (confirm('Are you sure you want to delete this certification?')) {
+            this.certifications = this.certifications.filter(c => c.id !== certificationId);
+            this.saveCertifications();
+            this.renderCertificationTable();
+            this.updateCertificationStats();
+            this.showNotification('Certification deleted', 'success');
+        }
+    }
+
+    renderCertificationTable() {
+        const tbody = document.getElementById('certificationTableBody');
+        if (!tbody) return;
+
+        // Filter certifications by current user
+        const userCertifications = this.certifications.filter(cert => cert.userId === this.currentUser);
+
+        if (userCertifications.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        <i class="fas fa-certificate fa-2x mb-2 d-block"></i>
+                        No certifications found. Add your first certification to get started.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = userCertifications.map(cert => `
+            <tr>
+                <td>
+                    <div class="fw-bold">${this.escapeHtml(cert.name)}</div>
+                    ${cert.level ? `<small class="text-muted">${cert.level}</small>` : ''}
+                </td>
+                <td>${this.escapeHtml(cert.provider)}</td>
+                <td>
+                    <span class="status-badge ${this.getCertificationStatusClass(cert)}" role="status">
+                        <span class="status-icon ${this.getCertificationStatusIconClass(cert)}"></span>
+                        ${this.getCertificationStatus(cert)}
+                    </span>
+                </td>
+                <td>${this.formatDate(cert.issueDate)}</td>
+                <td>${cert.expiryDate ? this.formatDate(cert.expiryDate) : 'No expiry'}</td>
+                <td>
+                    ${cert.certificateFile ? `
+                        <button class="btn btn-sm btn-outline-primary" onclick="projectManager.viewCertificate(${cert.id})" title="View Certificate">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    ` : '<span class="text-muted">No file</span>'}
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <button onclick="projectManager.editCertificationModal(${cert.id})" class="btn btn-sm btn-outline-primary" title="Edit Certification">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="projectManager.deleteCertification(${cert.id})" class="btn btn-sm btn-outline-danger" title="Delete Certification">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    getCertificationStatus(cert) {
+        if (!cert.expiryDate) return 'Active';
+        
+        const now = new Date();
+        const expiry = new Date(cert.expiryDate);
+        const daysUntilExpiry = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+        
+        if (daysUntilExpiry < 0) return 'Expired';
+        if (daysUntilExpiry <= 30) return 'Expiring Soon';
+        return 'Active';
+    }
+
+    getCertificationStatusClass(cert) {
+        const status = this.getCertificationStatus(cert);
+        switch (status) {
+            case 'Active': return 'status-badge-active';
+            case 'Expiring Soon': return 'status-badge-at-risk';
+            case 'Expired': return 'status-badge-overdue';
+            default: return 'status-badge-pending';
+        }
+    }
+
+    getCertificationStatusIconClass(cert) {
+        const status = this.getCertificationStatus(cert);
+        switch (status) {
+            case 'Active': return 'status-icon-active';
+            case 'Expiring Soon': return 'status-icon-at-risk';
+            case 'Expired': return 'status-icon-overdue';
+            default: return 'status-icon-pending';
+        }
+    }
+
+    updateCertificationStats() {
+        const userCertifications = this.certifications.filter(cert => cert.userId === this.currentUser);
+        
+        const total = userCertifications.length;
+        const active = userCertifications.filter(cert => this.getCertificationStatus(cert) === 'Active').length;
+        const expiring = userCertifications.filter(cert => this.getCertificationStatus(cert) === 'Expiring Soon').length;
+        const expired = userCertifications.filter(cert => this.getCertificationStatus(cert) === 'Expired').length;
+
+        // Update stats cards
+        document.getElementById('totalCertifications').textContent = total;
+        document.getElementById('activeCertifications').textContent = active;
+        document.getElementById('expiringCertifications').textContent = expiring;
+        document.getElementById('expiredCertifications').textContent = expired;
+    }
+
+    editCertificationModal(certificationId) {
+        const cert = this.certifications.find(c => c.id === certificationId);
+        if (!cert) return;
+
+        this.currentCertificationEditId = certificationId;
+        
+        // Fill form with certification data
+        document.getElementById('certificationName').value = cert.name;
+        document.getElementById('certificationProvider').value = cert.provider;
+        document.getElementById('certificationNumber').value = cert.number || '';
+        document.getElementById('certificationLevel').value = cert.level || '';
+        document.getElementById('certificationIssueDate').value = cert.issueDate;
+        document.getElementById('certificationExpiryDate').value = cert.expiryDate || '';
+        document.getElementById('certificationDescription').value = cert.description || '';
+        
+        // Show file preview if exists
+        if (cert.certificateFile) {
+            document.getElementById('certificationFilePreview').innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-file me-2"></i>Current file: ${cert.certificateFileName}
+                </div>
+            `;
+        }
+        
+        // Update modal title
+        document.getElementById('certificationModalTitle').textContent = 'Edit Certification';
+        document.getElementById('certificationSubmitText').textContent = 'Update Certification';
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('certificationModal'));
+        modal.show();
+    }
+
+    viewCertificate(certificationId) {
+        const cert = this.certifications.find(c => c.id === certificationId);
+        if (!cert || !cert.certificateFile) return;
+
+        // Create a new window/tab to display the certificate
+        const newWindow = window.open('', '_blank');
+        if (cert.certificateFile.startsWith('data:application/pdf')) {
+            // PDF file
+            newWindow.document.write(`
+                <html>
+                    <head><title>${cert.name} - Certificate</title></head>
+                    <body style="margin:0;">
+                        <embed src="${cert.certificateFile}" width="100%" height="100%" type="application/pdf">
+                    </body>
+                </html>
+            `);
+        } else {
+            // Image file
+            newWindow.document.write(`
+                <html>
+                    <head><title>${cert.name} - Certificate</title></head>
+                    <body style="margin:0; text-align:center; background:#f5f5f5;">
+                        <img src="${cert.certificateFile}" style="max-width:100%; max-height:100%; margin:20px;">
+                    </body>
+                </html>
+            `);
+        }
+    }
+
+    async saveCertifications() {
+        // Save to cloud storage
+        localStorage.setItem('safetrack_certifications', JSON.stringify(this.certifications));
+    }
+
+    loadCertifications() {
+        const stored = localStorage.getItem('safetrack_certifications');
+        return stored ? JSON.parse(stored) : [];
+    }
+
+    handleCertificationFileUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Check file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            input.value = '';
+            return;
+        }
+
+        // Check file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Only images (JPG, PNG, GIF) and PDF files are allowed');
+            input.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const fileData = e.target.result;
+            window.currentCertificateFile = fileData;
+            window.currentCertificateFileName = file.name;
+
+            // Show preview
+            const preview = document.getElementById('certificationFilePreview');
+            if (file.type.startsWith('image/')) {
+                preview.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-image me-2"></i>Image uploaded: ${file.name}
+                        <br><img src="${fileData}" class="img-thumbnail mt-2" style="max-width: 200px; max-height: 150px;">
+                    </div>
+                `;
+            } else if (file.type === 'application/pdf') {
+                preview.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-file-pdf me-2"></i>PDF uploaded: ${file.name}
+                    </div>
+                `;
+            }
+        };
+        reader.readAsDataURL(file);
     }
     
     async waitForCloudStorage() {
@@ -2203,6 +2495,8 @@ END:VCALENDAR`;
         this.updateUserInterface();
         this.updateViewModeInterface();
         this.render();
+        this.renderCertificationTable();
+        this.updateCertificationStats();
     }
 
     toggleProjectView(viewMode) {
@@ -2221,6 +2515,8 @@ END:VCALENDAR`;
         this.updateUserInterface();
         this.updateViewModeInterface();
         this.render();
+        this.renderCertificationTable();
+        this.updateCertificationStats();
     }
 
     updateUserInterface() {
@@ -3657,4 +3953,43 @@ document.addEventListener('DOMContentLoaded', function() {
             window.projectManager.exportToAppleCalendar();
         }
     };
+
+    // Global certification functions
+    window.openCertificationModal = () => {
+        if (window.projectManager) {
+            window.projectManager.openCertificationModal();
+        }
+    };
+
+    window.handleCertificationFileUpload = (input) => {
+        if (window.projectManager) {
+            window.projectManager.handleCertificationFileUpload(input);
+        }
+    };
+
+    // Certification form submission handler
+    document.getElementById('certificationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!window.projectManager) return;
+        
+        const formData = new FormData(this);
+        const certificationData = {
+            name: document.getElementById('certificationName').value,
+            provider: document.getElementById('certificationProvider').value,
+            number: document.getElementById('certificationNumber').value,
+            level: document.getElementById('certificationLevel').value,
+            issueDate: document.getElementById('certificationIssueDate').value,
+            expiryDate: document.getElementById('certificationExpiryDate').value,
+            description: document.getElementById('certificationDescription').value,
+            certificateFile: window.currentCertificateFile || null,
+            certificateFileName: window.currentCertificateFileName || null
+        };
+        
+        if (window.projectManager.currentCertificationEditId) {
+            window.projectManager.editCertification(window.projectManager.currentCertificationEditId, certificationData);
+        } else {
+            window.projectManager.addCertification(certificationData);
+        }
+    });
 });

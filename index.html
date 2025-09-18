@@ -154,6 +154,9 @@
                 <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" data-tab="compliance">
                     <i class="fas fa-clipboard-check mr-2"></i>Safety Compliance
                 </button>
+                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" data-tab="certifications">
+                    <i class="fas fa-certificate mr-2"></i>Certifications
+                </button>
                 <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" data-tab="reports">
                     <i class="fas fa-chart-line mr-2"></i>Safety Reports
                 </button>
@@ -435,6 +438,108 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Certifications Tab -->
+        <div id="certifications" class="tab-content d-none">
+            <!-- Certification Overview Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-lg-3 col-md-6">
+                    <div class="stats-card card-interactive hover-lift fade-in" role="region" aria-labelledby="total-certs-label">
+                        <div class="icon-circle" style="background: linear-gradient(135deg, var(--safety-green) 0%, #146c43 100%);">
+                            <i class="fas fa-certificate" aria-hidden="true"></i>
+                        </div>
+                        <div class="stats-content">
+                            <div class="stats-info">
+                                <div class="stats-number" id="totalCertifications" aria-live="polite">0</div>
+                                <div class="stats-label" id="total-certs-label">Total Certifications</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="stats-card card-interactive hover-lift fade-in" role="region" aria-labelledby="active-certs-label" style="animation-delay: 0.1s;">
+                        <div class="icon-circle" style="background: linear-gradient(135deg, var(--safety-blue) 0%, #0a58ca 100%);">
+                            <i class="fas fa-check-circle" aria-hidden="true"></i>
+                        </div>
+                        <div class="stats-content">
+                            <div class="stats-info">
+                                <div class="stats-number" id="activeCertifications" aria-live="polite">0</div>
+                                <div class="stats-label" id="active-certs-label">Active Certifications</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="stats-card card-interactive hover-lift fade-in" role="region" aria-labelledby="expiring-certs-label" style="animation-delay: 0.2s;">
+                        <div class="icon-circle" style="background: linear-gradient(135deg, var(--safety-orange) 0%, #e8590c 100%);">
+                            <i class="fas fa-clock" aria-hidden="true"></i>
+                        </div>
+                        <div class="stats-content">
+                            <div class="stats-info">
+                                <div class="stats-number" id="expiringCertifications" aria-live="polite">0</div>
+                                <div class="stats-label" id="expiring-certs-label">Expiring Soon</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="stats-card card-interactive hover-lift fade-in" role="region" aria-labelledby="expired-certs-label" style="animation-delay: 0.3s;">
+                        <div class="icon-circle" style="background: linear-gradient(135deg, var(--safety-red) 0%, #b02a37 100%);">
+                            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                        </div>
+                        <div class="stats-content">
+                            <div class="stats-info">
+                                <div class="stats-number" id="expiredCertifications" aria-live="polite">0</div>
+                                <div class="stats-label" id="expired-certs-label">Expired</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Certifications Management -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0 d-flex align-items-center">
+                            <i class="fas fa-certificate me-2 text-safety-blue"></i>
+                            <span id="certificationTableTitle">My Certifications</span>
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-safety btn-enhanced btn-press hover-lift" onclick="openCertificationModal()" 
+                                    aria-label="Add new certification">
+                                <i class="fas fa-plus me-2" aria-hidden="true"></i>Add Certification
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Certification</th>
+                                    <th scope="col">Provider</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Issue Date</th>
+                                    <th scope="col">Expiry Date</th>
+                                    <th scope="col">Certificate</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="certificationTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        <i class="fas fa-certificate fa-2x mb-2 d-block"></i>
+                                        No certifications found. Add your first certification to get started.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -1135,6 +1240,77 @@
                         <i class="fas fa-upload me-1"></i>Import Projects
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Certification Modal -->
+    <div class="modal fade" id="certificationModal" tabindex="-1" aria-labelledby="certificationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="certificationModalTitle">New Certification</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="certificationForm">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="certificationName" class="form-label">Certification Name *</label>
+                                <input type="text" class="form-control form-control-enhanced" id="certificationName" required
+                                       placeholder="e.g., OSHA 30-Hour Construction Safety">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="certificationProvider" class="form-label">Provider/Organization *</label>
+                                <input type="text" class="form-control form-control-enhanced" id="certificationProvider" required
+                                       placeholder="e.g., OSHA, NFPA, Red Cross">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="certificationNumber" class="form-label">Certificate Number</label>
+                                <input type="text" class="form-control form-control-enhanced" id="certificationNumber"
+                                       placeholder="Certificate ID or number">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="certificationLevel" class="form-label">Level/Type</label>
+                                <select class="form-select form-control-enhanced" id="certificationLevel">
+                                    <option value="">Select level...</option>
+                                    <option value="basic">Basic</option>
+                                    <option value="intermediate">Intermediate</option>
+                                    <option value="advanced">Advanced</option>
+                                    <option value="expert">Expert/Master</option>
+                                    <option value="instructor">Instructor</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="certificationIssueDate" class="form-label">Issue Date *</label>
+                                <input type="date" class="form-control form-control-enhanced" id="certificationIssueDate" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="certificationExpiryDate" class="form-label">Expiry Date</label>
+                                <input type="date" class="form-control form-control-enhanced" id="certificationExpiryDate">
+                                <div class="form-text">Leave blank if certification doesn't expire</div>
+                            </div>
+                            <div class="col-12">
+                                <label for="certificationDescription" class="form-label">Description</label>
+                                <textarea class="form-control form-control-enhanced" id="certificationDescription" rows="3"
+                                          placeholder="Brief description of the certification and skills covered..."></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="certificationFile" class="form-label">Certificate Image/PDF</label>
+                                <input type="file" class="form-control form-control-enhanced" id="certificationFile" 
+                                       accept="image/*,.pdf" onchange="handleCertificationFileUpload(this)">
+                                <div class="form-text">Upload a screenshot or PDF of your certificate (Max 5MB)</div>
+                                <div id="certificationFilePreview" class="mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-safety btn-enhanced">
+                            <span id="certificationSubmitText">Add Certification</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
