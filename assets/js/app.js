@@ -80,6 +80,42 @@ class ProjectManager {
     }
 
     // ========================================
+    // USER ROLE HIERARCHY SYSTEM
+    // ========================================
+    
+    sortUsersByRoleHierarchy(users) {
+        // Define role hierarchy (higher number = higher priority)
+        const roleHierarchy = {
+            'Administrator': 100,
+            'Associate Director of Security': 90,
+            'Associate Director': 85,
+            'Director': 80,
+            'Safety Specialist': 70,
+            'Safety Liaison': 60,
+            'Team Member': 50,
+            'default': 0
+        };
+        
+        return [...users].sort((a, b) => {
+            // Admin always comes first
+            if (a.id === 'admin') return -1;
+            if (b.id === 'admin') return 1;
+            
+            // Get role priorities
+            const aRole = a.role || 'Team Member';
+            const bRole = b.role || 'Team Member';
+            const aPriority = roleHierarchy[aRole] || roleHierarchy['default'];
+            const bPriority = roleHierarchy[bRole] || roleHierarchy['default'];
+            
+            // Sort by priority (descending), then by name (ascending)
+            if (aPriority !== bPriority) {
+                return bPriority - aPriority;
+            }
+            return a.name.localeCompare(b.name);
+        });
+    }
+
+    // ========================================
     // SIMPLE AUTHENTICATION SYSTEM
     // ========================================
     
@@ -761,23 +797,26 @@ class ProjectManager {
             return;
         }
         
-        grid.innerHTML = this.users.map(user => {
+        // Sort users by role hierarchy
+        const sortedUsers = this.sortUsersByRoleHierarchy(this.users);
+        
+        grid.innerHTML = sortedUsers.map(user => {
             const projectCount = this.projects.filter(p => p.createdBy === user.id || p.assignedTo === user.id).length;
             const certCount = this.certifications.filter(c => c.userId === user.id).length;
             
             return `
-                <div class="col-md-6">
-                    <div class="user-selection-card" onclick="${user.id === 'admin' ? 'requestAdminAccess()' : `selectUserProfile('${user.id}')`}">
-                        <div class="user-selection-avatar">
+                <div class="col-md-4 col-lg-3">
+                    <div class="user-selection-card user-selection-card-compact" onclick="${user.id === 'admin' ? 'requestAdminAccess()' : `selectUserProfile('${user.id}')`}">
+                        <div class="user-selection-avatar user-selection-avatar-compact">
                             ${user.avatar || user.name.charAt(0).toUpperCase()}
                         </div>
                         <div class="user-selection-name">${this.escapeHtml(user.name)}</div>
                         <div class="user-selection-role">${user.role || 'Team Member'}</div>
-                        <div class="user-selection-stats">
-                            <div><strong>${projectCount}</strong> Projects</div>
-                            <div><strong>${certCount}</strong> Certifications</div>
+                        <div class="user-selection-stats user-selection-stats-compact">
+                            <span><strong>${projectCount}</strong> Projects</span>
+                            <span><strong>${certCount}</strong> Certifications</span>
                         </div>
-                        ${user.id === 'admin' ? '<div class="admin-badge"><i class="fas fa-shield-alt me-1"></i>Admin Access</div>' : ''}
+                        ${user.id === 'admin' ? '<div class="admin-badge admin-badge-compact"><i class="fas fa-shield-alt me-1"></i>Admin</div>' : ''}
                     </div>
                 </div>
             `;

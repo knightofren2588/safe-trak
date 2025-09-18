@@ -440,6 +440,37 @@ body::after {
     left: 100%;
 }
 
+/* Compact user selection cards */
+.user-selection-card-compact {
+    padding: 15px;
+    min-height: auto;
+}
+
+.user-selection-avatar-compact {
+    width: 45px;
+    height: 45px;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+.user-selection-stats-compact {
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-selection-stats-compact span {
+    display: block;
+}
+
+.admin-badge-compact {
+    padding: 2px 6px;
+    font-size: 0.6rem;
+    top: 8px;
+    right: 8px;
+}
+
 .admin-badge {
     position: absolute;
     top: 10px;
