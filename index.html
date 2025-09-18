@@ -225,12 +225,12 @@
                     <div class="stats-card card-interactive hover-lift fade-in" role="region" aria-labelledby="overdue-projects-label" style="animation-delay: 0.3s;">
                         <div class="icon-circle danger">
                             <i class="fas fa-calendar-times" aria-hidden="true"></i>
-                        </div>
+                                </div>
                         <div class="stats-content">
                             <div class="stats-info">
                                 <div class="stats-number" id="overdueProjects" aria-live="polite">1</div>
                                 <div class="stats-label" id="overdue-projects-label">Overdue Safety Items</div>
-                            </div>
+                                </div>
                             <div class="stats-trend">
                                 <i class="fas fa-arrow-up trend-down" aria-hidden="true"></i> 
                                 <span class="sr-only">Increased by </span>+1 this week
@@ -510,6 +510,27 @@
                             <span id="certificationTableTitle">My Certifications</span>
                         </h5>
                         <div class="d-flex gap-2">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle btn-enhanced" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-download me-2"></i>Export
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><h6 class="dropdown-header">Export Certifications</h6></li>
+                                    <li><a class="dropdown-item" href="#" onclick="exportCertificationsToExcel()">
+                                        <i class="fas fa-file-excel text-success me-2"></i>Excel (.xlsx)
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="exportCertificationsToPDF()">
+                                        <i class="fas fa-file-pdf text-danger me-2"></i>PDF Document
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="exportCertificationsToCSV()">
+                                        <i class="fas fa-file-csv text-info me-2"></i>CSV (.csv)
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="printCertifications()">
+                                        <i class="fas fa-print text-secondary me-2"></i>Print Report
+                                    </a></li>
+                                </ul>
+                            </div>
                             <button class="btn btn-safety btn-enhanced btn-press hover-lift" onclick="openCertificationModal()" 
                                     aria-label="Add new certification">
                                 <i class="fas fa-plus me-2" aria-hidden="true"></i>Add Certification

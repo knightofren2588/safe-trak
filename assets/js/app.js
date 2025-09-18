@@ -1466,6 +1466,282 @@ END:VCALENDAR`;
         };
         reader.readAsDataURL(file);
     }
+
+    // ========================================
+    // CERTIFICATION EXPORT FUNCTIONS
+    // ========================================
+
+    exportCertificationsToExcel() {
+        const userCertifications = this.certifications.filter(cert => cert.userId === this.currentUser);
+        
+        if (userCertifications.length === 0) {
+            this.showNotification('No certifications to export', 'warning');
+            return;
+        }
+
+        const exportData = this.prepareCertificationExportData(userCertifications);
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        
+        // Set column widths
+        worksheet['!cols'] = [
+            { width: 30 }, // Certification Name
+            { width: 20 }, // Provider
+            { width: 15 }, // Certificate Number
+            { width: 12 }, // Level
+            { width: 12 }, // Status
+            { width: 12 }, // Issue Date
+            { width: 12 }, // Expiry Date
+            { width: 40 }  // Description
+        ];
+        
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Certifications');
+        
+        const userName = this.getUserById(this.currentUser)?.name || 'User';
+        const fileName = `${userName}_Certifications_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+        
+        this.showNotification(`Certifications exported to ${fileName}`, 'success');
+    }
+
+    exportCertificationsToPDF() {
+        const userCertifications = this.certifications.filter(cert => cert.userId === this.currentUser);
+        
+        if (userCertifications.length === 0) {
+            this.showNotification('No certifications to export', 'warning');
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        const userName = this.getUserById(this.currentUser)?.name || 'User';
+        const currentDate = new Date().toLocaleDateString();
+        
+        // Header
+        doc.setFontSize(20);
+        doc.setTextColor(220, 53, 69); // Safety red
+        doc.text('SafeTrack - Certification Report', 20, 25);
+        
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Team Member: ${userName}`, 20, 40);
+        doc.text(`Generated: ${currentDate}`, 20, 50);
+        doc.text(`Total Certifications: ${userCertifications.length}`, 20, 60);
+        
+        // Statistics
+        const stats = this.getCertificationStats(userCertifications);
+        doc.text(`Active: ${stats.active} | Expiring Soon: ${stats.expiring} | Expired: ${stats.expired}`, 20, 70);
+        
+        // Table
+        const exportData = this.prepareCertificationExportData(userCertifications);
+        const tableData = exportData.map(cert => [
+            cert['Certification Name'],
+            cert['Provider'],
+            cert['Level'] || 'N/A',
+            cert['Status'],
+            cert['Issue Date'],
+            cert['Expiry Date'] || 'No expiry'
+        ]);
+        
+        doc.autoTable({
+            head: [['Certification', 'Provider', 'Level', 'Status', 'Issue Date', 'Expiry Date']],
+            body: tableData,
+            startY: 80,
+            theme: 'striped',
+            headStyles: { 
+                fillColor: [220, 53, 69], // Safety red
+                textColor: 255,
+                fontStyle: 'bold'
+            },
+            styles: { fontSize: 9 },
+            columnStyles: {
+                0: { cellWidth: 40 },
+                1: { cellWidth: 30 },
+                2: { cellWidth: 20 },
+                3: { cellWidth: 25 },
+                4: { cellWidth: 25 },
+                5: { cellWidth: 25 }
+            }
+        });
+        
+        const fileName = `${userName}_Certifications_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+        
+        this.showNotification(`PDF report saved as ${fileName}`, 'success');
+    }
+
+    exportCertificationsToCSV() {
+        const userCertifications = this.certifications.filter(cert => cert.userId === this.currentUser);
+        
+        if (userCertifications.length === 0) {
+            this.showNotification('No certifications to export', 'warning');
+            return;
+        }
+
+        const exportData = this.prepareCertificationExportData(userCertifications);
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const csv = XLSX.utils.sheet_to_csv(worksheet);
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        const userName = this.getUserById(this.currentUser)?.name || 'User';
+        const fileName = `${userName}_Certifications_${new Date().toISOString().split('T')[0]}.csv`;
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        this.showNotification(`Certifications exported to ${fileName}`, 'success');
+    }
+
+    printCertifications() {
+        const userCertifications = this.certifications.filter(cert => cert.userId === this.currentUser);
+        
+        if (userCertifications.length === 0) {
+            this.showNotification('No certifications to print', 'warning');
+            return;
+        }
+
+        const userName = this.getUserById(this.currentUser)?.name || 'User';
+        const currentDate = new Date().toLocaleDateString();
+        const stats = this.getCertificationStats(userCertifications);
+        
+        let printContent = `
+            <html>
+            <head>
+                <title>${userName} - Certification Report</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    .header { border-bottom: 3px solid #dc3545; padding-bottom: 10px; margin-bottom: 20px; }
+                    .header h1 { color: #dc3545; margin: 0; }
+                    .stats { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+                    .stat-item { text-align: center; }
+                    .stat-number { font-size: 24px; font-weight: bold; color: #dc3545; }
+                    .stat-label { font-size: 12px; color: #666; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background-color: #dc3545; color: white; font-weight: bold; }
+                    tr:nth-child(even) { background-color: #f9f9f9; }
+                    .status-active { color: #198754; font-weight: bold; }
+                    .status-expiring { color: #fd7e14; font-weight: bold; }
+                    .status-expired { color: #dc3545; font-weight: bold; }
+                    @media print {
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>🛡️ SafeTrack - Certification Report</h1>
+                    <p><strong>Team Member:</strong> ${userName} | <strong>Generated:</strong> ${currentDate}</p>
+                </div>
+                
+                <div class="stats">
+                    <h3>Certification Summary</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-number">${userCertifications.length}</div>
+                            <div class="stat-label">Total Certifications</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">${stats.active}</div>
+                            <div class="stat-label">Active</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">${stats.expiring}</div>
+                            <div class="stat-label">Expiring Soon</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number">${stats.expired}</div>
+                            <div class="stat-label">Expired</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Certification Name</th>
+                            <th>Provider</th>
+                            <th>Level</th>
+                            <th>Status</th>
+                            <th>Issue Date</th>
+                            <th>Expiry Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        userCertifications.forEach(cert => {
+            const status = this.getCertificationStatus(cert);
+            const statusClass = status.toLowerCase().replace(' ', '-');
+            
+            printContent += `
+                <tr>
+                    <td><strong>${this.escapeHtml(cert.name)}</strong></td>
+                    <td>${this.escapeHtml(cert.provider)}</td>
+                    <td>${cert.level || 'N/A'}</td>
+                    <td class="status-${statusClass}">${status}</td>
+                    <td>${this.formatDate(cert.issueDate)}</td>
+                    <td>${cert.expiryDate ? this.formatDate(cert.expiryDate) : 'No expiry'}</td>
+                </tr>
+            `;
+        });
+        
+        printContent += `
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 30px; font-size: 12px; color: #666;">
+                    <p><strong>Report Notes:</strong></p>
+                    <ul>
+                        <li>Active: Certifications that are currently valid</li>
+                        <li>Expiring Soon: Certifications expiring within 30 days</li>
+                        <li>Expired: Certifications past their expiration date</li>
+                    </ul>
+                    <p>Generated by SafeTrack Safety Management System - Equitas Health</p>
+                </div>
+            </body>
+            </html>
+        `;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.print();
+        
+        this.showNotification('Print dialog opened', 'success');
+    }
+
+    prepareCertificationExportData(certifications) {
+        return certifications.map(cert => ({
+            'Certification Name': cert.name,
+            'Provider': cert.provider,
+            'Certificate Number': cert.number || '',
+            'Level': cert.level || '',
+            'Status': this.getCertificationStatus(cert),
+            'Issue Date': this.formatDate(cert.issueDate),
+            'Expiry Date': cert.expiryDate ? this.formatDate(cert.expiryDate) : '',
+            'Description': cert.description || '',
+            'Days Until Expiry': cert.expiryDate ? Math.ceil((new Date(cert.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)) : 'N/A'
+        }));
+    }
+
+    getCertificationStats(certifications) {
+        const active = certifications.filter(cert => this.getCertificationStatus(cert) === 'Active').length;
+        const expiring = certifications.filter(cert => this.getCertificationStatus(cert) === 'Expiring Soon').length;
+        const expired = certifications.filter(cert => this.getCertificationStatus(cert) === 'Expired').length;
+        
+        return { active, expiring, expired };
+    }
     
     async waitForCloudStorage() {
         // Wait for cloud storage to be initialized
@@ -3964,6 +4240,31 @@ document.addEventListener('DOMContentLoaded', function() {
     window.handleCertificationFileUpload = (input) => {
         if (window.projectManager) {
             window.projectManager.handleCertificationFileUpload(input);
+        }
+    };
+
+    // Global certification export functions
+    window.exportCertificationsToExcel = () => {
+        if (window.projectManager) {
+            window.projectManager.exportCertificationsToExcel();
+        }
+    };
+
+    window.exportCertificationsToPDF = () => {
+        if (window.projectManager) {
+            window.projectManager.exportCertificationsToPDF();
+        }
+    };
+
+    window.exportCertificationsToCSV = () => {
+        if (window.projectManager) {
+            window.projectManager.exportCertificationsToCSV();
+        }
+    };
+
+    window.printCertifications = () => {
+        if (window.projectManager) {
+            window.projectManager.printCertifications();
         }
     };
 
