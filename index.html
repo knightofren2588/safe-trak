@@ -136,6 +136,27 @@
                             aria-label="Create a new safety project">
                         <i class="fas fa-plus me-2" aria-hidden="true"></i>New Safety Project
                     </button>
+                    
+                    <!-- TEST: Status badges to see if they work -->
+                    <div class="d-flex gap-2 ms-3">
+                        <span class="status-badge status-badge-active">
+                            <span class="status-icon status-icon-active"></span>ACTIVE
+                        </span>
+                        <span class="status-badge status-badge-overdue">
+                            <span class="status-icon status-icon-overdue"></span>OVERDUE
+                        </span>
+                        <span class="status-badge status-badge-at-risk">
+                            <span class="status-icon status-icon-at-risk"></span>AT RISK
+                        </span>
+                    </div>
+                    
+                    <!-- TEST: Progress bar to see if it works -->
+                    <div class="ms-3" style="width: 200px;">
+                        <div class="progress-enhanced">
+                            <div class="progress-bar-enhanced" style="width: 65%"></div>
+                        </div>
+                        <small class="text-muted">65% Complete</small>
+                    </div>
                 </div>
             </div>
         </div>
