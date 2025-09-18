@@ -339,7 +339,6 @@ class ProjectManager {
         }
         
         this.projectNotes[numericProjectId].unshift(note); // Add to beginning
-        console.log('About to save project notes. Current notes:', this.projectNotes);
         await this.saveProjectNotes();
         this.renderProjectNotes(numericProjectId);
         
@@ -388,7 +387,6 @@ class ProjectManager {
                     }
                 });
                 
-                console.log('Attempting to save to cloud:', cloudData);
                 await this.cloudStorage.saveToCloud('project_notes', cloudData);
                 console.log('Project notes saved to cloud:', Object.keys(cloudData).length, 'projects with notes');
             } catch (error) {
