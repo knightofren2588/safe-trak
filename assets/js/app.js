@@ -249,11 +249,18 @@ class ProjectManager {
         const numericProjectId = Number(projectId);
         this.currentNotesProjectId = numericProjectId;
         
-        const project = this.projects.find(p => p.id === numericProjectId);
+        // First try to find in active projects
+        let project = this.projects.find(p => p.id === numericProjectId);
+        
+        // If not found in active projects, check archived projects
+        if (!project) {
+            const userArchive = this.archivedProjects[this.currentUser] || [];
+            project = userArchive.find(p => p.originalId === numericProjectId);
+        }
         
         if (!project) {
-            console.error('Project not found. Looking for ID:', numericProjectId, 'Available projects:', this.projects.map(p => ({id: p.id, name: p.name})));
-            this.showNotification('Project not found', 'error');
+            console.error('Project not found. Looking for ID:', numericProjectId, 'Available active projects:', this.projects.map(p => ({id: p.id, name: p.name})), 'Available archived projects:', (this.archivedProjects[this.currentUser] || []).map(p => ({id: p.originalId, name: p.name})));
+            this.showNotification('Project not found in active or archived projects', 'error');
             return;
         }
         
@@ -3719,7 +3726,16 @@ END:VCALENDAR`;
         // Save to cloud storage if connected
         if (this.cloudStorage.isConnected) {
             try {
-                await this.cloudStorage.saveToCloud('archived_projects', this.archivedProjects);
+                // Save each user's archived projects separately to avoid array storage issues
+                for (const userId in this.archivedProjects) {
+                    if (this.archivedProjects[userId] && this.archivedProjects[userId].length > 0) {
+                        await this.cloudStorage.saveToCloud(`archived_projects_${userId}`, {
+                            userId: userId,
+                            projects: this.archivedProjects[userId],
+                            lastUpdated: new Date().toISOString()
+                        });
+                    }
+                }
                 console.log('Archived projects saved to cloud');
             } catch (error) {
                 console.error('Failed to save archived projects to cloud:', error);
@@ -3728,13 +3744,28 @@ END:VCALENDAR`;
     }
     
     async loadArchivedProjects() {
+        let archivedProjects = {};
+        
         // Try to load from cloud first
         if (this.cloudStorage.isConnected) {
             try {
-                const cloudArchive = await this.cloudStorage.loadFromCloud('archived_projects');
-                if (cloudArchive && Object.keys(cloudArchive).length > 0) {
+                // Load archived projects for all users
+                const users = this.users || [];
+                for (const user of users) {
+                    try {
+                        const userArchive = await this.cloudStorage.loadFromCloud(`archived_projects_${user.id}`);
+                        if (userArchive && userArchive.projects && userArchive.projects.length > 0) {
+                            archivedProjects[user.id] = userArchive.projects;
+                        }
+                    } catch (userError) {
+                        // User might not have archived projects yet
+                        console.log(`No archived projects found for user ${user.id}`);
+                    }
+                }
+                
+                if (Object.keys(archivedProjects).length > 0) {
                     console.log('Loaded archived projects from cloud');
-                    return cloudArchive;
+                    return archivedProjects;
                 }
             } catch (error) {
                 console.error('Failed to load archived projects from cloud:', error);
