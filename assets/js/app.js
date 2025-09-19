@@ -5270,8 +5270,8 @@ END:VCALENDAR`;
             <tr class="fade-in project-row-user-colored" style="background: ${this.getUserColorMedium(project.createdBy)} !important; border-left: 5px solid ${this.getUserColor(project.createdBy)}; box-shadow: inset 0 0 0 1px ${this.getUserColorLight(project.createdBy)};">
                 <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     <div class="d-flex align-items-center">
-                        <div class="bg-${this.getCategoryColor(project.category)} text-white p-2 rounded me-3">
-                            <i class="fas ${this.getCategoryIcon(project.category)} small"></i>
+                        <div class="category-icon bg-${this.getCategoryColor(project.category)} text-white">
+                            <i class="fas ${this.getCategoryIcon(project.category)}"></i>
                         </div>
                         <div>
                             <div class="fw-bold">${this.escapeHtml(project.name)}</div>
@@ -5371,10 +5371,10 @@ END:VCALENDAR`;
                 <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     ${this.canUserEditProject(project) ? `
                     <div class="btn-group btn-group-sm">
-                            <button onclick="projectManager.editProjectModal(${project.id})" class="btn btn-outline-primary" title="Edit Project">
+                            <button onclick="projectManager.editProjectModal(${project.id})" class="btn btn-action btn-outline-primary" title="Edit Project">
                             <i class="fas fa-edit"></i>
                         </button>
-                            <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-outline-success" title="Update Progress">
+                            <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-action btn-outline-success" title="Update Progress">
                                 <i class="fas fa-chart-line"></i>
                             </button>
                             <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary" title="Project Notes">

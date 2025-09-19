@@ -1048,32 +1048,103 @@ body::after {
 }
 
 /* ========================================
-   📑 TABLES - COMPACT & CLEAN
+   📑 TABLES - MODERN & POLISHED
 ======================================== */
 .table {
     font-size: 0.85rem;
     margin-bottom: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .table thead th {
-    background-color: var(--safety-red);
+    background: linear-gradient(135deg, var(--safety-red) 0%, #b91c1c 100%);
     color: white;
-    font-weight: 600;
-    padding: 10px 8px;
+    font-weight: 700;
+    padding: 16px 12px;
     border: none;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.table thead th::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
 }
 
 .table tbody td {
-    padding: 8px;
-    border-color: var(--gray-200);
+    padding: 16px 12px;
+    border-color: rgba(0, 0, 0, 0.05);
     vertical-align: middle;
+    position: relative;
+    background-color: white;
+    transition: all 0.2s ease;
+}
+
+.table tbody tr {
+    border-left: 4px solid transparent;
+    transition: all 0.3s ease;
 }
 
 .table tbody tr:hover {
-    background-color: var(--gray-50);
+    background-color: rgba(248, 250, 252, 0.8);
+    border-left-color: var(--safety-blue);
+    transform: translateX(2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced row styling with subtle gradients */
+.table tbody tr:nth-child(even) {
+    background-color: rgba(248, 250, 252, 0.3);
+}
+
+.table tbody tr:nth-child(even):hover {
+    background-color: rgba(248, 250, 252, 0.9);
+}
+
+/* Enhanced Status Badges */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.status-badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: left 0.5s ease;
+}
+
+.status-badge:hover::before {
+    left: 100%;
+}
+
+.status-badge .status-icon {
+    margin-right: 4px;
+    font-size: 0.7rem;
 }
 
 /* Status Dropdown Improvements */
@@ -1082,13 +1153,111 @@ body::after {
     font-size: 0.85rem !important;
     padding: 0.25rem 0.5rem !important;
     border: 1px solid #dee2e6 !important;
-    border-radius: 0.375rem !important;
+    border-radius: 8px !important;
     background-color: white !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.status-dropdown:focus {
+    border-color: var(--safety-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .status-dropdown option {
     padding: 0.25rem 0.5rem;
     font-size: 0.85rem;
+}
+
+/* Enhanced Progress Bars */
+.progress {
+    height: 8px;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: width 0.6s ease;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.2) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0.2) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 15px 15px;
+    animation: progress-shine 2s linear infinite;
+}
+
+@keyframes progress-shine {
+    0% { background-position: 0 0; }
+    100% { background-position: 30px 0; }
+}
+
+/* Enhanced Project Cards */
+.project-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.project-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--safety-red), var(--safety-orange), var(--safety-yellow), var(--safety-green));
+}
+
+.project-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced User Avatar Circles */
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: 2px solid white;
+    transition: all 0.2s ease;
+}
+
+.user-avatar:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Table Column Width Adjustments */
@@ -1149,6 +1318,83 @@ body::after {
     align-items: flex-start !important;
 }
 
+/* Enhanced Action Buttons */
+.btn-action {
+    padding: 6px 8px;
+    margin: 0 2px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-action::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transition: width 0.3s ease, height 0.3s ease;
+    transform: translate(-50%, -50%);
+}
+
+.btn-action:hover::before {
+    width: 100px;
+    height: 100px;
+}
+
+.btn-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-action i {
+    font-size: 0.8rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* Enhanced Category Icons */
+.category-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.category-icon::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.3) 50%, transparent 70%);
+    transform: rotate(45deg);
+    transition: transform 0.6s ease;
+}
+
+.category-icon:hover::before {
+    transform: rotate(45deg) translate(50%, 50%);
+}
+
+.category-icon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 /* Better mobile responsiveness */
 @media (max-width: 768px) {
     .status-dropdown {
@@ -1163,6 +1409,23 @@ body::after {
     
     .btn-link.btn-sm {
         font-size: 0.6rem !important;
+    }
+    
+    .category-icon {
+        width: 32px;
+        height: 32px;
+        margin-right: 8px;
+    }
+    
+    .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+    }
+    
+    .btn-action {
+        padding: 4px 6px;
+        margin: 0 1px;
     }
 }
 
