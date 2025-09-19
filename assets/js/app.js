@@ -3490,6 +3490,62 @@ END:VCALENDAR`;
         div.textContent = text;
         return div.innerHTML;
     }
+    
+    // ========================================
+    // DESCRIPTION TOGGLE SYSTEM
+    // ========================================
+    
+    renderProjectDescription(projectId, description) {
+        if (!description || description.trim() === '') {
+            return 'No description';
+        }
+        
+        const maxLength = 80; // Characters to show before truncation
+        const fullDescription = this.escapeHtml(description);
+        
+        if (description.length <= maxLength) {
+            return fullDescription;
+        }
+        
+        const truncated = this.escapeHtml(description.substring(0, maxLength));
+        const expandId = `desc-${projectId}`;
+        
+        return `
+            <span id="${expandId}-short">
+                ${truncated}...
+                <button class="btn btn-link btn-sm p-0 ms-1 text-primary" 
+                        onclick="projectManager.toggleDescription('${expandId}')"
+                        title="Show full description">
+                    <i class="fas fa-expand-alt"></i>
+                </button>
+            </span>
+            <span id="${expandId}-full" style="display: none;">
+                ${fullDescription}
+                <button class="btn btn-link btn-sm p-0 ms-1 text-primary" 
+                        onclick="projectManager.toggleDescription('${expandId}')"
+                        title="Show less">
+                    <i class="fas fa-compress-alt"></i>
+                </button>
+            </span>
+        `;
+    }
+    
+    toggleDescription(expandId) {
+        const shortElement = document.getElementById(`${expandId}-short`);
+        const fullElement = document.getElementById(`${expandId}-full`);
+        
+        if (shortElement && fullElement) {
+            if (shortElement.style.display === 'none') {
+                // Show short, hide full
+                shortElement.style.display = 'inline';
+                fullElement.style.display = 'none';
+            } else {
+                // Show full, hide short
+                shortElement.style.display = 'none';
+                fullElement.style.display = 'inline';
+            }
+        }
+    }
 
     // Update project table title based on current user
     updateProjectTableTitle() {
@@ -5219,7 +5275,7 @@ END:VCALENDAR`;
                         </div>
                         <div>
                             <div class="fw-bold">${this.escapeHtml(project.name)}</div>
-                            <small class="text-muted">${this.escapeHtml(project.description || 'No description')}</small>
+                            <small class="text-muted">${this.renderProjectDescription(project.id, project.description)}</small>
                         </div>
                     </div>
                 </td>

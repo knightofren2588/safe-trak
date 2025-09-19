@@ -1123,6 +1123,32 @@ body::after {
     -webkit-overflow-scrolling: touch;
 }
 
+/* Description Toggle Buttons */
+.btn-link.btn-sm {
+    font-size: 0.7rem !important;
+    line-height: 1 !important;
+    vertical-align: middle !important;
+    text-decoration: none !important;
+}
+
+.btn-link.btn-sm:hover {
+    text-decoration: none !important;
+    opacity: 0.8;
+}
+
+.btn-link.btn-sm i {
+    font-size: 0.7rem;
+}
+
+/* Keep table row heights consistent */
+.table tbody td {
+    vertical-align: top !important;
+}
+
+.table tbody td .d-flex {
+    align-items: flex-start !important;
+}
+
 /* Better mobile responsiveness */
 @media (max-width: 768px) {
     .status-dropdown {
@@ -1133,6 +1159,10 @@ body::after {
     .table th, .table td {
         padding: 0.5rem 0.25rem !important;
         font-size: 0.8rem !important;
+    }
+    
+    .btn-link.btn-sm {
+        font-size: 0.6rem !important;
     }
 }
 
