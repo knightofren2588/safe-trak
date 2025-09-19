@@ -4544,6 +4544,15 @@ END:VCALENDAR`;
         return colors[category] || 'secondary';
     }
 
+    getPriorityColor(priority) {
+        const colors = {
+            'high': 'danger',
+            'medium': 'warning',
+            'low': 'success'
+        };
+        return colors[priority?.toLowerCase()] || 'secondary';
+    }
+
     getCategoryIcon(category) {
         const icons = {
             safety: 'fa-shield-alt',
@@ -6488,6 +6497,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.printArchive = () => {
         if (window.projectManager) {
             window.projectManager.printArchive();
+        }
+    };
+
+    window.openProjectNotes = (projectId) => {
+        if (window.projectManager) {
+            window.projectManager.openProjectNotes(projectId);
         }
     };
 
