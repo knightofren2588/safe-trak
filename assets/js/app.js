@@ -77,6 +77,9 @@ class ProjectManager {
         // Multi-user assignment system
         this.selectedAssignedUsers = [];
         
+        // Archive system
+        this.archivedProjects = this.loadArchivedProjects();
+        
         // Admin verification system
         this.isAdminVerified = false;
         this.pendingAdminAction = null;
@@ -3613,6 +3616,220 @@ END:VCALENDAR`;
         select.innerHTML = `<option value="">+ Add Team Member</option>${options}`;
     }
 
+    // ========================================
+    // PROJECT ARCHIVE SYSTEM
+    // ========================================
+    
+    async archiveProject(projectId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) {
+            this.showNotification('Project not found', 'error');
+            return;
+        }
+        
+        // Only allow archiving completed projects
+        if (project.status !== 'completed') {
+            this.showNotification('Only completed projects can be archived', 'warning');
+            return;
+        }
+        
+        // Check if user can archive (creator or assigned user)
+        if (!this.canUserEditProject(project)) {
+            this.showNotification('You can only archive projects you created or are assigned to', 'error');
+            return;
+        }
+        
+        if (!confirm(`Are you sure you want to archive "${project.name}"?\n\nArchived projects are moved to your personal archive and hidden from the main project list.`)) {
+            return;
+        }
+        
+        // Add archive metadata
+        const archivedProject = {
+            ...project,
+            archivedAt: new Date().toISOString(),
+            archivedBy: this.currentUser,
+            originalId: project.id
+        };
+        
+        // Add to user's archive
+        if (!this.archivedProjects[this.currentUser]) {
+            this.archivedProjects[this.currentUser] = [];
+        }
+        this.archivedProjects[this.currentUser].unshift(archivedProject);
+        
+        // Remove from active projects
+        this.projects = this.projects.filter(p => p.id !== projectId);
+        
+        // Save both active projects and archive
+        await this.saveProjects();
+        await this.saveArchivedProjects();
+        
+        // Update interface
+        this.render();
+        this.showNotification(`Project "${project.name}" archived successfully`, 'success');
+    }
+    
+    async restoreProject(archivedProjectId) {
+        const userArchive = this.archivedProjects[this.currentUser] || [];
+        const archivedProject = userArchive.find(p => p.originalId === archivedProjectId);
+        
+        if (!archivedProject) {
+            this.showNotification('Archived project not found', 'error');
+            return;
+        }
+        
+        if (!confirm(`Are you sure you want to restore "${archivedProject.name}"?\n\nThis will move it back to your active projects list.`)) {
+            return;
+        }
+        
+        // Create restored project (remove archive metadata)
+        const restoredProject = {
+            ...archivedProject,
+            id: this.generateId(), // New ID to avoid conflicts
+            restoredAt: new Date().toISOString(),
+            restoredBy: this.currentUser
+        };
+        
+        // Remove archive metadata
+        delete restoredProject.archivedAt;
+        delete restoredProject.archivedBy;
+        delete restoredProject.originalId;
+        delete restoredProject.restoredAt;
+        delete restoredProject.restoredBy;
+        
+        // Add back to active projects
+        this.projects.unshift(restoredProject);
+        
+        // Remove from archive
+        this.archivedProjects[this.currentUser] = userArchive.filter(p => p.originalId !== archivedProjectId);
+        
+        // Save both
+        await this.saveProjects();
+        await this.saveArchivedProjects();
+        
+        // Update interface
+        this.render();
+        this.showNotification(`Project "${archivedProject.name}" restored successfully`, 'success');
+    }
+    
+    async saveArchivedProjects() {
+        // Save to local storage
+        localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
+        
+        // Save to cloud storage if connected
+        if (this.cloudStorage.isConnected) {
+            try {
+                await this.cloudStorage.saveToCloud('archived_projects', this.archivedProjects);
+                console.log('Archived projects saved to cloud');
+            } catch (error) {
+                console.error('Failed to save archived projects to cloud:', error);
+            }
+        }
+    }
+    
+    async loadArchivedProjects() {
+        // Try to load from cloud first
+        if (this.cloudStorage.isConnected) {
+            try {
+                const cloudArchive = await this.cloudStorage.loadFromCloud('archived_projects');
+                if (cloudArchive && Object.keys(cloudArchive).length > 0) {
+                    console.log('Loaded archived projects from cloud');
+                    return cloudArchive;
+                }
+            } catch (error) {
+                console.error('Failed to load archived projects from cloud:', error);
+            }
+        }
+        
+        // Fallback to local storage
+        const stored = localStorage.getItem('safetrack_archived_projects');
+        return stored ? JSON.parse(stored) : {};
+    }
+    
+    showUserArchive() {
+        const userArchive = this.archivedProjects[this.currentUser] || [];
+        
+        if (userArchive.length === 0) {
+            this.showNotification('No archived projects found', 'info');
+            return;
+        }
+        
+        // Create archive modal content
+        const archiveHtml = userArchive.map(project => `
+            <div class="archive-item border rounded p-3 mb-3" style="background: rgba(108, 117, 125, 0.05);">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="archive-content flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="bg-${this.getCategoryColor(project.category)} text-white p-2 rounded me-3">
+                                <i class="fas ${this.getCategoryIcon(project.category)} small"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-bold">${this.escapeHtml(project.name)}</h6>
+                                <small class="text-muted">${this.escapeHtml(project.description || 'No description')}</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3 text-muted small">
+                            <span><i class="fas fa-calendar me-1"></i>Completed: ${this.formatDate(project.completionDate)}</span>
+                            <span><i class="fas fa-archive me-1"></i>Archived: ${this.formatDate(project.archivedAt)}</span>
+                            <span><i class="fas fa-chart-line me-1"></i>Progress: ${project.progress}%</span>
+                        </div>
+                    </div>
+                    <div class="archive-actions ms-3">
+                        <button class="btn btn-sm btn-outline-primary" onclick="restoreProject(${project.originalId})" title="Restore to active projects">
+                            <i class="fas fa-undo me-1"></i>Restore
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="openProjectNotes(${project.originalId})" title="View project notes">
+                            <i class="fas fa-sticky-note me-1"></i>Notes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        this.showArchiveModal(archiveHtml);
+    }
+    
+    showArchiveModal(content) {
+        const modalHtml = `
+            <div class="modal fade" id="archiveModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-archive me-2"></i>My Archived Projects
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+                            ${content}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('archiveModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('archiveModal'));
+        modal.show();
+        
+        // Clean up modal after it's hidden
+        document.getElementById('archiveModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+
     render() {
         this.renderDashboardStats();
         this.renderRecentProjects();
@@ -3858,6 +4075,9 @@ END:VCALENDAR`;
                             </button>
                             ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
                                 <i class="fas fa-images"></i>
+                            </button>` : ''}
+                            ${project.status === 'completed' ? `<button onclick="projectManager.archiveProject(${project.id})" class="btn btn-outline-warning" title="Archive Completed Project">
+                                <i class="fas fa-archive"></i>
                             </button>` : ''}
                             <button onclick="projectManager.deleteProject(${project.id})" class="btn btn-outline-danger" title="Delete Project">
                             <i class="fas fa-trash"></i>
@@ -5615,6 +5835,15 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Failed to load project notes:', error);
         window.projectManager.projectNotes = {};
     });
+
+    // Load archived projects after initialization
+    window.projectManager.loadArchivedProjects().then(archive => {
+        window.projectManager.archivedProjects = archive;
+        console.log('Archived projects loaded successfully');
+    }).catch(error => {
+        console.error('Failed to load archived projects:', error);
+        window.projectManager.archivedProjects = {};
+    });
     
     // Check authentication after ProjectManager is created
     window.projectManager.checkAuthentication();
@@ -5817,6 +6046,25 @@ document.addEventListener('DOMContentLoaded', function() {
     window.removeAssignedUser = (userId) => {
         if (window.projectManager) {
             window.projectManager.removeAssignedUser(userId);
+        }
+    };
+
+    // Global archive functions
+    window.showUserArchive = () => {
+        if (window.projectManager) {
+            window.projectManager.showUserArchive();
+        }
+    };
+
+    window.archiveProject = (projectId) => {
+        if (window.projectManager) {
+            window.projectManager.archiveProject(projectId);
+        }
+    };
+
+    window.restoreProject = (projectId) => {
+        if (window.projectManager) {
+            window.projectManager.restoreProject(projectId);
         }
     };
 
