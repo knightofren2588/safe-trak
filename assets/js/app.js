@@ -3910,15 +3910,32 @@ END:VCALENDAR`;
         // Force immediate cloud storage update for current user's archive
         if (this.cloudStorage.isConnected) {
             try {
-                const archiveData = {
-                    [this.currentUser]: {
-                        userId: this.currentUser,
-                        projects: this.archivedProjects[this.currentUser] || [],
-                        lastUpdated: new Date().toISOString()
-                    }
-                };
-                await this.cloudStorage.saveToCloud(`archived_projects_${this.currentUser}`, archiveData);
-                console.log(`Delete: Force-saved current user's archive to cloud: ${this.archivedProjects[this.currentUser]?.length || 0} projects`);
+                const currentUserProjects = this.archivedProjects[this.currentUser] || [];
+                
+                if (currentUserProjects.length === 0) {
+                    // If no projects left, save empty state explicitly
+                    const emptyArchiveData = {
+                        [this.currentUser]: {
+                            userId: this.currentUser,
+                            projects: [],
+                            lastUpdated: new Date().toISOString(),
+                            isEmpty: true  // Explicit flag for empty state
+                        }
+                    };
+                    await this.cloudStorage.saveToCloud(`archived_projects_${this.currentUser}`, emptyArchiveData);
+                    console.log(`Delete: Force-saved EMPTY archive to cloud for ${this.currentUser}`);
+                } else {
+                    // Save normal archive data
+                    const archiveData = {
+                        [this.currentUser]: {
+                            userId: this.currentUser,
+                            projects: currentUserProjects,
+                            lastUpdated: new Date().toISOString()
+                        }
+                    };
+                    await this.cloudStorage.saveToCloud(`archived_projects_${this.currentUser}`, archiveData);
+                    console.log(`Delete: Force-saved archive to cloud: ${currentUserProjects.length} projects`);
+                }
             } catch (error) {
                 console.error('Delete: Failed to force-save archive to cloud:', error);
             }
@@ -4006,8 +4023,11 @@ END:VCALENDAR`;
                 for (const user of users) {
                     try {
                         const userArchiveData = await this.cloudStorage.loadFromCloud(`archived_projects_${user.id}`);
-                        if (userArchiveData && userArchiveData[user.id] && userArchiveData[user.id].projects && userArchiveData[user.id].projects.length > 0) {
-                            archivedProjects[user.id] = userArchiveData[user.id].projects;
+                        if (userArchiveData && userArchiveData[user.id]) {
+                            const archiveInfo = userArchiveData[user.id];
+                            // Load projects regardless of count (including empty arrays)
+                            archivedProjects[user.id] = archiveInfo.projects || [];
+                            console.log(`Loaded archive for ${user.id}: ${archiveInfo.projects?.length || 0} projects${archiveInfo.isEmpty ? ' (explicitly empty)' : ''}`);
                         }
                     } catch (userError) {
                         // User might not have archived projects yet
