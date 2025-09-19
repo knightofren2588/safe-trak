@@ -3913,17 +3913,9 @@ END:VCALENDAR`;
                 const currentUserProjects = this.archivedProjects[this.currentUser] || [];
                 
                 if (currentUserProjects.length === 0) {
-                    // If no projects left, save empty state explicitly
-                    const emptyArchiveData = {
-                        [this.currentUser]: {
-                            userId: this.currentUser,
-                            projects: [],
-                            lastUpdated: new Date().toISOString(),
-                            isEmpty: true  // Explicit flag for empty state
-                        }
-                    };
-                    await this.cloudStorage.saveToCloud(`archived_projects_${this.currentUser}`, emptyArchiveData);
-                    console.log(`Delete: Force-saved EMPTY archive to cloud for ${this.currentUser}`);
+                    // If no projects left, completely DELETE the cloud storage document
+                    await this.cloudStorage.deleteFromCloud(`archived_projects_${this.currentUser}`, this.currentUser);
+                    console.log(`Delete: COMPLETELY REMOVED cloud storage document for ${this.currentUser}`);
                 } else {
                     // Save normal archive data
                     const archiveData = {
@@ -3937,7 +3929,7 @@ END:VCALENDAR`;
                     console.log(`Delete: Force-saved archive to cloud: ${currentUserProjects.length} projects`);
                 }
             } catch (error) {
-                console.error('Delete: Failed to force-save archive to cloud:', error);
+                console.error('Delete: Failed to update cloud storage:', error);
             }
         }
         
@@ -3993,17 +3985,24 @@ END:VCALENDAR`;
                 
                 // Save each user's archived projects separately to avoid array storage issues
                 for (const userId of usersToSave) {
-                    // Always save, even if empty - this ensures restored projects are properly removed from cloud
                     const projects = this.archivedProjects[userId] || [];
-                    const archiveData = {
-                        [userId]: {
-                            userId: userId,
-                            projects: projects,
-                            lastUpdated: new Date().toISOString()
-                        }
-                    };
-                    await this.cloudStorage.saveToCloud(`archived_projects_${userId}`, archiveData);
-                    console.log(`Saved archive for ${userId}: ${projects.length} projects`, projects.map(p => ({id: p.originalId, name: p.name})));
+                    
+                    if (projects.length === 0) {
+                        // If no projects, DELETE the cloud storage document completely
+                        await this.cloudStorage.deleteFromCloud(`archived_projects_${userId}`, userId);
+                        console.log(`Deleted cloud storage document for ${userId}: no archived projects`);
+                    } else {
+                        // Save normal archive data
+                        const archiveData = {
+                            [userId]: {
+                                userId: userId,
+                                projects: projects,
+                                lastUpdated: new Date().toISOString()
+                            }
+                        };
+                        await this.cloudStorage.saveToCloud(`archived_projects_${userId}`, archiveData);
+                        console.log(`Saved archive for ${userId}: ${projects.length} projects`, projects.map(p => ({id: p.originalId, name: p.name})));
+                    }
                 }
                 console.log('Archived projects saved to cloud');
             } catch (error) {
