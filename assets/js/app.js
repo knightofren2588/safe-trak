@@ -74,6 +74,9 @@ class ProjectManager {
         this.currentNotesProjectId = null;
         this.userNotifications = this.loadUserNotifications();
         
+        // Multi-user assignment system
+        this.selectedAssignedUsers = [];
+        
         // Admin verification system
         this.isAdminVerified = false;
         this.pendingAdminAction = null;
@@ -3201,7 +3204,12 @@ END:VCALENDAR`;
         
         // If current user is 'all', default to admin for project creation
         const creatorId = this.currentUser === 'all' ? 'admin' : this.currentUser;
-        const assignedTo = projectData.assignedTo || creatorId;
+        
+        // Handle multiple assigned users
+        let assignedUsers = projectData.assignedTo;
+        if (!Array.isArray(assignedUsers)) {
+            assignedUsers = assignedUsers ? [assignedUsers] : [creatorId];
+        }
         
         const project = {
             id: this.generateId(),
@@ -3209,7 +3217,7 @@ END:VCALENDAR`;
             status: 'active',
             progress: 0,
             createdBy: creatorId,
-            assignedTo: assignedTo,
+            assignedTo: assignedUsers,
             createdAt: new Date().toISOString()
         };
         this.projects.unshift(project);
@@ -3291,7 +3299,7 @@ END:VCALENDAR`;
             category: formData.get('category'),
             startDate: formData.get('startDate'),
             dueDate: formData.get('dueDate'),
-            assignedTo: formData.get('assignedTo'),
+            assignedTo: this.selectedAssignedUsers.length > 0 ? this.selectedAssignedUsers : [this.currentUser],
             status: formData.get('status'),
             screenshots: screenshots
         };
@@ -3309,6 +3317,11 @@ END:VCALENDAR`;
         document.getElementById('modalTitle').textContent = 'New Safety Project';
         document.getElementById('submitText').textContent = 'Create Safety Project';
         this.currentEditId = null;
+        
+        // Reset assigned users
+        this.selectedAssignedUsers = [];
+        this.renderAssignedUsers();
+        this.populateAssignedUsersDropdown();
         
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('projectModal'));
@@ -3340,24 +3353,29 @@ END:VCALENDAR`;
         
         // Apply view mode filtering first
         if (this.projectViewMode === 'personal') {
-            filteredProjects = filteredProjects.filter(project => 
-                project.createdBy === this.currentUser || project.assignedTo === this.currentUser
-            );
+            filteredProjects = filteredProjects.filter(project => {
+                const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+                return project.createdBy === this.currentUser || assignedUsers.includes(this.currentUser);
+            });
         } else if (this.projectViewMode !== 'all') {
             // Individual user view
-            filteredProjects = filteredProjects.filter(project => 
-                project.createdBy === this.projectViewMode || project.assignedTo === this.projectViewMode
-            );
+            filteredProjects = filteredProjects.filter(project => {
+                const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+                return project.createdBy === this.projectViewMode || assignedUsers.includes(this.projectViewMode);
+            });
         }
         
         // Search filter
         if (searchTerm) {
-            filteredProjects = filteredProjects.filter(project => 
-                project.name.toLowerCase().includes(searchTerm) ||
-                (project.description && project.description.toLowerCase().includes(searchTerm)) ||
-                this.getUserName(project.createdBy).toLowerCase().includes(searchTerm) ||
-                this.getUserName(project.assignedTo).toLowerCase().includes(searchTerm)
-            );
+            filteredProjects = filteredProjects.filter(project => {
+                const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+                const assignedUserNames = assignedUsers.map(userId => this.getUserName(userId)).join(' ').toLowerCase();
+                
+                return project.name.toLowerCase().includes(searchTerm) ||
+                       (project.description && project.description.toLowerCase().includes(searchTerm)) ||
+                       this.getUserName(project.createdBy).toLowerCase().includes(searchTerm) ||
+                       assignedUserNames.includes(searchTerm);
+            });
         }
         
         // Status filter (including special statuses)
@@ -3371,9 +3389,10 @@ END:VCALENDAR`;
         
         // User filter
         if (userFilter) {
-            filteredProjects = filteredProjects.filter(project => 
-                project.createdBy === userFilter || project.assignedTo === userFilter
-            );
+            filteredProjects = filteredProjects.filter(project => {
+                const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+                return project.createdBy === userFilter || assignedUsers.includes(userFilter);
+            });
         }
         
         // Priority filter
@@ -3527,6 +3546,68 @@ END:VCALENDAR`;
         this.showNotification('All filters cleared', 'info');
     }
 
+    // ========================================
+    // MULTI-USER ASSIGNMENT SYSTEM
+    // ========================================
+    
+    addAssignedUser() {
+        const select = document.getElementById('projectAssignedTo');
+        const userId = select.value;
+        
+        if (!userId || this.selectedAssignedUsers.includes(userId)) {
+            select.value = ''; // Reset selection
+            return;
+        }
+        
+        this.selectedAssignedUsers.push(userId);
+        this.renderAssignedUsers();
+        select.value = ''; // Reset selection
+    }
+    
+    removeAssignedUser(userId) {
+        this.selectedAssignedUsers = this.selectedAssignedUsers.filter(id => id !== userId);
+        this.renderAssignedUsers();
+    }
+    
+    renderAssignedUsers() {
+        const container = document.getElementById('assignedUsersContainer');
+        if (!container) return;
+        
+        if (this.selectedAssignedUsers.length === 0) {
+            container.innerHTML = '<div class="text-muted small p-2">No team members assigned yet</div>';
+            return;
+        }
+        
+        container.innerHTML = this.selectedAssignedUsers.map(userId => {
+            const user = this.users.find(u => u.id === userId);
+            if (!user) return '';
+            
+            return `
+                <div class="assigned-user-tag d-inline-flex align-items-center me-2 mb-2">
+                    <div class="user-avatar-small me-1" style="background: ${this.getUserColor(userId)};">
+                        ${user.avatar || user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span class="me-2">${this.escapeHtml(user.name)}</span>
+                    <button type="button" class="btn-close btn-close-sm" onclick="removeAssignedUser('${userId}')" title="Remove ${user.name}"></button>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    populateAssignedUsersDropdown() {
+        const select = document.getElementById('projectAssignedTo');
+        if (!select) return;
+        
+        // Get users not already selected
+        const availableUsers = this.users.filter(user => !this.selectedAssignedUsers.includes(user.id));
+        
+        const options = availableUsers.map(user => 
+            `<option value="${user.id}">${user.name}</option>`
+        ).join('');
+        
+        select.innerHTML = `<option value="">+ Add Team Member</option>${options}`;
+    }
+
     render() {
         this.renderDashboardStats();
         this.renderRecentProjects();
@@ -3639,9 +3720,12 @@ END:VCALENDAR`;
             const creatorName = creator ? creator.name : 'Unknown';
             const creatorAvatar = creator ? creator.avatar : '?';
             
-            const assignedTo = this.users.find(u => u.id === project.assignedTo);
-            const assignedToName = assignedTo ? assignedTo.name : (project.assignedTo || 'Unassigned');
-            const assignedToAvatar = assignedTo ? assignedTo.avatar : '?';
+            // Handle multiple assigned users
+            const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+            const assignedUsersData = assignedUsers.map(userId => {
+                const user = this.users.find(u => u.id === userId);
+                return user ? { name: user.name, avatar: user.avatar, id: userId } : { name: 'Unknown', avatar: '?', id: userId };
+            });
             
             const screenshotCount = project.screenshots ? project.screenshots.length : 0;
             const screenshotThumbnails = project.screenshots ? project.screenshots.slice(0, 3).map(screenshot => 
@@ -3698,11 +3782,24 @@ END:VCALENDAR`;
                 <td class="text-muted" style="background: ${this.getUserColorMedium(project.createdBy)} !important;">${project.dueDate ? this.formatDate(project.dueDate) : '<span class="text-muted">No deadline</span>'}</td>
                 <td class="text-muted" style="background: ${this.getUserColorMedium(project.createdBy)} !important;">${project.completionDate ? this.formatDate(project.completionDate) : '<span class="text-muted">—</span>'}</td>
                 <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
-                    <div class="d-flex align-items-center">
-                        <div class="user-avatar me-2" title="${assignedToName}">${assignedToAvatar}</div>
-                        <div>
-                            <small class="text-muted">${assignedToName}</small>
-                            <br><small class="text-muted" style="font-size: 0.75rem;">by ${creatorName}</small>
+                    <div class="assigned-users-display">
+                        ${assignedUsersData.length > 0 ? `
+                            <div class="d-flex flex-wrap gap-1 mb-1">
+                                ${assignedUsersData.slice(0, 3).map(user => `
+                                    <div class="user-avatar-small" style="background: ${this.getUserColor(user.id)};" title="${user.name}">
+                                        ${user.avatar}
+                                    </div>
+                                `).join('')}
+                                ${assignedUsersData.length > 3 ? `<span class="badge bg-secondary">+${assignedUsersData.length - 3}</span>` : ''}
+                            </div>
+                            <div class="assigned-users-names">
+                                <small class="text-muted">${assignedUsersData.map(u => u.name).join(', ')}</small>
+                            </div>
+                        ` : `
+                            <small class="text-muted">Unassigned</small>
+                        `}
+                        <div class="mt-1">
+                            <small class="text-muted" style="font-size: 0.75rem;">by ${creatorName}</small>
                         </div>
                     </div>
                 </td>
@@ -5692,6 +5789,19 @@ document.addEventListener('DOMContentLoaded', function() {
     window.clearAllFilters = () => {
         if (window.projectManager) {
             window.projectManager.clearAllFilters();
+        }
+    };
+
+    // Global multi-user assignment functions
+    window.addAssignedUser = () => {
+        if (window.projectManager) {
+            window.projectManager.addAssignedUser();
+        }
+    };
+
+    window.removeAssignedUser = (userId) => {
+        if (window.projectManager) {
+            window.projectManager.removeAssignedUser(userId);
         }
     };
 

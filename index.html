@@ -884,10 +884,17 @@
                                 <div class="form-text">Automatically set when project is marked as completed</div>
                             </div>
                             <div class="col-md-6">
-                                <label for="projectAssignedTo" class="form-label">Assigned To</label>
-                                <select class="form-select" id="projectAssignedTo" name="assignedTo">
-                                    <option value="">Select Team Member</option>
-                                </select>
+                                <label for="projectAssignedTo" class="form-label">Assigned Team Members</label>
+                                <div class="border rounded p-2" style="min-height: 120px; max-height: 200px; overflow-y: auto;">
+                                    <div id="assignedUsersContainer">
+                                        <!-- Selected users will appear here -->
+                                    </div>
+                                    <select class="form-select form-select-sm mt-2" id="projectAssignedTo" onchange="addAssignedUser()">
+                                        <option value="">+ Add Team Member</option>
+                                        <!-- Will be populated dynamically -->
+                                    </select>
+                                </div>
+                                <div class="form-text">You can assign multiple team members to this project</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="projectStatus" class="form-label">Status</label>

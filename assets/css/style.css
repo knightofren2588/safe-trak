@@ -599,6 +599,45 @@ body::after {
     background-color: inherit !important;
 }
 
+/* ========================================
+   👥 MULTI-USER ASSIGNMENT SYSTEM
+======================================== */
+.assigned-user-tag {
+    background: rgba(13, 110, 253, 0.1);
+    border: 1px solid rgba(13, 110, 253, 0.2);
+    border-radius: 20px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.assigned-user-tag:hover {
+    background: rgba(13, 110, 253, 0.15);
+    transform: translateY(-1px);
+}
+
+.assigned-user-tag .btn-close-sm {
+    font-size: 0.7rem;
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+}
+
+.assigned-user-tag .btn-close-sm:hover {
+    opacity: 1;
+}
+
+.assigned-users-display {
+    min-width: 120px;
+}
+
+.assigned-users-names {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* Override Bootstrap table striping for colored rows */
 .table-striped tbody .project-row-user-colored:nth-of-type(odd) td {
     background-color: inherit !important;
