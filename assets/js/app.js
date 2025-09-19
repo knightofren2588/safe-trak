@@ -424,8 +424,8 @@ class ProjectManager {
     }
     
     async saveProjectNotes() {
-        // Save to local storage
-        localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
+        // CLOUD FIRST: Only save to local storage if cloud fails
+        // localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
         
         // Save to cloud storage if connected
         if (this.cloudStorage.isConnected) {
@@ -447,7 +447,14 @@ class ProjectManager {
                 console.log('Project notes saved to cloud:', Object.keys(cloudData).length, 'projects with notes');
             } catch (error) {
                 console.error('Failed to save project notes to cloud:', error);
+                // Only fallback to local storage if cloud fails
+                localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
+                console.log('Fallback: Saved project notes to local storage');
             }
+        } else {
+            // Only use local storage if not connected to cloud
+            localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
+            console.log('No cloud connection: Saved project notes to local storage');
         }
     }
     
@@ -523,8 +530,23 @@ class ProjectManager {
         return stored ? JSON.parse(stored) : {};
     }
     
-    saveUserNotifications() {
-        localStorage.setItem('safetrack_user_notifications', JSON.stringify(this.userNotifications));
+    async saveUserNotifications() {
+        // CLOUD FIRST: Save to cloud storage if connected
+        if (this.cloudStorage.isConnected) {
+            try {
+                await this.cloudStorage.saveToCloud('user_notifications', this.userNotifications);
+                console.log('User notifications saved to cloud');
+            } catch (error) {
+                console.error('Failed to save notifications to cloud:', error);
+                // FALLBACK ONLY: Save to local storage if cloud fails
+                localStorage.setItem('safetrack_user_notifications', JSON.stringify(this.userNotifications));
+                console.log('Fallback: Notifications saved to local storage');
+            }
+        } else {
+            // Only use local storage if not connected to cloud
+            localStorage.setItem('safetrack_user_notifications', JSON.stringify(this.userNotifications));
+            console.log('No cloud connection: Notifications saved to local storage');
+        }
     }
     
     addNotificationForProjectOwner(projectId, noteAuthor, noteText) {
@@ -3188,9 +3210,9 @@ END:VCALENDAR`;
             console.log('✅ Projects saved to cloud successfully');
         } catch (error) {
             console.error('❌ Failed to save projects to cloud, falling back to local storage:', error);
-            // Ensure local storage is updated even if cloud fails
+            // FALLBACK ONLY: Save to local storage only if cloud fails
         localStorage.setItem('safetrack_projects', JSON.stringify(this.projects));
-            console.log('✅ Projects saved to local storage as fallback');
+            console.log('Fallback: Projects saved to local storage');
         }
     }
 
@@ -4112,11 +4134,54 @@ END:VCALENDAR`;
         return cleanedCount;
     }
     
+    clearUnnecessaryLocalStorage() {
+        console.log('🧹 CLEARING UNNECESSARY LOCAL STORAGE FOR MULTI-USER SAFETY...');
+        
+        // Keep only essential session data, remove user-specific data that could cause conflicts
+        const itemsToKeep = [
+            'last_cleanup_timestamp',
+            'recent_archive_operation'
+        ];
+        
+        const itemsToRemove = [
+            'safetrack_projects',           // Should be cloud-only
+            'safetrack_users',             // Should be cloud-only  
+            'safetrack_current_user',      // Should be session-only
+            'safetrack_project_notes',     // Should be cloud-only
+            'safetrack_user_notifications', // Should be cloud-only
+            'safetrack_archived_projects', // Should be cloud-only
+            'safetrack_categories',        // Should be cloud-only
+            'safetrack_roles',            // Should be cloud-only
+            'safetrack_departments',      // Should be cloud-only
+            'safetrack_compliance',       // Should be cloud-only
+            'safetrack_certifications',   // Should be cloud-only
+            'safetrack_custom_quotes',    // Should be cloud-only
+            'safetrack_favorite_quotes',  // Should be cloud-only
+            'safetrack_user_interacted',  // Should be cloud-only
+            'safetrack_project_view_mode' // Should be session-only
+        ];
+        
+        let removedCount = 0;
+        itemsToRemove.forEach(item => {
+            if (localStorage.getItem(item)) {
+                localStorage.removeItem(item);
+                removedCount++;
+                console.log(`Removed local storage: ${item}`);
+            }
+        });
+        
+        console.log(`✅ Cleared ${removedCount} local storage items to prevent multi-user conflicts`);
+        return removedCount;
+    }
+    
     async runFullSystemCheck() {
         console.log('🔧 RUNNING FULL SYSTEM CHECK WITH CLEANUP...');
         
         // First, clean up any orphaned notes
         await this.cleanupOrphanedNotes();
+        
+        // Clear unnecessary local storage for multi-user safety
+        this.clearUnnecessaryLocalStorage();
         
         // Then run the comprehensive system test
         const testResults = this.runSystemTest();
@@ -4354,8 +4419,8 @@ END:VCALENDAR`;
     }
     
     async saveArchivedProjects() {
-        // Save to local storage
-        localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
+        // CLOUD FIRST: Only save to local storage if cloud fails
+        // localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
         
         // Save to cloud storage if connected
         if (this.cloudStorage.isConnected) {
@@ -4390,7 +4455,14 @@ END:VCALENDAR`;
                 console.log('Archived projects saved to cloud');
             } catch (error) {
                 console.error('Failed to save archived projects to cloud:', error);
+                // FALLBACK ONLY: Save to local storage if cloud fails
+                localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
+                console.log('Fallback: Archived projects saved to local storage');
             }
+        } else {
+            // Only use local storage if not connected to cloud
+            localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
+            console.log('No cloud connection: Archived projects saved to local storage');
         }
     }
     
@@ -7288,6 +7360,13 @@ document.addEventListener('DOMContentLoaded', function() {
     window.runFullSystemCheck = () => {
         if (window.projectManager) {
             return window.projectManager.runFullSystemCheck();
+        }
+    };
+
+    // Clear unnecessary local storage
+    window.clearUnnecessaryLocalStorage = () => {
+        if (window.projectManager) {
+            return window.projectManager.clearUnnecessaryLocalStorage();
         }
     };
 
