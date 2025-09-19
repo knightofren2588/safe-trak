@@ -3755,56 +3755,132 @@ END:VCALENDAR`;
         }
         
         // Create archive modal content
-        const archiveHtml = userArchive.map(project => `
-            <div class="archive-item border rounded p-3 mb-3" style="background: rgba(108, 117, 125, 0.05);">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="archive-content flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="bg-${this.getCategoryColor(project.category)} text-white p-2 rounded me-3">
-                                <i class="fas ${this.getCategoryIcon(project.category)} small"></i>
+        const archiveHtml = userArchive.map(project => {
+            // Handle multiple assigned users for archived projects
+            const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+            const assignedUsersData = assignedUsers.map(userId => {
+                const user = this.users.find(u => u.id === userId);
+                return user ? { name: user.name, avatar: user.avatar, id: userId } : { name: 'Unknown', avatar: '?', id: userId };
+            });
+            
+            return `
+                <div class="archive-item border rounded p-3 mb-3" style="background: ${this.getUserColorMedium(project.createdBy)}; border-left: 4px solid ${this.getUserColor(project.createdBy)};">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="archive-content flex-grow-1">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="bg-${this.getCategoryColor(project.category)} text-white p-2 rounded me-3">
+                                    <i class="fas ${this.getCategoryIcon(project.category)} small"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-bold">${this.escapeHtml(project.name)}</h6>
+                                    <small class="text-muted">${this.escapeHtml(project.description || 'No description')}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-success">Completed</span>
+                                    <div class="small text-muted mt-1">${project.priority.toUpperCase()} Priority</div>
+                                </div>
                             </div>
-                            <div>
-                                <h6 class="mb-1 fw-bold">${this.escapeHtml(project.name)}</h6>
-                                <small class="text-muted">${this.escapeHtml(project.description || 'No description')}</small>
+                            
+                            <!-- Detailed Project Information -->
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6">
+                                    <div class="small">
+                                        <strong>📅 Timeline:</strong><br>
+                                        <span class="text-muted">Started: ${this.formatDate(project.startDate)}</span><br>
+                                        <span class="text-muted">Due: ${project.dueDate ? this.formatDate(project.dueDate) : 'No deadline'}</span><br>
+                                        <span class="text-success">Completed: ${this.formatDate(project.completionDate)}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="small">
+                                        <strong>👥 Team:</strong><br>
+                                        <div class="d-flex flex-wrap gap-1 mt-1">
+                                            ${assignedUsersData.map(user => `
+                                                <div class="d-flex align-items-center me-2">
+                                                    <div class="user-avatar-small me-1" style="background: ${this.getUserColor(user.id)};">
+                                                        ${user.avatar}
+                                                    </div>
+                                                    <span class="text-muted small">${user.name}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-3 text-muted small">
+                                <span><i class="fas fa-archive me-1"></i>Archived: ${this.formatDate(project.archivedAt)}</span>
+                                <span><i class="fas fa-chart-line me-1"></i>Progress: ${project.progress}%</span>
+                                <span><i class="fas fa-folder me-1"></i>Category: ${project.category}</span>
                             </div>
                         </div>
-                        <div class="d-flex gap-3 text-muted small">
-                            <span><i class="fas fa-calendar me-1"></i>Completed: ${this.formatDate(project.completionDate)}</span>
-                            <span><i class="fas fa-archive me-1"></i>Archived: ${this.formatDate(project.archivedAt)}</span>
-                            <span><i class="fas fa-chart-line me-1"></i>Progress: ${project.progress}%</span>
+                        <div class="archive-actions ms-3 d-flex flex-column gap-1">
+                            <button class="btn btn-sm btn-outline-info" onclick="viewArchivedProjectDetails(${project.originalId})" title="View full project details">
+                                <i class="fas fa-eye me-1"></i>Details
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="openProjectNotes(${project.originalId})" title="View/add project notes">
+                                <i class="fas fa-sticky-note me-1"></i>Notes
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="restoreProject(${project.originalId})" title="Restore to active projects">
+                                <i class="fas fa-undo me-1"></i>Restore
+                            </button>
                         </div>
-                    </div>
-                    <div class="archive-actions ms-3">
-                        <button class="btn btn-sm btn-outline-primary" onclick="restoreProject(${project.originalId})" title="Restore to active projects">
-                            <i class="fas fa-undo me-1"></i>Restore
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="openProjectNotes(${project.originalId})" title="View project notes">
-                            <i class="fas fa-sticky-note me-1"></i>Notes
-                        </button>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
         this.showArchiveModal(archiveHtml);
     }
     
     showArchiveModal(content) {
+        const userArchive = this.archivedProjects[this.currentUser] || [];
+        const archiveCount = userArchive.length;
+        
         const modalHtml = `
             <div class="modal fade" id="archiveModal" tabindex="-1">
-                <div class="modal-dialog modal-lg">
+                <div class="modal-dialog modal-xl">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">
-                                <i class="fas fa-archive me-2"></i>My Archived Projects
+                                <i class="fas fa-archive me-2"></i>My Archived Projects (${archiveCount})
                             </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <div class="d-flex gap-2">
+                                <!-- Archive Export Options -->
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-download me-1"></i>Export Archive
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="exportArchiveToExcel()">
+                                            <i class="fas fa-file-excel me-2 text-success"></i>Excel
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="exportArchiveToPDF()">
+                                            <i class="fas fa-file-pdf me-2 text-danger"></i>PDF
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="exportArchiveToCSV()">
+                                            <i class="fas fa-file-csv me-2 text-info"></i>CSV
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="#" onclick="printArchive()">
+                                            <i class="fas fa-print me-2 text-secondary"></i>Print
+                                        </a></li>
+                                    </ul>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
                         </div>
-                        <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+                        <div class="modal-body" style="max-height: 600px; overflow-y: auto;">
                             ${content}
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <div class="d-flex justify-content-between w-100">
+                                <div class="text-muted small">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Archived projects preserve all data including notes and screenshots
+                                </div>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3828,6 +3904,322 @@ END:VCALENDAR`;
         document.getElementById('archiveModal').addEventListener('hidden.bs.modal', function() {
             this.remove();
         });
+    }
+    
+    viewArchivedProjectDetails(projectId) {
+        const userArchive = this.archivedProjects[this.currentUser] || [];
+        const project = userArchive.find(p => p.originalId === projectId);
+        
+        if (!project) {
+            this.showNotification('Archived project not found', 'error');
+            return;
+        }
+        
+        // Handle multiple assigned users
+        const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+        const assignedUsersData = assignedUsers.map(userId => {
+            const user = this.users.find(u => u.id === userId);
+            return user ? user.name : 'Unknown';
+        });
+        
+        const creator = this.users.find(u => u.id === project.createdBy);
+        const creatorName = creator ? creator.name : 'Unknown';
+        
+        const detailsHtml = `
+            <div class="modal fade" id="projectDetailsModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background: ${this.getUserColorLight(project.createdBy)};">
+                            <h5 class="modal-title">
+                                <i class="fas fa-folder-open me-2"></i>${this.escapeHtml(project.name)}
+                                <span class="badge bg-success ms-2">Archived</span>
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-info-circle me-2"></i>Project Information</h6>
+                                    <table class="table table-sm">
+                                        <tr><td><strong>Name:</strong></td><td>${this.escapeHtml(project.name)}</td></tr>
+                                        <tr><td><strong>Description:</strong></td><td>${this.escapeHtml(project.description || 'No description')}</td></tr>
+                                        <tr><td><strong>Category:</strong></td><td>${project.category}</td></tr>
+                                        <tr><td><strong>Priority:</strong></td><td><span class="badge bg-${this.getPriorityColor(project.priority)}">${project.priority.toUpperCase()}</span></td></tr>
+                                        <tr><td><strong>Status:</strong></td><td><span class="badge bg-success">Completed</span></td></tr>
+                                        <tr><td><strong>Progress:</strong></td><td>${project.progress}%</td></tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-calendar me-2"></i>Timeline</h6>
+                                    <table class="table table-sm">
+                                        <tr><td><strong>Start Date:</strong></td><td>${this.formatDate(project.startDate)}</td></tr>
+                                        <tr><td><strong>Due Date:</strong></td><td>${project.dueDate ? this.formatDate(project.dueDate) : 'No deadline'}</td></tr>
+                                        <tr><td><strong>Completed:</strong></td><td class="text-success">${this.formatDate(project.completionDate)}</td></tr>
+                                        <tr><td><strong>Archived:</strong></td><td>${this.formatDate(project.archivedAt)}</td></tr>
+                                    </table>
+                                    
+                                    <h6 class="mt-3"><i class="fas fa-users me-2"></i>Team Members</h6>
+                                    <div class="mb-2">
+                                        <strong>Created by:</strong> <span class="badge bg-primary">${creatorName}</span>
+                                    </div>
+                                    <div>
+                                        <strong>Assigned to:</strong><br>
+                                        <div class="d-flex flex-wrap gap-1 mt-1">
+                                            ${assignedUsersData.map(name => `
+                                                <span class="badge bg-secondary">${name}</span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-outline-secondary" onclick="openProjectNotes(${project.originalId})">
+                                <i class="fas fa-sticky-note me-1"></i>View/Add Notes
+                            </button>
+                            <button class="btn btn-outline-primary" onclick="restoreProject(${project.originalId})">
+                                <i class="fas fa-undo me-1"></i>Restore Project
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('projectDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', detailsHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('projectDetailsModal'));
+        modal.show();
+        
+        // Clean up modal after it's hidden
+        document.getElementById('projectDetailsModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+    
+    // Archive export functions
+    exportArchiveToExcel() {
+        const userArchive = this.archivedProjects[this.currentUser] || [];
+        if (userArchive.length === 0) {
+            this.showNotification('No archived projects to export', 'warning');
+            return;
+        }
+        
+        const exportData = userArchive.map(project => {
+            const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+            const assignedNames = assignedUsers.map(userId => {
+                const user = this.users.find(u => u.id === userId);
+                return user ? user.name : 'Unknown';
+            }).join(', ');
+            
+            const createdBy = this.users.find(u => u.id === project.createdBy);
+            
+            return {
+                'Project Name': project.name,
+                'Description': project.description || '',
+                'Category': project.category,
+                'Priority': project.priority.toUpperCase(),
+                'Status': 'COMPLETED (ARCHIVED)',
+                'Progress': `${project.progress}%`,
+                'Assigned To': assignedNames,
+                'Created By': createdBy ? createdBy.name : 'Unknown',
+                'Start Date': project.startDate ? new Date(project.startDate).toLocaleDateString() : '',
+                'Due Date': project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'No deadline',
+                'Completion Date': project.completionDate ? new Date(project.completionDate).toLocaleDateString() : '',
+                'Archive Date': project.archivedAt ? new Date(project.archivedAt).toLocaleDateString() : ''
+            };
+        });
+        
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Archived Projects");
+        
+        const fileName = `SafeTrack_Archived_Projects_${this.currentUser}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        
+        this.showNotification('Archived projects exported to Excel successfully!', 'success');
+    }
+    
+    exportArchiveToPDF() {
+        const userArchive = this.archivedProjects[this.currentUser] || [];
+        if (userArchive.length === 0) {
+            this.showNotification('No archived projects to export', 'warning');
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Add title
+        doc.setFontSize(20);
+        doc.text('SafeTrack - Archived Projects', 20, 20);
+        
+        const currentUserData = this.users.find(u => u.id === this.currentUser);
+        const userName = currentUserData ? currentUserData.name : this.currentUser;
+        
+        doc.setFontSize(12);
+        doc.text(`User: ${userName}`, 20, 35);
+        doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 20, 45);
+        doc.text(`Total Archived Projects: ${userArchive.length}`, 20, 55);
+        
+        // Prepare data for table
+        const tableData = userArchive.map(project => {
+            const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+            const assignedNames = assignedUsers.map(userId => {
+                const user = this.users.find(u => u.id === userId);
+                return user ? user.name : 'Unknown';
+            }).join(', ');
+            
+            return [
+                project.name,
+                project.category,
+                project.priority.toUpperCase(),
+                assignedNames,
+                project.completionDate ? new Date(project.completionDate).toLocaleDateString() : '',
+                project.archivedAt ? new Date(project.archivedAt).toLocaleDateString() : ''
+            ];
+        });
+        
+        // Add table
+        doc.autoTable({
+            head: [['Project Name', 'Category', 'Priority', 'Assigned To', 'Completed', 'Archived']],
+            body: tableData,
+            startY: 65,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [220, 53, 69] }
+        });
+        
+        const fileName = `SafeTrack_Archived_Projects_${this.currentUser}_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+        
+        this.showNotification('Archived projects exported to PDF successfully!', 'success');
+    }
+    
+    exportArchiveToCSV() {
+        const userArchive = this.archivedProjects[this.currentUser] || [];
+        if (userArchive.length === 0) {
+            this.showNotification('No archived projects to export', 'warning');
+            return;
+        }
+        
+        const exportData = userArchive.map(project => {
+            const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+            const assignedNames = assignedUsers.map(userId => {
+                const user = this.users.find(u => u.id === userId);
+                return user ? user.name : 'Unknown';
+            }).join(', ');
+            
+            const createdBy = this.users.find(u => u.id === project.createdBy);
+            
+            return {
+                'Project Name': project.name,
+                'Description': project.description || '',
+                'Category': project.category,
+                'Priority': project.priority.toUpperCase(),
+                'Status': 'COMPLETED (ARCHIVED)',
+                'Progress': `${project.progress}%`,
+                'Assigned To': assignedNames,
+                'Created By': createdBy ? createdBy.name : 'Unknown',
+                'Start Date': project.startDate ? new Date(project.startDate).toLocaleDateString() : '',
+                'Due Date': project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'No deadline',
+                'Completion Date': project.completionDate ? new Date(project.completionDate).toLocaleDateString() : '',
+                'Archive Date': project.archivedAt ? new Date(project.archivedAt).toLocaleDateString() : ''
+            };
+        });
+        
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `SafeTrack_Archived_Projects_${this.currentUser}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        this.showNotification('Archived projects exported to CSV successfully!', 'success');
+    }
+    
+    printArchive() {
+        const userArchive = this.archivedProjects[this.currentUser] || [];
+        if (userArchive.length === 0) {
+            this.showNotification('No archived projects to print', 'warning');
+            return;
+        }
+        
+        const currentUserData = this.users.find(u => u.id === this.currentUser);
+        const userName = currentUserData ? currentUserData.name : this.currentUser;
+        
+        const printContent = `
+            <html>
+            <head>
+                <title>SafeTrack - Archived Projects</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    .header { border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-bottom: 20px; }
+                    .project-item { border: 1px solid #ddd; margin-bottom: 15px; padding: 15px; border-radius: 5px; }
+                    .project-header { background: #f8f9fa; padding: 10px; margin: -15px -15px 10px -15px; border-radius: 5px 5px 0 0; }
+                    .badge { background: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; }
+                    .text-muted { color: #6c757d; }
+                    .small { font-size: 0.9em; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>SafeTrack - Archived Projects</h1>
+                    <p><strong>User:</strong> ${userName} | <strong>Export Date:</strong> ${new Date().toLocaleDateString()} | <strong>Total Projects:</strong> ${userArchive.length}</p>
+                </div>
+                
+                ${userArchive.map(project => {
+                    const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+                    const assignedNames = assignedUsers.map(userId => {
+                        const user = this.users.find(u => u.id === userId);
+                        return user ? user.name : 'Unknown';
+                    }).join(', ');
+                    
+                    return `
+                        <div class="project-item">
+                            <div class="project-header">
+                                <h3>${project.name} <span class="badge">COMPLETED</span></h3>
+                            </div>
+                            <p><strong>Description:</strong> ${project.description || 'No description'}</p>
+                            <div class="row">
+                                <div class="col">
+                                    <p><strong>Category:</strong> ${project.category}</p>
+                                    <p><strong>Priority:</strong> ${project.priority.toUpperCase()}</p>
+                                    <p><strong>Progress:</strong> ${project.progress}%</p>
+                                </div>
+                                <div class="col">
+                                    <p><strong>Start Date:</strong> ${this.formatDate(project.startDate)}</p>
+                                    <p><strong>Due Date:</strong> ${project.dueDate ? this.formatDate(project.dueDate) : 'No deadline'}</p>
+                                    <p><strong>Completed:</strong> ${this.formatDate(project.completionDate)}</p>
+                                    <p><strong>Archived:</strong> ${this.formatDate(project.archivedAt)}</p>
+                                </div>
+                            </div>
+                            <p><strong>Assigned Team Members:</strong> ${assignedNames}</p>
+                        </div>
+                    `;
+                }).join('')}
+            </body>
+            </html>
+        `;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.print();
     }
 
     render() {
@@ -6065,6 +6457,37 @@ document.addEventListener('DOMContentLoaded', function() {
     window.restoreProject = (projectId) => {
         if (window.projectManager) {
             window.projectManager.restoreProject(projectId);
+        }
+    };
+
+    window.viewArchivedProjectDetails = (projectId) => {
+        if (window.projectManager) {
+            window.projectManager.viewArchivedProjectDetails(projectId);
+        }
+    };
+
+    // Archive export functions
+    window.exportArchiveToExcel = () => {
+        if (window.projectManager) {
+            window.projectManager.exportArchiveToExcel();
+        }
+    };
+
+    window.exportArchiveToPDF = () => {
+        if (window.projectManager) {
+            window.projectManager.exportArchiveToPDF();
+        }
+    };
+
+    window.exportArchiveToCSV = () => {
+        if (window.projectManager) {
+            window.projectManager.exportArchiveToCSV();
+        }
+    };
+
+    window.printArchive = () => {
+        if (window.projectManager) {
+            window.projectManager.printArchive();
         }
     };
 
