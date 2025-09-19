@@ -1153,19 +1153,41 @@ body::after {
 
 /* Status Dropdown Improvements */
 .status-dropdown {
-    min-width: 120px !important;
-    font-size: 0.85rem !important;
-    padding: 0.25rem 0.5rem !important;
-    border: 1px solid #dee2e6 !important;
-    border-radius: 8px !important;
-    background-color: white !important;
+    min-width: 100px !important;
+    font-size: 0.75rem !important;
+    padding: 0.2rem 0.4rem !important;
+    border: none !important;
+    border-radius: 12px !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease;
+    text-align: center;
+    font-weight: 600;
 }
 
 .status-dropdown:focus {
-    border-color: var(--safety-blue);
+    outline: none;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Status-based dropdown colors */
+.status-dropdown.status-active {
+    background: linear-gradient(135deg, var(--safety-green), #20c997) !important;
+    color: white !important;
+}
+
+.status-dropdown.status-on-hold {
+    background: linear-gradient(135deg, var(--safety-yellow), #ffc107) !important;
+    color: #000 !important;
+}
+
+.status-dropdown.status-completed {
+    background: linear-gradient(135deg, var(--safety-green), #28a745) !important;
+    color: white !important;
+}
+
+.status-dropdown.status-cancelled {
+    background: linear-gradient(135deg, var(--safety-red), #dc3545) !important;
+    color: white !important;
 }
 
 .status-dropdown option {
@@ -1266,8 +1288,8 @@ body::after {
 
 /* Table Column Width Adjustments */
 .table th:nth-child(2), .table td:nth-child(2) { /* Status column */
-    min-width: 150px;
-    width: 150px;
+    min-width: 110px;
+    width: 110px;
 }
 
 .table th:nth-child(3), .table td:nth-child(3) { /* Progress column */

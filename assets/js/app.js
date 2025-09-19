@@ -5281,19 +5281,18 @@ END:VCALENDAR`;
                 </td>
                 <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     <div class="d-flex align-items-center">
-                        <span class="status-badge ${this.getEnhancedStatusClass(project)} me-2" role="status" aria-label="Project status: ${this.getStatusDisplayText(project.status)}">
-                            <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
-                            ${this.getStatusDisplayText(project.status)}
-                    </span>
                         ${this.canUserEditProject(project) ? `
-                            <select class="form-select form-select-sm status-dropdown" onchange="projectManager.changeProjectStatus(${project.id}, this.value)">
+                            <select class="form-select form-select-sm status-dropdown ${this.getEnhancedStatusClass(project)}" onchange="projectManager.changeProjectStatus(${project.id}, this.value)" style="color: white; font-weight: 600;">
                                 <option value="active" ${project.status === 'active' ? 'selected' : ''}>Active</option>
                                 <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
-                                <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Done</option>
                                 <option value="cancelled" ${project.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
                             </select>
                         ` : `
-                            <span class="text-muted small">${this.getStatusDisplayText(project.status)}</span>
+                            <span class="status-badge ${this.getEnhancedStatusClass(project)}" role="status" aria-label="Project status: ${this.getStatusDisplayText(project.status)}">
+                                <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
+                                ${this.getStatusDisplayText(project.status)}
+                            </span>
                         `}
                     </div>
                 </td>
