@@ -292,8 +292,8 @@ class ProjectManager {
             return;
         }
         
-        // Sync notes from cloud before showing modal
-        await this.syncProjectNotesFromCloud();
+        // DISABLED: Sync notes from cloud before showing modal (causes note deletion issues)
+        // await this.syncProjectNotesFromCloud();
         
         // Update modal title
         document.getElementById('notesProjectTitle').textContent = `Project: ${project.name}`;
@@ -1081,8 +1081,8 @@ class ProjectManager {
         this.currentUser = userId;
         this.saveCurrentUser();
         
-        // Sync notes from cloud when switching users
-        await this.syncProjectNotesFromCloud();
+        // DISABLED: Sync notes from cloud when switching users (causes note deletion issues)
+        // await this.syncProjectNotesFromCloud();
         
         // Update UI
         this.updateUserInterface();
@@ -7006,13 +7006,35 @@ window.openProjectModal = () => {
 document.addEventListener('DOMContentLoaded', function() {
     window.projectManager = new ProjectManager();
     
-    // Load project notes after initialization
-    window.projectManager.loadProjectNotes().then(notes => {
-        window.projectManager.projectNotes = notes;
-        console.log('Project notes loaded successfully');
-    }).catch(error => {
-        console.error('Failed to load project notes:', error);
-        window.projectManager.projectNotes = {};
+    // Load project notes after cloud storage is ready - CLOUD FIRST
+    window.projectManager.waitForCloudStorage().then(async () => {
+        try {
+            // Try cloud storage first
+            if (window.projectManager.cloudStorage.isConnected) {
+                const cloudData = await window.projectManager.cloudStorage.loadFromCloud('project_notes');
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    // Convert cloud format back to our internal format
+                    const notes = {};
+                    Object.entries(cloudData).forEach(([projectId, data]) => {
+                        if (data.notes) {
+                            notes[projectId] = data.notes;
+                        }
+                    });
+                    window.projectManager.projectNotes = notes;
+                    console.log('Project notes loaded from cloud successfully');
+                    return;
+                }
+            }
+            
+            // Fallback to local storage only if cloud fails or is empty
+            const stored = localStorage.getItem('safetrack_project_notes');
+            const localNotes = stored ? JSON.parse(stored) : {};
+            window.projectManager.projectNotes = localNotes;
+            console.log('Project notes loaded from local storage (fallback)');
+        } catch (error) {
+            console.error('Failed to load project notes:', error);
+            window.projectManager.projectNotes = {};
+        }
     });
 
     // Load archived projects after initialization
