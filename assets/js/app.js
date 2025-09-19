@@ -3881,15 +3881,33 @@ END:VCALENDAR`;
         
         // Remove from archived projects
         this.archivedProjects[this.currentUser].splice(projectIndex, 1);
+        console.log(`Delete: Removed project ${projectId} from archive. Remaining archived: ${this.archivedProjects[this.currentUser].length}`);
         
         // Remove project notes for this project
         if (this.projectNotes[projectId]) {
             delete this.projectNotes[projectId];
             await this.saveProjectNotes();
+            console.log(`Delete: Removed notes for project ${projectId}`);
+        }
+        
+        // Ensure this project ID is not somehow in active projects
+        const activeProjectsBefore = this.projects.length;
+        this.projects = this.projects.filter(p => p.id !== projectId);
+        const activeProjectsAfter = this.projects.length;
+        if (activeProjectsBefore !== activeProjectsAfter) {
+            console.log(`Delete: Also removed ${activeProjectsBefore - activeProjectsAfter} active projects with same ID ${projectId}`);
         }
         
         // Save changes
         await this.saveArchivedProjects();
+        if (activeProjectsBefore !== activeProjectsAfter) {
+            await this.saveProjects();
+        }
+        
+        console.log(`Delete: Final state - Active: ${this.projects.length}, Archived: ${this.archivedProjects[this.currentUser].length}`);
+        
+        // Update the main interface to reflect changes
+        this.render();
         
         // Refresh archive modal if open
         const archiveModal = document.getElementById('archiveModal');
