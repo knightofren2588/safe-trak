@@ -3899,12 +3899,30 @@ END:VCALENDAR`;
         }
         
         // Save changes
+        console.log(`Delete: About to save archives. Current user ${this.currentUser} has ${this.archivedProjects[this.currentUser]?.length || 0} archived projects`);
         await this.saveArchivedProjects();
         if (activeProjectsBefore !== activeProjectsAfter) {
             await this.saveProjects();
         }
         
         console.log(`Delete: Final state - Active: ${this.projects.length}, Archived: ${this.archivedProjects[this.currentUser].length}`);
+        
+        // Force immediate cloud storage update for current user's archive
+        if (this.cloudStorage.isConnected) {
+            try {
+                const archiveData = {
+                    [this.currentUser]: {
+                        userId: this.currentUser,
+                        projects: this.archivedProjects[this.currentUser] || [],
+                        lastUpdated: new Date().toISOString()
+                    }
+                };
+                await this.cloudStorage.saveToCloud(`archived_projects_${this.currentUser}`, archiveData);
+                console.log(`Delete: Force-saved current user's archive to cloud: ${this.archivedProjects[this.currentUser]?.length || 0} projects`);
+            } catch (error) {
+                console.error('Delete: Failed to force-save archive to cloud:', error);
+            }
+        }
         
         // Update the main interface to reflect changes
         this.render();
@@ -3968,7 +3986,7 @@ END:VCALENDAR`;
                         }
                     };
                     await this.cloudStorage.saveToCloud(`archived_projects_${userId}`, archiveData);
-                    console.log(`Saved archive for ${userId}: ${projects.length} projects`);
+                    console.log(`Saved archive for ${userId}: ${projects.length} projects`, projects.map(p => ({id: p.originalId, name: p.name})));
                 }
                 console.log('Archived projects saved to cloud');
             } catch (error) {
