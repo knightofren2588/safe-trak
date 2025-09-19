@@ -3998,6 +3998,243 @@ END:VCALENDAR`;
         
         this.showNotification(`Project "${project.name}" permanently deleted`, 'success');
     }
+
+    // ========================================
+    // COMPREHENSIVE SYSTEM TEST
+    // ========================================
+    
+    runSystemTest() {
+        console.log('🧪 RUNNING COMPREHENSIVE SYSTEM TEST...');
+        
+        const testResults = {
+            coreData: this.testCoreDataIntegrity(),
+            userManagement: this.testUserManagement(),
+            projectManagement: this.testProjectManagement(),
+            archiveSystem: this.testArchiveSystem(),
+            notesSystem: this.testNotesSystem(),
+            cloudStorage: this.testCloudStorageConnection(),
+            security: this.testSecurityFeatures()
+        };
+        
+        console.log('🎯 SYSTEM TEST RESULTS:', testResults);
+        
+        const passedTests = Object.values(testResults).filter(result => result.status === 'PASS').length;
+        const totalTests = Object.keys(testResults).length;
+        
+        console.log(`📊 OVERALL SCORE: ${passedTests}/${totalTests} tests passed`);
+        
+        if (passedTests === totalTests) {
+            console.log('🎉 ALL TESTS PASSED - SYSTEM READY FOR LAUNCH!');
+        } else {
+            console.log('⚠️ SOME TESTS FAILED - REVIEW REQUIRED');
+        }
+        
+        return testResults;
+    }
+    
+    testCoreDataIntegrity() {
+        try {
+            const issues = [];
+            
+            // Check if core arrays exist and are valid
+            if (!Array.isArray(this.projects)) issues.push('Projects array invalid');
+            if (!Array.isArray(this.users)) issues.push('Users array invalid');
+            if (!Array.isArray(this.categories)) issues.push('Categories array invalid');
+            if (!this.currentUser) issues.push('No current user set');
+            
+            // Check for duplicate project IDs
+            const projectIds = this.projects.map(p => p.id);
+            const uniqueIds = new Set(projectIds);
+            if (projectIds.length !== uniqueIds.size) issues.push('Duplicate project IDs found');
+            
+            return {
+                status: issues.length === 0 ? 'PASS' : 'FAIL',
+                issues: issues,
+                data: {
+                    projects: this.projects.length,
+                    users: this.users.length,
+                    categories: this.categories.length,
+                    currentUser: this.currentUser
+                }
+            };
+        } catch (error) {
+            return { status: 'ERROR', error: error.message };
+        }
+    }
+    
+    testUserManagement() {
+        try {
+            const issues = [];
+            
+            // Check if current user exists in users array
+            const currentUserExists = this.users.find(u => u.id === this.currentUser);
+            if (!currentUserExists) issues.push('Current user not found in users array');
+            
+            // Check for duplicate user IDs
+            const userIds = this.users.map(u => u.id);
+            const uniqueUserIds = new Set(userIds);
+            if (userIds.length !== uniqueUserIds.size) issues.push('Duplicate user IDs found');
+            
+            // Check if all users have required fields
+            this.users.forEach(user => {
+                if (!user.id) issues.push(`User missing ID: ${user.name}`);
+                if (!user.name) issues.push(`User missing name: ${user.id}`);
+                if (!user.role) issues.push(`User missing role: ${user.name}`);
+            });
+            
+            return {
+                status: issues.length === 0 ? 'PASS' : 'FAIL',
+                issues: issues,
+                data: {
+                    totalUsers: this.users.length,
+                    currentUser: currentUserExists ? currentUserExists.name : 'NOT FOUND'
+                }
+            };
+        } catch (error) {
+            return { status: 'ERROR', error: error.message };
+        }
+    }
+    
+    testProjectManagement() {
+        try {
+            const issues = [];
+            
+            // Check if all projects have required fields
+            this.projects.forEach(project => {
+                if (!project.id) issues.push(`Project missing ID: ${project.name}`);
+                if (!project.name) issues.push(`Project missing name: ID ${project.id}`);
+                if (!project.createdBy) issues.push(`Project missing createdBy: ${project.name}`);
+                if (!project.status) issues.push(`Project missing status: ${project.name}`);
+                if (typeof project.progress !== 'number') issues.push(`Project invalid progress: ${project.name}`);
+            });
+            
+            // Check project status distribution
+            const statusCounts = {};
+            this.projects.forEach(p => {
+                statusCounts[p.status] = (statusCounts[p.status] || 0) + 1;
+            });
+            
+            return {
+                status: issues.length === 0 ? 'PASS' : 'FAIL',
+                issues: issues,
+                data: {
+                    totalProjects: this.projects.length,
+                    statusDistribution: statusCounts
+                }
+            };
+        } catch (error) {
+            return { status: 'ERROR', error: error.message };
+        }
+    }
+    
+    testArchiveSystem() {
+        try {
+            const issues = [];
+            
+            // Check archive structure
+            if (typeof this.archivedProjects !== 'object') issues.push('Archived projects not an object');
+            
+            // Check for archived projects in active list
+            const allArchivedIds = new Set();
+            Object.values(this.archivedProjects).forEach(userArchive => {
+                if (Array.isArray(userArchive)) {
+                    userArchive.forEach(p => allArchivedIds.add(p.originalId));
+                }
+            });
+            
+            const activeIds = new Set(this.projects.map(p => p.id));
+            const overlap = [...allArchivedIds].filter(id => activeIds.has(id));
+            if (overlap.length > 0) issues.push(`Projects in both active and archived: ${overlap.join(', ')}`);
+            
+            return {
+                status: issues.length === 0 ? 'PASS' : 'FAIL',
+                issues: issues,
+                data: {
+                    totalArchived: Object.values(this.archivedProjects).reduce((sum, arr) => sum + (arr?.length || 0), 0),
+                    usersWithArchives: Object.keys(this.archivedProjects).length,
+                    overlappingProjects: overlap
+                }
+            };
+        } catch (error) {
+            return { status: 'ERROR', error: error.message };
+        }
+    }
+    
+    testNotesSystem() {
+        try {
+            const issues = [];
+            
+            // Check notes structure
+            if (typeof this.projectNotes !== 'object') issues.push('Project notes not an object');
+            
+            // Check if notes reference valid projects
+            Object.keys(this.projectNotes).forEach(projectId => {
+                const numericId = Number(projectId);
+                const projectExists = this.projects.find(p => p.id === numericId);
+                const archivedExists = Object.values(this.archivedProjects).some(userArchive => 
+                    userArchive?.find(p => p.originalId === numericId)
+                );
+                
+                if (!projectExists && !archivedExists) {
+                    issues.push(`Notes exist for non-existent project: ${projectId}`);
+                }
+            });
+            
+            return {
+                status: issues.length === 0 ? 'PASS' : 'FAIL',
+                issues: issues,
+                data: {
+                    totalProjectsWithNotes: Object.keys(this.projectNotes).length,
+                    totalNotes: Object.values(this.projectNotes).reduce((sum, notes) => sum + (notes?.length || 0), 0)
+                }
+            };
+        } catch (error) {
+            return { status: 'ERROR', error: error.message };
+        }
+    }
+    
+    testCloudStorageConnection() {
+        try {
+            const issues = [];
+            
+            if (!this.cloudStorage) issues.push('Cloud storage not initialized');
+            if (!this.cloudStorage.isConnected) issues.push('Not connected to cloud storage');
+            
+            return {
+                status: issues.length === 0 ? 'PASS' : 'WARN',
+                issues: issues,
+                data: {
+                    connected: this.cloudStorage?.isConnected || false,
+                    hasCloudStorage: !!this.cloudStorage
+                }
+            };
+        } catch (error) {
+            return { status: 'ERROR', error: error.message };
+        }
+    }
+    
+    testSecurityFeatures() {
+        try {
+            const issues = [];
+            
+            // Check if XSS protection is in place
+            if (typeof this.escapeHtml !== 'function') issues.push('XSS protection (escapeHtml) missing');
+            
+            // Check authentication state
+            if (typeof this.isAuthenticated !== 'boolean') issues.push('Authentication state not properly set');
+            
+            return {
+                status: issues.length === 0 ? 'PASS' : 'FAIL',
+                issues: issues,
+                data: {
+                    authenticated: this.isAuthenticated,
+                    hasXSSProtection: typeof this.escapeHtml === 'function'
+                }
+            };
+        } catch (error) {
+            return { status: 'ERROR', error: error.message };
+        }
+    }
     
     async cleanupArchivedProjectsFromActive() {
         // Get all archived project IDs across all users
@@ -6914,6 +7151,37 @@ document.addEventListener('DOMContentLoaded', function() {
     window.showUserNotifications = () => {
         if (window.projectManager) {
             window.projectManager.showUserNotifications();
+        }
+    };
+
+    window.syncData = () => {
+        if (window.projectManager) {
+            window.projectManager.syncData();
+        }
+    };
+
+    window.toggleProjectView = (mode) => {
+        if (window.projectManager) {
+            window.projectManager.toggleProjectView(mode);
+        }
+    };
+
+    window.openUserManagement = () => {
+        if (window.projectManager) {
+            window.projectManager.openUserManagement();
+        }
+    };
+
+    window.resetAllData = () => {
+        if (window.projectManager) {
+            window.projectManager.resetAllData();
+        }
+    };
+
+    // System testing function
+    window.runSystemTest = () => {
+        if (window.projectManager) {
+            return window.projectManager.runSystemTest();
         }
     };
 
