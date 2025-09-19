@@ -412,8 +412,22 @@ class ProjectManager {
             
             console.log('Notes after deletion:', this.projectNotes[numericProjectId].length);
             
+            console.log('About to save notes after deletion. Current notes state:', {
+                projectId: numericProjectId,
+                notesForThisProject: this.projectNotes[numericProjectId]?.length || 0,
+                totalProjectsWithNotes: Object.keys(this.projectNotes).length,
+                allNotes: this.projectNotes
+            });
+            
             await this.saveProjectNotes();
             console.log('Notes saved to cloud after deletion');
+            
+            // Verify the save worked by checking what's in memory
+            console.log('After save - notes in memory:', {
+                projectId: numericProjectId,
+                notesForThisProject: this.projectNotes[numericProjectId]?.length || 0,
+                allNotes: this.projectNotes
+            });
             
             // Set a flag to prevent immediate sync from overwriting our deletion
             this.lastNoteOperation = Date.now();
@@ -443,8 +457,9 @@ class ProjectManager {
                     }
                 });
                 
+                console.log('Saving to cloud storage - data being saved:', cloudData);
                 await this.cloudStorage.saveToCloud('project_notes', cloudData);
-                console.log('Project notes saved to cloud:', Object.keys(cloudData).length, 'projects with notes');
+                console.log('✅ Project notes saved to cloud successfully:', Object.keys(cloudData).length, 'projects with notes');
             } catch (error) {
                 console.error('Failed to save project notes to cloud:', error);
                 // Only fallback to local storage if cloud fails
@@ -7012,6 +7027,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Try cloud storage first
             if (window.projectManager.cloudStorage.isConnected) {
                 const cloudData = await window.projectManager.cloudStorage.loadFromCloud('project_notes');
+                console.log('Raw cloud data loaded during init:', cloudData);
+                
                 if (cloudData && Object.keys(cloudData).length > 0) {
                     // Convert cloud format back to our internal format
                     const notes = {};
@@ -7021,8 +7038,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
                     window.projectManager.projectNotes = notes;
-                    console.log('Project notes loaded from cloud successfully');
+                    console.log('Project notes loaded from cloud successfully:', notes);
                     return;
+                } else {
+                    console.log('No cloud data found or empty cloud data');
                 }
             }
             
