@@ -381,6 +381,10 @@ class ProjectManager {
         
         this.projectNotes[numericProjectId].unshift(note); // Add to beginning
         await this.saveProjectNotes();
+        
+        // Set a flag to prevent immediate sync from overwriting our addition
+        this.lastNoteOperation = Date.now();
+        
         this.renderProjectNotes(numericProjectId);
         
         // Add notification for project owner(s)
@@ -401,8 +405,19 @@ class ProjectManager {
         const numericProjectId = Number(projectId);
         
         if (this.projectNotes[numericProjectId]) {
+            console.log(`Deleting note ${noteId} from project ${numericProjectId}`);
+            console.log('Notes before deletion:', this.projectNotes[numericProjectId].length);
+            
             this.projectNotes[numericProjectId] = this.projectNotes[numericProjectId].filter(note => note.id !== noteId);
+            
+            console.log('Notes after deletion:', this.projectNotes[numericProjectId].length);
+            
             await this.saveProjectNotes();
+            console.log('Notes saved to cloud after deletion');
+            
+            // Set a flag to prevent immediate sync from overwriting our deletion
+            this.lastNoteOperation = Date.now();
+            
             this.renderProjectNotes(numericProjectId);
             this.showNotification('Note deleted', 'success');
         }
@@ -465,6 +480,12 @@ class ProjectManager {
     }
     
     async syncProjectNotesFromCloud() {
+        // Check if we just performed a note operation - if so, skip sync to prevent overwriting
+        if (this.lastNoteOperation && (Date.now() - this.lastNoteOperation) < 5000) {
+            console.log('Skipping sync - recent note operation detected');
+            return;
+        }
+        
         // Force refresh notes from cloud
         if (this.cloudStorage.isConnected) {
             try {
