@@ -1082,12 +1082,14 @@ body::after {
 }
 
 .table tbody td {
-    padding: 16px 12px;
+    padding: 12px 10px;
     border-color: rgba(0, 0, 0, 0.05);
     vertical-align: middle;
     position: relative;
     background-color: white;
     transition: all 0.2s ease;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .table tbody tr {
@@ -1098,8 +1100,8 @@ body::after {
 .table tbody tr:hover {
     background-color: rgba(248, 250, 252, 0.8);
     border-left-color: var(--safety-blue);
-    transform: translateX(2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateX(1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 /* Enhanced row styling with subtle gradients */
@@ -1115,16 +1117,17 @@ body::after {
 .status-badge {
     display: inline-flex;
     align-items: center;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0.3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
+    white-space: nowrap;
 }
 
 .status-badge::before {
@@ -1262,8 +1265,8 @@ body::after {
 
 /* Table Column Width Adjustments */
 .table th:nth-child(2), .table td:nth-child(2) { /* Status column */
-    min-width: 130px;
-    width: 130px;
+    min-width: 120px;
+    width: 120px;
 }
 
 .table th:nth-child(3), .table td:nth-child(3) { /* Progress column */
@@ -1361,17 +1364,18 @@ body::after {
 
 /* Enhanced Category Icons */
 .category-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 12px;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    margin-right: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     position: relative;
     overflow: hidden;
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .category-icon::before {
@@ -1391,8 +1395,8 @@ body::after {
 }
 
 .category-icon:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: scale(1.02);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Better mobile responsiveness */
