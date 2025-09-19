@@ -1706,6 +1706,12 @@ END:VCALENDAR`;
         // Load data from cloud storage
         await this.loadAllData();
         
+        // Load archived projects and ensure proper separation
+        this.archivedProjects = await this.loadArchivedProjects();
+        
+        // Ensure no archived projects are in the active projects array
+        await this.cleanupArchivedProjectsFromActive();
+        
         // TEMPORARILY DISABLED: Compliance and Certification loading
         // this.complianceItems = this.loadComplianceItems();
         // this.certifications = this.loadCertifications();
@@ -2992,11 +2998,11 @@ END:VCALENDAR`;
         } catch (error) {
             console.error('Error loading data from cloud storage:', error);
             // Fallback to local storage
-            this.loadFromLocalStorage();
+            await this.loadFromLocalStorage();
         }
     }
 
-    loadFromLocalStorage() {
+    async loadFromLocalStorage() {
         console.log('Falling back to local storage...');
         this.projects = this.loadProjectsLocal();
         this.users = this.loadUsersLocal();
@@ -3004,6 +3010,12 @@ END:VCALENDAR`;
         this.roles = this.loadRolesLocal();
         this.departments = this.loadDepartmentsLocal();
         this.currentUser = this.loadCurrentUserLocal();
+        
+        // Load archived projects and ensure proper separation
+        this.archivedProjects = await this.loadArchivedProjects();
+        
+        // Ensure no archived projects are in the active projects array
+        await this.cleanupArchivedProjectsFromActive();
     }
 
     loadProjects() {
@@ -3778,6 +3790,31 @@ END:VCALENDAR`;
         }
         
         this.showNotification(`Project "${project.name}" permanently deleted`, 'success');
+    }
+    
+    async cleanupArchivedProjectsFromActive() {
+        // Get all archived project IDs across all users
+        const archivedProjectIds = new Set();
+        
+        for (const userId in this.archivedProjects) {
+            const userArchive = this.archivedProjects[userId] || [];
+            userArchive.forEach(archivedProject => {
+                if (archivedProject.originalId) {
+                    archivedProjectIds.add(archivedProject.originalId);
+                }
+            });
+        }
+        
+        // Remove any projects from active list that are in archived list
+        const originalCount = this.projects.length;
+        this.projects = this.projects.filter(project => !archivedProjectIds.has(project.id));
+        const newCount = this.projects.length;
+        
+        if (originalCount !== newCount) {
+            console.log(`Cleanup: Removed ${originalCount - newCount} archived projects from active list`);
+            // Save the cleaned up active projects
+            await this.saveProjects();
+        }
     }
     
     async saveArchivedProjects() {
