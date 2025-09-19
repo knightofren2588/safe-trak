@@ -77,9 +77,6 @@ class ProjectManager {
         // Auto-cleanup old notifications on startup
         this.autoCleanupOldNotifications();
         
-        // Auto-cleanup orphaned notes on startup
-        this.cleanupOrphanedNotes();
-        
         // Set up periodic notification cleanup (every hour)
         setInterval(() => {
             this.autoCleanupOldNotifications();
@@ -1828,6 +1825,9 @@ END:VCALENDAR`;
             }
         }
         
+        // Cleanup orphaned notes after all data is loaded
+        await this.cleanupOrphanedNotes();
+        
         // TEMPORARILY DISABLED: Compliance and Certification loading
         // this.complianceItems = this.loadComplianceItems();
         // this.certifications = this.loadCertifications();
@@ -3162,7 +3162,7 @@ END:VCALENDAR`;
         } catch (error) {
             console.error('❌ Failed to save projects to cloud, falling back to local storage:', error);
             // Ensure local storage is updated even if cloud fails
-            localStorage.setItem('safetrack_projects', JSON.stringify(this.projects));
+        localStorage.setItem('safetrack_projects', JSON.stringify(this.projects));
             console.log('✅ Projects saved to local storage as fallback');
         }
     }
@@ -4042,24 +4042,38 @@ END:VCALENDAR`;
         const validProjectIds = new Set();
         
         // Collect all valid project IDs (active projects)
-        this.projects.forEach(p => validProjectIds.add(p.id));
+        if (Array.isArray(this.projects)) {
+            this.projects.forEach(p => {
+                if (p && p.id) {
+                    validProjectIds.add(p.id);
+                }
+            });
+        }
         
         // Collect all valid archived project IDs
-        Object.values(this.archivedProjects).forEach(userArchive => {
-            if (Array.isArray(userArchive)) {
-                userArchive.forEach(p => validProjectIds.add(p.originalId));
-            }
-        });
+        if (this.archivedProjects && typeof this.archivedProjects === 'object') {
+            Object.values(this.archivedProjects).forEach(userArchive => {
+                if (Array.isArray(userArchive)) {
+                    userArchive.forEach(p => {
+                        if (p && p.originalId) {
+                            validProjectIds.add(p.originalId);
+                        }
+                    });
+                }
+            });
+        }
         
         // Remove notes for non-existent projects
-        Object.keys(this.projectNotes).forEach(projectId => {
-            const numericId = Number(projectId);
-            if (!validProjectIds.has(numericId)) {
-                console.log(`Removing orphaned notes for project ${projectId}`);
-                delete this.projectNotes[projectId];
-                cleanedCount++;
-            }
-        });
+        if (this.projectNotes && typeof this.projectNotes === 'object') {
+            Object.keys(this.projectNotes).forEach(projectId => {
+                const numericId = Number(projectId);
+                if (!validProjectIds.has(numericId)) {
+                    console.log(`Removing orphaned notes for project ${projectId}`);
+                    delete this.projectNotes[projectId];
+                    cleanedCount++;
+                }
+            });
+        }
         
         if (cleanedCount > 0) {
             await this.saveProjectNotes();
