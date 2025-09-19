@@ -72,9 +72,9 @@ class ProjectManager {
         // Project notes system
         this.projectNotes = {};
         this.currentNotesProjectId = null;
-        this.userNotifications = this.loadUserNotifications();
+        this.userNotifications = {}; // Will be loaded asynchronously
         
-        // Auto-cleanup old notifications on startup
+        // Auto-cleanup old notifications on startup (async, but don't wait)
         this.autoCleanupOldNotifications();
         
         // Set up periodic notification cleanup (every hour)
@@ -558,17 +558,53 @@ class ProjectManager {
     // USER NOTIFICATIONS SYSTEM
     // ========================================
     
-    loadUserNotifications() {
+    async loadUserNotifications() {
+        // CLOUD FIRST: Load from cloud storage if connected
+        if (this.cloudStorage && this.cloudStorage.isConnected) {
+            try {
+                const cloudData = await this.cloudStorage.loadFromCloud('user_notifications');
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    // Convert cloud format back to our internal format
+                    const notifications = {};
+                    Object.entries(cloudData).forEach(([userId, data]) => {
+                        if (data.notifications) {
+                            notifications[userId] = data.notifications;
+                        }
+                    });
+                    console.log('User notifications loaded from cloud');
+                    return notifications;
+                }
+            } catch (error) {
+                console.error('Failed to load notifications from cloud:', error);
+            }
+        }
+        
+        // Fallback to local storage
         const stored = localStorage.getItem('safetrack_user_notifications');
-        return stored ? JSON.parse(stored) : {};
+        const localNotifications = stored ? JSON.parse(stored) : {};
+        console.log('User notifications loaded from local storage (fallback)');
+        return localNotifications;
     }
     
     async saveUserNotifications() {
         // CLOUD FIRST: Save to cloud storage if connected
         if (this.cloudStorage.isConnected) {
             try {
-                await this.cloudStorage.saveToCloud('user_notifications', this.userNotifications);
-                console.log('User notifications saved to cloud');
+                // Convert user notifications to proper cloud storage format
+                const cloudData = {};
+                Object.entries(this.userNotifications).forEach(([userId, notifications]) => {
+                    if (notifications && notifications.length > 0) {
+                        cloudData[userId] = {
+                            userId: userId,
+                            notifications: notifications,
+                            lastUpdated: new Date().toISOString()
+                        };
+                    }
+                });
+                
+                console.log('Saving notifications to cloud:', cloudData);
+                await this.cloudStorage.saveToCloud('user_notifications', cloudData);
+                console.log('✅ User notifications saved to cloud successfully');
             } catch (error) {
                 console.error('Failed to save notifications to cloud:', error);
                 // FALLBACK ONLY: Save to local storage if cloud fails
@@ -734,12 +770,12 @@ class ProjectManager {
         });
     }
     
-    markAllNotificationsRead() {
+    async markAllNotificationsRead() {
         if (this.userNotifications[this.currentUser]) {
             this.userNotifications[this.currentUser].forEach(notification => {
                 notification.read = true;
             });
-            this.saveUserNotifications();
+            await this.saveUserNotifications();
             this.updateNotificationBadge();
             
             // Close modal and show success
@@ -749,13 +785,13 @@ class ProjectManager {
         }
     }
     
-    clearReadNotifications() {
+    async clearReadNotifications() {
         if (this.userNotifications[this.currentUser]) {
             const originalCount = this.userNotifications[this.currentUser].length;
             this.userNotifications[this.currentUser] = this.userNotifications[this.currentUser].filter(notification => !notification.read);
             const clearedCount = originalCount - this.userNotifications[this.currentUser].length;
             
-            this.saveUserNotifications();
+            await this.saveUserNotifications();
             this.updateNotificationBadge();
             
             // Close modal and show success
@@ -766,7 +802,7 @@ class ProjectManager {
         }
     }
     
-    clearAllNotifications() {
+    async clearAllNotifications() {
         if (this.userNotifications[this.currentUser]) {
             const clearedCount = this.userNotifications[this.currentUser].length;
             
@@ -781,7 +817,7 @@ class ProjectManager {
             }
             
             this.userNotifications[this.currentUser] = [];
-            this.saveUserNotifications();
+            await this.saveUserNotifications();
             this.updateNotificationBadge();
             
             // Close modal and show success
@@ -793,7 +829,7 @@ class ProjectManager {
     }
     
     // Automatic cleanup - removes read notifications older than 7 days
-    autoCleanupOldNotifications() {
+    async autoCleanupOldNotifications() {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         
@@ -816,8 +852,8 @@ class ProjectManager {
         
         if (totalCleaned > 0) {
             console.log(`Auto-cleanup: Removed ${totalCleaned} old read notifications`);
-            this.saveUserNotifications();
-            this.updateNotificationBadge();
+        await this.saveUserNotifications();
+        this.updateNotificationBadge();
         }
     }
     
@@ -1900,6 +1936,9 @@ END:VCALENDAR`;
                 console.log('Skipping cleanup - no recent archive operations');
             }
         }
+        
+        // Load user notifications from cloud
+        this.userNotifications = await this.loadUserNotifications();
         
         // Cleanup orphaned notes after all data is loaded
         console.log('About to run orphaned notes cleanup...');
