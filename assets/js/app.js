@@ -1826,6 +1826,12 @@ END:VCALENDAR`;
         }
         
         // Cleanup orphaned notes after all data is loaded
+        console.log('About to run orphaned notes cleanup...');
+        console.log('Data state before cleanup:', {
+            projects: this.projects?.length || 0,
+            archivedProjects: this.archivedProjects ? Object.keys(this.archivedProjects).length : 0,
+            projectNotes: this.projectNotes ? Object.keys(this.projectNotes).length : 0
+        });
         await this.cleanupOrphanedNotes();
         
         // TEMPORARILY DISABLED: Compliance and Certification loading
@@ -4083,6 +4089,18 @@ END:VCALENDAR`;
         }
         
         return cleanedCount;
+    }
+    
+    async runFullSystemCheck() {
+        console.log('🔧 RUNNING FULL SYSTEM CHECK WITH CLEANUP...');
+        
+        // First, clean up any orphaned notes
+        await this.cleanupOrphanedNotes();
+        
+        // Then run the comprehensive system test
+        const testResults = this.runSystemTest();
+        
+        return testResults;
     }
     
     testCoreDataIntegrity() {
@@ -7242,6 +7260,13 @@ document.addEventListener('DOMContentLoaded', function() {
     window.cleanupOrphanedNotes = () => {
         if (window.projectManager) {
             return window.projectManager.cleanupOrphanedNotes();
+        }
+    };
+
+    // Full system check with cleanup
+    window.runFullSystemCheck = () => {
+        if (window.projectManager) {
+            return window.projectManager.runFullSystemCheck();
         }
     };
 
