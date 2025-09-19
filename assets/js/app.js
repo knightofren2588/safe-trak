@@ -245,6 +245,26 @@ class ProjectManager {
     // ========================================
     
     async openProjectNotes(projectId) {
+        // Close any existing modals first for better UX
+        const existingArchiveModal = document.getElementById('archiveModal');
+        if (existingArchiveModal) {
+            const archiveModalInstance = bootstrap.Modal.getInstance(existingArchiveModal);
+            if (archiveModalInstance) {
+                archiveModalInstance.hide();
+            }
+        }
+        
+        const existingDetailsModal = document.getElementById('projectDetailsModal');
+        if (existingDetailsModal) {
+            const detailsModalInstance = bootstrap.Modal.getInstance(existingDetailsModal);
+            if (detailsModalInstance) {
+                detailsModalInstance.hide();
+            }
+        }
+        
+        // Small delay to ensure modal closing animation completes
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
         // Convert projectId to number since project IDs are stored as numbers
         const numericProjectId = Number(projectId);
         this.currentNotesProjectId = numericProjectId;
@@ -3941,7 +3961,18 @@ END:VCALENDAR`;
         });
     }
     
-    viewArchivedProjectDetails(projectId) {
+    async viewArchivedProjectDetails(projectId) {
+        // Close archive modal first for better UX
+        const existingArchiveModal = document.getElementById('archiveModal');
+        if (existingArchiveModal) {
+            const archiveModalInstance = bootstrap.Modal.getInstance(existingArchiveModal);
+            if (archiveModalInstance) {
+                archiveModalInstance.hide();
+                // Small delay to ensure modal closing animation completes
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+        }
+        
         const userArchive = this.archivedProjects[this.currentUser] || [];
         const project = userArchive.find(p => p.originalId === projectId);
         
