@@ -57,7 +57,12 @@ class CloudStorageService {
             await Promise.all(promises);
             console.log(`Saved ${Object.keys(data).length} items to cloud: ${collectionName}`);
         } catch (error) {
-            console.error(`Error saving to cloud (${collectionName}):`, error);
+            // Check if it's a CORS/network error that we can ignore
+            if (error.message && (error.message.includes('access control') || error.message.includes('CORS'))) {
+                console.warn(`Cloud storage CORS error (${collectionName}), using local storage fallback`);
+            } else {
+                console.error(`Error saving to cloud (${collectionName}):`, error);
+            }
             // Fallback to local storage
             this.saveToLocal(collectionName, data);
         }

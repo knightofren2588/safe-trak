@@ -3128,13 +3128,19 @@ END:VCALENDAR`;
     }
 
     async saveProjects() {
+        console.log('Attempting to save projects:', {
+            count: this.projects.length,
+            projects: this.projects.map(p => ({id: p.id, name: p.name, createdBy: p.createdBy}))
+        });
+        
         try {
             await this.cloudStorage.saveProjects(this.projects);
-            console.log('Projects saved to cloud successfully');
+            console.log('✅ Projects saved to cloud successfully');
         } catch (error) {
-            console.error('Failed to save projects to cloud, falling back to local storage:', error);
+            console.error('❌ Failed to save projects to cloud, falling back to local storage:', error);
             // Ensure local storage is updated even if cloud fails
             localStorage.setItem('safetrack_projects', JSON.stringify(this.projects));
+            console.log('✅ Projects saved to local storage as fallback');
         }
     }
 
