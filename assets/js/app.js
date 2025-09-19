@@ -77,6 +77,9 @@ class ProjectManager {
         // Auto-cleanup old notifications on startup
         this.autoCleanupOldNotifications();
         
+        // Auto-cleanup orphaned notes on startup
+        this.cleanupOrphanedNotes();
+        
         // Set up periodic notification cleanup (every hour)
         setInterval(() => {
             this.autoCleanupOldNotifications();
@@ -4032,6 +4035,42 @@ END:VCALENDAR`;
         return testResults;
     }
     
+    async cleanupOrphanedNotes() {
+        console.log('🧹 Cleaning up orphaned notes...');
+        
+        let cleanedCount = 0;
+        const validProjectIds = new Set();
+        
+        // Collect all valid project IDs (active projects)
+        this.projects.forEach(p => validProjectIds.add(p.id));
+        
+        // Collect all valid archived project IDs
+        Object.values(this.archivedProjects).forEach(userArchive => {
+            if (Array.isArray(userArchive)) {
+                userArchive.forEach(p => validProjectIds.add(p.originalId));
+            }
+        });
+        
+        // Remove notes for non-existent projects
+        Object.keys(this.projectNotes).forEach(projectId => {
+            const numericId = Number(projectId);
+            if (!validProjectIds.has(numericId)) {
+                console.log(`Removing orphaned notes for project ${projectId}`);
+                delete this.projectNotes[projectId];
+                cleanedCount++;
+            }
+        });
+        
+        if (cleanedCount > 0) {
+            await this.saveProjectNotes();
+            console.log(`✅ Cleaned up ${cleanedCount} orphaned note collections`);
+        } else {
+            console.log('✅ No orphaned notes found');
+        }
+        
+        return cleanedCount;
+    }
+    
     testCoreDataIntegrity() {
         try {
             const issues = [];
@@ -7182,6 +7221,13 @@ document.addEventListener('DOMContentLoaded', function() {
     window.runSystemTest = () => {
         if (window.projectManager) {
             return window.projectManager.runSystemTest();
+        }
+    };
+
+    // Manual cleanup function
+    window.cleanupOrphanedNotes = () => {
+        if (window.projectManager) {
+            return window.projectManager.cleanupOrphanedNotes();
         }
     };
 
