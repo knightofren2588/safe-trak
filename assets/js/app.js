@@ -474,11 +474,16 @@ class ProjectManager {
         
         if (!project) return;
         
-        // Notify project creator and assigned user (if different)
+        // Notify project creator and all assigned users
         const usersToNotify = [project.createdBy];
-        if (project.assignedTo && project.assignedTo !== project.createdBy) {
-            usersToNotify.push(project.assignedTo);
-        }
+        const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+        
+        // Add all assigned users to notification list
+        assignedUsers.forEach(userId => {
+            if (userId && userId !== project.createdBy && !usersToNotify.includes(userId)) {
+                usersToNotify.push(userId);
+            }
+        });
         
         // Don't notify the author of the note
         const filteredUsers = usersToNotify.filter(userId => userId !== noteAuthor);
@@ -3620,14 +3625,16 @@ END:VCALENDAR`;
         
         // Filter by current user if not viewing all team projects
         if (this.projectViewMode === 'personal') {
-            projectsToCount = projectsToCount.filter(p => 
-                p.createdBy === this.currentUser || p.assignedTo === this.currentUser
-            );
+            projectsToCount = projectsToCount.filter(p => {
+                const assignedUsers = Array.isArray(p.assignedTo) ? p.assignedTo : [p.assignedTo].filter(Boolean);
+                return p.createdBy === this.currentUser || assignedUsers.includes(this.currentUser);
+            });
         } else if (this.projectViewMode !== 'all') {
             // Individual user view - filter for specific user
-            projectsToCount = projectsToCount.filter(p => 
-                p.createdBy === this.projectViewMode || p.assignedTo === this.projectViewMode
-            );
+            projectsToCount = projectsToCount.filter(p => {
+                const assignedUsers = Array.isArray(p.assignedTo) ? p.assignedTo : [p.assignedTo].filter(Boolean);
+                return p.createdBy === this.projectViewMode || assignedUsers.includes(this.projectViewMode);
+            });
         }
         
         const activeProjects = projectsToCount.filter(p => p.status === 'active').length;
@@ -3693,14 +3700,16 @@ END:VCALENDAR`;
                 projects = this.projects;
             } else if (this.projectViewMode === 'personal') {
                 // Show only projects created by or assigned to current user
-                projects = this.projects.filter(project => 
-                    project.createdBy === this.currentUser || project.assignedTo === this.currentUser
-                );
+                projects = this.projects.filter(project => {
+                    const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+                    return project.createdBy === this.currentUser || assignedUsers.includes(this.currentUser);
+                });
             } else {
                 // Individual user view - show projects created by or assigned to specific user
-                projects = this.projects.filter(project => 
-                    project.createdBy === this.projectViewMode || project.assignedTo === this.projectViewMode
-                );
+                projects = this.projects.filter(project => {
+                    const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+                    return project.createdBy === this.projectViewMode || assignedUsers.includes(this.projectViewMode);
+                });
             }
         }
         
@@ -3872,8 +3881,14 @@ END:VCALENDAR`;
     }
 
     canUserEditProject(project) {
-        // Users can only edit projects they created or are assigned to
-        return project.createdBy === this.currentUser || project.assignedTo === this.currentUser;
+        // Users can edit projects they created or are assigned to
+        if (project.createdBy === this.currentUser) {
+            return true;
+        }
+        
+        // Check if user is in the assigned users array
+        const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+        return assignedUsers.includes(this.currentUser);
     }
 
     editProjectModal(id) {
