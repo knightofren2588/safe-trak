@@ -5285,7 +5285,7 @@ END:VCALENDAR`;
                             <select class="form-select form-select-sm status-dropdown ${this.getEnhancedStatusClass(project)}" onchange="projectManager.changeProjectStatus(${project.id}, this.value)" style="color: white; font-weight: 600;">
                                 <option value="active" ${project.status === 'active' ? 'selected' : ''}>Active</option>
                                 <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
-                                <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Done</option>
+                                <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Complete</option>
                                 <option value="cancelled" ${project.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
                             </select>
                         ` : `
