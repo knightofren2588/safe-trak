@@ -457,9 +457,27 @@ class ProjectManager {
                     }
                 });
                 
-                console.log('Saving to cloud storage - data being saved:', cloudData);
-                await this.cloudStorage.saveToCloud('project_notes', cloudData);
-                console.log('✅ Project notes saved to cloud successfully:', Object.keys(cloudData).length, 'projects with notes');
+                if (Object.keys(cloudData).length === 0) {
+                    // If no projects have notes, delete all note documents from cloud
+                    console.log('No projects have notes - deleting all note documents from cloud');
+                    try {
+                        // Delete the entire project_notes collection by deleting all known project documents
+                        const existingData = await this.cloudStorage.loadFromCloud('project_notes');
+                        if (existingData) {
+                            for (const projectId of Object.keys(existingData)) {
+                                await this.cloudStorage.deleteFromCloud('project_notes', projectId);
+                                console.log(`Deleted cloud notes document for project ${projectId}`);
+                            }
+                        }
+                        console.log('✅ All note documents deleted from cloud storage');
+                    } catch (deleteError) {
+                        console.error('Failed to delete note documents from cloud:', deleteError);
+                    }
+                } else {
+                    console.log('Saving to cloud storage - data being saved:', cloudData);
+                    await this.cloudStorage.saveToCloud('project_notes', cloudData);
+                    console.log('✅ Project notes saved to cloud successfully:', Object.keys(cloudData).length, 'projects with notes');
+                }
             } catch (error) {
                 console.error('Failed to save project notes to cloud:', error);
                 // Only fallback to local storage if cloud fails
