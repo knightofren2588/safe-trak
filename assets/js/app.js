@@ -1800,17 +1800,22 @@ END:VCALENDAR`;
         // Only run cleanup if we have both active projects and archived projects
         // This prevents cleanup from running during normal archive/restore operations
         if (this.projects.length > 0 && Object.keys(this.archivedProjects).length > 0) {
-            // Add safety check to prevent cleanup from running too frequently
+            // Check if there was a recent archive operation that requires cleanup
+            const recentArchiveOperation = localStorage.getItem('recent_archive_operation');
             const lastCleanup = localStorage.getItem('last_cleanup_timestamp');
             const now = Date.now();
             const fiveMinutes = 5 * 60 * 1000;
             
-            if (!lastCleanup || (now - parseInt(lastCleanup)) > fiveMinutes) {
-                console.log('Running cleanup - last cleanup was more than 5 minutes ago');
+            // Run cleanup if:
+            // 1. There was a recent archive operation, OR
+            // 2. It's been more than 5 minutes since last cleanup
+            if (recentArchiveOperation || !lastCleanup || (now - parseInt(lastCleanup)) > fiveMinutes) {
+                console.log('Running cleanup - recent archive operation or 5+ minutes since last cleanup');
                 await this.cleanupArchivedProjectsFromActive();
                 localStorage.setItem('last_cleanup_timestamp', now.toString());
+                localStorage.removeItem('recent_archive_operation'); // Clear the flag
             } else {
-                console.log('Skipping cleanup - ran recently');
+                console.log('Skipping cleanup - no recent archive operations and ran recently');
             }
         }
         
@@ -3119,17 +3124,22 @@ END:VCALENDAR`;
         // Only run cleanup if we have both active projects and archived projects
         // This prevents cleanup from running during normal archive/restore operations
         if (this.projects.length > 0 && Object.keys(this.archivedProjects).length > 0) {
-            // Add safety check to prevent cleanup from running too frequently
+            // Check if there was a recent archive operation that requires cleanup
+            const recentArchiveOperation = localStorage.getItem('recent_archive_operation');
             const lastCleanup = localStorage.getItem('last_cleanup_timestamp');
             const now = Date.now();
             const fiveMinutes = 5 * 60 * 1000;
             
-            if (!lastCleanup || (now - parseInt(lastCleanup)) > fiveMinutes) {
-                console.log('Running cleanup (local storage) - last cleanup was more than 5 minutes ago');
+            // Run cleanup if:
+            // 1. There was a recent archive operation, OR
+            // 2. It's been more than 5 minutes since last cleanup
+            if (recentArchiveOperation || !lastCleanup || (now - parseInt(lastCleanup)) > fiveMinutes) {
+                console.log('Running cleanup (local storage) - recent archive operation or 5+ minutes since last cleanup');
                 await this.cleanupArchivedProjectsFromActive();
                 localStorage.setItem('last_cleanup_timestamp', now.toString());
+                localStorage.removeItem('recent_archive_operation'); // Clear the flag
             } else {
-                console.log('Skipping cleanup (local storage) - ran recently');
+                console.log('Skipping cleanup (local storage) - no recent archive operations and ran recently');
             }
         }
     }
@@ -3826,6 +3836,10 @@ END:VCALENDAR`;
         
         console.log(`Archive: Saved to cloud. Active projects: ${this.projects.length}, Archived projects: ${this.archivedProjects[this.currentUser]?.length || 0}`);
         
+        // Set flag to indicate recent archive operation for cleanup
+        localStorage.setItem('recent_archive_operation', 'true');
+        console.log('Archive: Set flag for cleanup to run on next page load');
+        
         // Update interface
         this.render();
         this.showNotification(`Project "${project.name}" archived successfully`, 'success');
@@ -3879,6 +3893,10 @@ END:VCALENDAR`;
         await this.saveArchivedProjects();
         
         console.log(`Restore: Saved to cloud. Active projects: ${this.projects.length}, Archived projects: ${this.archivedProjects[this.currentUser]?.length || 0}`);
+        
+        // Set flag to indicate recent archive operation for cleanup
+        localStorage.setItem('recent_archive_operation', 'true');
+        console.log('Restore: Set flag for cleanup to run on next page load');
         
         // Update interface
         this.render();
