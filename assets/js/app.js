@@ -3847,6 +3847,11 @@ END:VCALENDAR`;
         const newArchiveCount = this.archivedProjects[this.currentUser].length;
         console.log(`Restore: Removed from archive. Archive count: ${originalArchiveCount} → ${newArchiveCount}`);
         
+        // Ensure the current user's archive is properly tracked even if empty
+        if (!this.archivedProjects[this.currentUser]) {
+            this.archivedProjects[this.currentUser] = [];
+        }
+        
         // Save both
         await this.saveProjects();
         await this.saveArchivedProjects();
@@ -3927,19 +3932,25 @@ END:VCALENDAR`;
         // Save to cloud storage if connected
         if (this.cloudStorage.isConnected) {
             try {
+                // Get all users who should have archive data saved (including current user)
+                const usersToSave = new Set(Object.keys(this.archivedProjects));
+                if (this.currentUser) {
+                    usersToSave.add(this.currentUser);
+                }
+                
                 // Save each user's archived projects separately to avoid array storage issues
-                for (const userId in this.archivedProjects) {
-                    if (this.archivedProjects[userId] && this.archivedProjects[userId].length > 0) {
-                        // Create data object with user ID as key and archive data as value
-                        const archiveData = {
-                            [userId]: {
-                                userId: userId,
-                                projects: this.archivedProjects[userId],
-                                lastUpdated: new Date().toISOString()
-                            }
-                        };
-                        await this.cloudStorage.saveToCloud(`archived_projects_${userId}`, archiveData);
-                    }
+                for (const userId of usersToSave) {
+                    // Always save, even if empty - this ensures restored projects are properly removed from cloud
+                    const projects = this.archivedProjects[userId] || [];
+                    const archiveData = {
+                        [userId]: {
+                            userId: userId,
+                            projects: projects,
+                            lastUpdated: new Date().toISOString()
+                        }
+                    };
+                    await this.cloudStorage.saveToCloud(`archived_projects_${userId}`, archiveData);
+                    console.log(`Saved archive for ${userId}: ${projects.length} projects`);
                 }
                 console.log('Archived projects saved to cloud');
             } catch (error) {
