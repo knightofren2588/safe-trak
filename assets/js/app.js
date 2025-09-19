@@ -1797,8 +1797,11 @@ END:VCALENDAR`;
         // Load archived projects and ensure proper separation
         this.archivedProjects = await this.loadArchivedProjects();
         
-        // Ensure no archived projects are in the active projects array
-        await this.cleanupArchivedProjectsFromActive();
+        // Only run cleanup if we have both active projects and archived projects
+        // This prevents cleanup from running during normal archive/restore operations
+        if (this.projects.length > 0 && Object.keys(this.archivedProjects).length > 0) {
+            await this.cleanupArchivedProjectsFromActive();
+        }
         
         // TEMPORARILY DISABLED: Compliance and Certification loading
         // this.complianceItems = this.loadComplianceItems();
@@ -3102,8 +3105,11 @@ END:VCALENDAR`;
         // Load archived projects and ensure proper separation
         this.archivedProjects = await this.loadArchivedProjects();
         
-        // Ensure no archived projects are in the active projects array
-        await this.cleanupArchivedProjectsFromActive();
+        // Only run cleanup if we have both active projects and archived projects
+        // This prevents cleanup from running during normal archive/restore operations
+        if (this.projects.length > 0 && Object.keys(this.archivedProjects).length > 0) {
+            await this.cleanupArchivedProjectsFromActive();
+        }
     }
 
     loadProjects() {
@@ -3790,10 +3796,13 @@ END:VCALENDAR`;
         const newProjectCount = this.projects.length;
         
         console.log(`Archive: Removed project ${projectId}. Projects count: ${originalProjectCount} → ${newProjectCount}`);
+        console.log(`Archive: Active projects after filter:`, this.projects.map(p => ({id: p.id, name: p.name})));
         
         // Save both active projects and archive
         await this.saveProjects();
         await this.saveArchivedProjects();
+        
+        console.log(`Archive: Saved to cloud. Active projects: ${this.projects.length}, Archived projects: ${this.archivedProjects[this.currentUser]?.length || 0}`);
         
         // Update interface
         this.render();
@@ -3813,10 +3822,10 @@ END:VCALENDAR`;
             return;
         }
         
-        // Create restored project (remove archive metadata)
+        // Create restored project (keep original ID to avoid conflicts with cleanup)
         const restoredProject = {
             ...archivedProject,
-            id: this.generateId(), // New ID to avoid conflicts
+            id: archivedProject.originalId, // Use original ID to maintain consistency
             restoredAt: new Date().toISOString(),
             restoredBy: this.currentUser
         };
@@ -3830,13 +3839,19 @@ END:VCALENDAR`;
         
         // Add back to active projects
         this.projects.unshift(restoredProject);
+        console.log(`Restore: Added project ${restoredProject.id} back to active projects. Total active: ${this.projects.length}`);
         
         // Remove from archive
+        const originalArchiveCount = this.archivedProjects[this.currentUser].length;
         this.archivedProjects[this.currentUser] = userArchive.filter(p => p.originalId !== archivedProjectId);
+        const newArchiveCount = this.archivedProjects[this.currentUser].length;
+        console.log(`Restore: Removed from archive. Archive count: ${originalArchiveCount} → ${newArchiveCount}`);
         
         // Save both
         await this.saveProjects();
         await this.saveArchivedProjects();
+        
+        console.log(`Restore: Saved to cloud. Active projects: ${this.projects.length}, Archived projects: ${this.archivedProjects[this.currentUser]?.length || 0}`);
         
         // Update interface
         this.render();
