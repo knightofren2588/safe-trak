@@ -3607,6 +3607,7 @@ END:VCALENDAR`;
             category: formData.get('category'),
             startDate: formData.get('startDate'),
             dueDate: formData.get('dueDate'),
+            completionDate: formData.get('completionDate'),
             assignedTo: this.selectedAssignedUsers.length > 0 ? this.selectedAssignedUsers : [this.currentUser],
             status: formData.get('status'),
             screenshots: screenshots
@@ -3625,6 +3626,14 @@ END:VCALENDAR`;
         document.getElementById('modalTitle').textContent = 'New Safety Project';
         document.getElementById('submitText').textContent = 'Create Safety Project';
         this.currentEditId = null;
+        
+        // Explicitly ensure completion date field is enabled and interactive
+        const completionDateField = document.getElementById('projectCompletionDate');
+        if (completionDateField) {
+            completionDateField.removeAttribute('readonly');
+            completionDateField.removeAttribute('disabled');
+            completionDateField.style.pointerEvents = 'auto';
+        }
         
         // Reset assigned users
         this.selectedAssignedUsers = [];
@@ -5366,7 +5375,12 @@ END:VCALENDAR`;
         document.getElementById('projectCategory').value = project.category;
         document.getElementById('projectStartDate').value = project.startDate || '';
         document.getElementById('projectDueDate').value = project.dueDate || '';
-        document.getElementById('projectCompletionDate').value = project.completionDate || '';
+        const completionDateField = document.getElementById('projectCompletionDate');
+        completionDateField.value = project.completionDate || '';
+        // Explicitly ensure the field is enabled and interactive
+        completionDateField.removeAttribute('readonly');
+        completionDateField.removeAttribute('disabled');
+        completionDateField.style.pointerEvents = 'auto';
         document.getElementById('projectAssignedTo').value = project.assignedTo || '';
         document.getElementById('projectStatus').value = project.status || 'active';
         
@@ -7067,6 +7081,15 @@ window.openProjectModal = () => {
         document.getElementById('projectForm').reset();
         document.getElementById('modalTitle').textContent = 'New Safety Project';
         document.getElementById('submitText').textContent = 'Create Safety Project';
+        
+        // Explicitly ensure completion date field is enabled and interactive
+        const completionDateField = document.getElementById('projectCompletionDate');
+        if (completionDateField) {
+            completionDateField.removeAttribute('readonly');
+            completionDateField.removeAttribute('disabled');
+            completionDateField.style.pointerEvents = 'auto';
+        }
+        
         const modal = new bootstrap.Modal(document.getElementById('projectModal'));
         modal.show();
     }
