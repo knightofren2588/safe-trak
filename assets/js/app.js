@@ -74,6 +74,14 @@ class ProjectManager {
         this.currentNotesProjectId = null;
         this.userNotifications = this.loadUserNotifications();
         
+        // Auto-cleanup old notifications on startup
+        this.autoCleanupOldNotifications();
+        
+        // Set up periodic notification cleanup (every hour)
+        setInterval(() => {
+            this.autoCleanupOldNotifications();
+        }, 60 * 60 * 1000); // 1 hour
+        
         // Multi-user assignment system
         this.selectedAssignedUsers = [];
         
@@ -613,9 +621,17 @@ class ProjectManager {
                             ${content}
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" onclick="markAllNotificationsRead()">
-                                <i class="fas fa-check-double me-1"></i>Mark All Read
-                            </button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary" onclick="markAllNotificationsRead()">
+                                    <i class="fas fa-check-double me-1"></i>Mark All Read
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" onclick="clearReadNotifications()">
+                                    <i class="fas fa-broom me-1"></i>Clear Read
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="clearAllNotifications()">
+                                    <i class="fas fa-trash me-1"></i>Clear All
+                                </button>
+                            </div>
                             <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
@@ -654,6 +670,78 @@ class ProjectManager {
             const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
             if (modal) modal.hide();
             this.showNotification('All notifications marked as read', 'success');
+        }
+    }
+    
+    clearReadNotifications() {
+        if (this.userNotifications[this.currentUser]) {
+            const originalCount = this.userNotifications[this.currentUser].length;
+            this.userNotifications[this.currentUser] = this.userNotifications[this.currentUser].filter(notification => !notification.read);
+            const clearedCount = originalCount - this.userNotifications[this.currentUser].length;
+            
+            this.saveUserNotifications();
+            this.updateNotificationBadge();
+            
+            // Close modal and show success
+            const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
+            if (modal) modal.hide();
+            
+            this.showNotification(`Cleared ${clearedCount} read notifications`, 'success');
+        }
+    }
+    
+    clearAllNotifications() {
+        if (this.userNotifications[this.currentUser]) {
+            const clearedCount = this.userNotifications[this.currentUser].length;
+            
+            if (clearedCount === 0) {
+                this.showNotification('No notifications to clear', 'info');
+                return;
+            }
+            
+            // Confirm clearing all notifications
+            if (!confirm(`Are you sure you want to clear all ${clearedCount} notifications?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+            
+            this.userNotifications[this.currentUser] = [];
+            this.saveUserNotifications();
+            this.updateNotificationBadge();
+            
+            // Close modal and show success
+            const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
+            if (modal) modal.hide();
+            
+            this.showNotification(`Cleared all ${clearedCount} notifications`, 'success');
+        }
+    }
+    
+    // Automatic cleanup - removes read notifications older than 7 days
+    autoCleanupOldNotifications() {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        let totalCleaned = 0;
+        
+        for (const userId in this.userNotifications) {
+            if (this.userNotifications[userId]) {
+                const originalCount = this.userNotifications[userId].length;
+                this.userNotifications[userId] = this.userNotifications[userId].filter(notification => {
+                    // Keep unread notifications regardless of age
+                    if (!notification.read) return true;
+                    
+                    // Keep read notifications less than 7 days old
+                    const notificationDate = new Date(notification.timestamp);
+                    return notificationDate > sevenDaysAgo;
+                });
+                totalCleaned += originalCount - this.userNotifications[userId].length;
+            }
+        }
+        
+        if (totalCleaned > 0) {
+            console.log(`Auto-cleanup: Removed ${totalCleaned} old read notifications`);
+            this.saveUserNotifications();
+            this.updateNotificationBadge();
         }
     }
     
@@ -6697,6 +6785,18 @@ document.addEventListener('DOMContentLoaded', function() {
     window.markAllNotificationsRead = () => {
         if (window.projectManager) {
             window.projectManager.markAllNotificationsRead();
+        }
+    };
+
+    window.clearReadNotifications = () => {
+        if (window.projectManager) {
+            window.projectManager.clearReadNotifications();
+        }
+    };
+
+    window.clearAllNotifications = () => {
+        if (window.projectManager) {
+            window.projectManager.clearAllNotifications();
         }
     };
 
