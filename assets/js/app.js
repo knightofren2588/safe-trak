@@ -3729,11 +3729,15 @@ END:VCALENDAR`;
                 // Save each user's archived projects separately to avoid array storage issues
                 for (const userId in this.archivedProjects) {
                     if (this.archivedProjects[userId] && this.archivedProjects[userId].length > 0) {
-                        await this.cloudStorage.saveToCloud(`archived_projects_${userId}`, {
-                            userId: userId,
-                            projects: this.archivedProjects[userId],
-                            lastUpdated: new Date().toISOString()
-                        });
+                        // Create data object with user ID as key and archive data as value
+                        const archiveData = {
+                            [userId]: {
+                                userId: userId,
+                                projects: this.archivedProjects[userId],
+                                lastUpdated: new Date().toISOString()
+                            }
+                        };
+                        await this.cloudStorage.saveToCloud(`archived_projects_${userId}`, archiveData);
                     }
                 }
                 console.log('Archived projects saved to cloud');
@@ -3753,9 +3757,9 @@ END:VCALENDAR`;
                 const users = this.users || [];
                 for (const user of users) {
                     try {
-                        const userArchive = await this.cloudStorage.loadFromCloud(`archived_projects_${user.id}`);
-                        if (userArchive && userArchive.projects && userArchive.projects.length > 0) {
-                            archivedProjects[user.id] = userArchive.projects;
+                        const userArchiveData = await this.cloudStorage.loadFromCloud(`archived_projects_${user.id}`);
+                        if (userArchiveData && userArchiveData[user.id] && userArchiveData[user.id].projects && userArchiveData[user.id].projects.length > 0) {
+                            archivedProjects[user.id] = userArchiveData[user.id].projects;
                         }
                     } catch (userError) {
                         // User might not have archived projects yet
