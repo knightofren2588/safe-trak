@@ -1800,7 +1800,18 @@ END:VCALENDAR`;
         // Only run cleanup if we have both active projects and archived projects
         // This prevents cleanup from running during normal archive/restore operations
         if (this.projects.length > 0 && Object.keys(this.archivedProjects).length > 0) {
-            await this.cleanupArchivedProjectsFromActive();
+            // Add safety check to prevent cleanup from running too frequently
+            const lastCleanup = localStorage.getItem('last_cleanup_timestamp');
+            const now = Date.now();
+            const fiveMinutes = 5 * 60 * 1000;
+            
+            if (!lastCleanup || (now - parseInt(lastCleanup)) > fiveMinutes) {
+                console.log('Running cleanup - last cleanup was more than 5 minutes ago');
+                await this.cleanupArchivedProjectsFromActive();
+                localStorage.setItem('last_cleanup_timestamp', now.toString());
+            } else {
+                console.log('Skipping cleanup - ran recently');
+            }
         }
         
         // TEMPORARILY DISABLED: Compliance and Certification loading
@@ -3108,7 +3119,18 @@ END:VCALENDAR`;
         // Only run cleanup if we have both active projects and archived projects
         // This prevents cleanup from running during normal archive/restore operations
         if (this.projects.length > 0 && Object.keys(this.archivedProjects).length > 0) {
-            await this.cleanupArchivedProjectsFromActive();
+            // Add safety check to prevent cleanup from running too frequently
+            const lastCleanup = localStorage.getItem('last_cleanup_timestamp');
+            const now = Date.now();
+            const fiveMinutes = 5 * 60 * 1000;
+            
+            if (!lastCleanup || (now - parseInt(lastCleanup)) > fiveMinutes) {
+                console.log('Running cleanup (local storage) - last cleanup was more than 5 minutes ago');
+                await this.cleanupArchivedProjectsFromActive();
+                localStorage.setItem('last_cleanup_timestamp', now.toString());
+            } else {
+                console.log('Skipping cleanup (local storage) - ran recently');
+            }
         }
     }
 
