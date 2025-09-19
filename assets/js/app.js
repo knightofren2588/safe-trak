@@ -3685,7 +3685,11 @@ END:VCALENDAR`;
         this.archivedProjects[this.currentUser].unshift(archivedProject);
         
         // Remove from active projects
+        const originalProjectCount = this.projects.length;
         this.projects = this.projects.filter(p => p.id !== projectId);
+        const newProjectCount = this.projects.length;
+        
+        console.log(`Archive: Removed project ${projectId}. Projects count: ${originalProjectCount} → ${newProjectCount}`);
         
         // Save both active projects and archive
         await this.saveProjects();
@@ -3737,6 +3741,43 @@ END:VCALENDAR`;
         // Update interface
         this.render();
         this.showNotification(`Project "${archivedProject.name}" restored successfully`, 'success');
+    }
+    
+    async deleteArchivedProject(projectId) {
+        const userArchive = this.archivedProjects[this.currentUser] || [];
+        const projectIndex = userArchive.findIndex(p => p.originalId === projectId);
+        
+        if (projectIndex === -1) {
+            this.showNotification('Archived project not found', 'error');
+            return;
+        }
+        
+        const project = userArchive[projectIndex];
+        
+        // Confirm deletion
+        if (!confirm(`Are you sure you want to permanently delete "${project.name}"?\n\nThis action cannot be undone and will remove:\n- All project data\n- All project notes\n- All project history\n\nClick OK to permanently delete, or Cancel to keep the project.`)) {
+            return;
+        }
+        
+        // Remove from archived projects
+        this.archivedProjects[this.currentUser].splice(projectIndex, 1);
+        
+        // Remove project notes for this project
+        if (this.projectNotes[projectId]) {
+            delete this.projectNotes[projectId];
+            await this.saveProjectNotes();
+        }
+        
+        // Save changes
+        await this.saveArchivedProjects();
+        
+        // Refresh archive modal if open
+        const archiveModal = document.getElementById('archiveModal');
+        if (archiveModal && archiveModal.style.display !== 'none') {
+            this.showUserArchive();
+        }
+        
+        this.showNotification(`Project "${project.name}" permanently deleted`, 'success');
     }
     
     async saveArchivedProjects() {
@@ -3878,6 +3919,9 @@ END:VCALENDAR`;
                             </button>
                             <button class="btn btn-sm btn-outline-primary" onclick="restoreProject(${project.originalId})" title="Restore to active projects">
                                 <i class="fas fa-undo me-1"></i>Restore
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteArchivedProject(${project.originalId})" title="Permanently delete archived project">
+                                <i class="fas fa-trash me-1"></i>Delete
                             </button>
                         </div>
                     </div>
@@ -4296,7 +4340,8 @@ END:VCALENDAR`;
     }
 
     renderDashboardStats() {
-        let projectsToCount = this.projects;
+        // Start with only active projects (filter out archived ones)
+        let projectsToCount = this.projects.filter(p => !p.isArchived && p.status !== 'archived');
         
         // Filter by current user if not viewing all team projects
         if (this.projectViewMode === 'personal') {
@@ -4370,22 +4415,28 @@ END:VCALENDAR`;
         // If no specific projects provided, filter based on view mode
         let projects = projectsToRender;
         if (!projects) {
+            // First, ensure we only work with active projects (filter out any archived ones)
+            const activeProjects = this.projects.filter(p => !p.isArchived && p.status !== 'archived');
+            
             if (this.projectViewMode === 'all') {
-                // Show all projects (read-only view for non-owners)
-                projects = this.projects;
+                // Show all active projects (read-only view for non-owners)
+                projects = activeProjects;
             } else if (this.projectViewMode === 'personal') {
-                // Show only projects created by or assigned to current user
-                projects = this.projects.filter(project => {
+                // Show only active projects created by or assigned to current user
+                projects = activeProjects.filter(project => {
                     const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
                     return project.createdBy === this.currentUser || assignedUsers.includes(this.currentUser);
                 });
             } else {
-                // Individual user view - show projects created by or assigned to specific user
-                projects = this.projects.filter(project => {
+                // Individual user view - show active projects created by or assigned to specific user
+                projects = activeProjects.filter(project => {
                     const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
                     return project.createdBy === this.projectViewMode || assignedUsers.includes(this.projectViewMode);
                 });
             }
+        } else {
+            // Even when projects are provided, filter out archived ones
+            projects = projects.filter(p => !p.isArchived && p.status !== 'archived');
         }
         
         // Update table title based on current user
@@ -6569,6 +6620,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.openProjectNotes = (projectId) => {
         if (window.projectManager) {
             window.projectManager.openProjectNotes(projectId);
+        }
+    };
+
+    window.deleteArchivedProject = (projectId) => {
+        if (window.projectManager) {
+            window.projectManager.deleteArchivedProject(projectId);
         }
     };
 
