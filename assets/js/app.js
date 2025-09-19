@@ -3890,20 +3890,23 @@ END:VCALENDAR`;
             console.log(`Delete: Removed notes for project ${projectId}`);
         }
         
-        // Ensure this project ID is not somehow in active projects
+        // CRITICAL: Ensure this project ID is completely removed from active projects
         const activeProjectsBefore = this.projects.length;
         this.projects = this.projects.filter(p => p.id !== projectId);
         const activeProjectsAfter = this.projects.length;
         if (activeProjectsBefore !== activeProjectsAfter) {
             console.log(`Delete: Also removed ${activeProjectsBefore - activeProjectsAfter} active projects with same ID ${projectId}`);
+        } else {
+            console.log(`Delete: No active projects found with ID ${projectId} (this is expected for archive-only deletion)`);
         }
         
         // Save changes
         console.log(`Delete: About to save archives. Current user ${this.currentUser} has ${this.archivedProjects[this.currentUser]?.length || 0} archived projects`);
         await this.saveArchivedProjects();
-        if (activeProjectsBefore !== activeProjectsAfter) {
-            await this.saveProjects();
-        }
+        
+        // ALWAYS save active projects to ensure the deletion is synced to cloud
+        await this.saveProjects();
+        console.log(`Delete: Force-saved active projects to cloud to ensure project ${projectId} is removed`);
         
         console.log(`Delete: Final state - Active: ${this.projects.length}, Archived: ${this.archivedProjects[this.currentUser].length}`);
         
