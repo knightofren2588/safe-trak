@@ -3546,6 +3546,67 @@ END:VCALENDAR`;
             }
         }
     }
+    
+    // ========================================
+    // STATUS MODAL SYSTEM
+    // ========================================
+    
+    openStatusModal(projectId) {
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) return;
+        
+        const modalHtml = `
+            <div class="modal fade" id="statusModal" tabindex="-1">
+                <div class="modal-dialog modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-flag me-2"></i>Change Status
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-3"><strong>${this.escapeHtml(project.name)}</strong></p>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success status-modal-btn" onclick="projectManager.changeProjectStatus(${projectId}, 'active'); projectManager.closeStatusModal();">
+                                    <i class="fas fa-play me-2"></i>Active
+                                </button>
+                                <button class="btn btn-warning status-modal-btn" onclick="projectManager.changeProjectStatus(${projectId}, 'on-hold'); projectManager.closeStatusModal();">
+                                    <i class="fas fa-pause me-2"></i>On Hold
+                                </button>
+                                <button class="btn btn-primary status-modal-btn" onclick="projectManager.changeProjectStatus(${projectId}, 'completed'); projectManager.closeStatusModal();">
+                                    <i class="fas fa-check me-2"></i>Complete
+                                </button>
+                                <button class="btn btn-danger status-modal-btn" onclick="projectManager.changeProjectStatus(${projectId}, 'cancelled'); projectManager.closeStatusModal();">
+                                    <i class="fas fa-times me-2"></i>Cancelled
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if present
+        const existingModal = document.getElementById('statusModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('statusModal'));
+        modal.show();
+    }
+    
+    closeStatusModal() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('statusModal'));
+        if (modal) {
+            modal.hide();
+        }
+    }
 
     // Update project table title based on current user
     updateProjectTableTitle() {
@@ -5281,19 +5342,10 @@ END:VCALENDAR`;
                 </td>
                 <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     <div class="d-flex align-items-center">
-                        ${this.canUserEditProject(project) ? `
-                            <select class="form-select form-select-sm status-dropdown ${this.getEnhancedStatusClass(project)}" onchange="projectManager.changeProjectStatus(${project.id}, this.value)" style="color: white; font-weight: 600;">
-                                <option value="active" ${project.status === 'active' ? 'selected' : ''}>Active</option>
-                                <option value="on-hold" ${project.status === 'on-hold' ? 'selected' : ''}>On Hold</option>
-                                <option value="completed" ${project.status === 'completed' ? 'selected' : ''}>Complete</option>
-                                <option value="cancelled" ${project.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-                            </select>
-                        ` : `
-                            <span class="status-badge ${this.getEnhancedStatusClass(project)}" role="status" aria-label="Project status: ${this.getStatusDisplayText(project.status)}">
-                                <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
-                                ${this.getStatusDisplayText(project.status)}
-                            </span>
-                        `}
+                        <span class="status-badge ${this.getEnhancedStatusClass(project)}" role="status" aria-label="Project status: ${this.getStatusDisplayText(project.status)}" ${this.canUserEditProject(project) ? `style="cursor: pointer;" onclick="projectManager.openStatusModal(${project.id})" title="Click to change status"` : ''}>
+                            <span class="status-icon ${this.getStatusIconClass(project)}" aria-hidden="true"></span>
+                            ${this.getStatusDisplayText(project.status).toUpperCase()}
+                        </span>
                     </div>
                 </td>
                 <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">

@@ -1117,18 +1117,20 @@ body::after {
 .status-badge {
     display: inline-flex;
     align-items: center;
-    padding: 3px 6px;
-    border-radius: 10px;
-    font-size: 0.65rem;
+    padding: 4px 8px;
+    border-radius: 15px;
+    font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.2px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
     white-space: nowrap;
     max-width: 100%;
+    border: none;
+    color: white;
 }
 
 .status-badge::before {
@@ -1147,8 +1149,22 @@ body::after {
 }
 
 .status-badge .status-icon {
-    margin-right: 3px;
-    font-size: 0.6rem;
+    margin-right: 4px;
+    font-size: 0.65rem;
+}
+
+/* Clickable status badges */
+.status-badge[style*="cursor: pointer"] {
+    cursor: pointer !important;
+}
+
+.status-badge[style*="cursor: pointer"]:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.status-badge[style*="cursor: pointer"]:hover::before {
+    left: 100%;
 }
 
 /* Status Dropdown Improvements */
