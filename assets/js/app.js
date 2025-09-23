@@ -6149,7 +6149,6 @@ END:VCALENDAR`;
         if (newStatus === 'completed') {
             project.progress = 100;
             project.completedAt = new Date().toISOString();
-            project.completionDate = new Date().toISOString().split('T')[0]; // Store as YYYY-MM-DD
         } else if (newStatus === 'cancelled') {
             project.cancelledAt = new Date().toISOString();
         } else if (newStatus === 'active' && oldStatus === 'completed') {
