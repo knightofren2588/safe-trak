@@ -413,6 +413,25 @@
                                 <option value="no-deadline">No Deadline</option>
                             </select>
                             
+                            <!-- Sort By -->
+                            <select id="sortBy" class="form-select" style="width: 140px;">
+                                <option value="">Sort By</option>
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                                <option value="start-date-asc">Start Date (Oldest)</option>
+                                <option value="start-date-desc">Start Date (Newest)</option>
+                                <option value="due-date-asc">Due Date (Soonest)</option>
+                                <option value="due-date-desc">Due Date (Latest)</option>
+                                <option value="completion-date-asc">Completed (Oldest)</option>
+                                <option value="completion-date-desc">Completed (Newest)</option>
+                                <option value="created-date-asc">Created (Oldest)</option>
+                                <option value="created-date-desc">Created (Newest)</option>
+                                <option value="priority-high">Priority (High First)</option>
+                                <option value="priority-low">Priority (Low First)</option>
+                                <option value="progress-asc">Progress (Low First)</option>
+                                <option value="progress-desc">Progress (High First)</option>
+                            </select>
+                            
                             <!-- Advanced Filters Button -->
                             <button class="btn btn-outline-secondary" type="button" id="moreFiltersBtn" onclick="toggleAdvancedFilters()">
                                 <i class="fas fa-filter me-1"></i>More Filters

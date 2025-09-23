@@ -3443,6 +3443,11 @@ END:VCALENDAR`;
             this.filterProjects();
         });
         
+        // Sort by
+        document.getElementById('sortBy').addEventListener('change', (e) => {
+            this.filterProjects();
+        });
+        
         // Priority filter
         document.getElementById('priorityFilter').addEventListener('change', (e) => {
             this.filterProjects();
@@ -3912,8 +3917,120 @@ END:VCALENDAR`;
             });
         }
         
+        // Apply sorting
+        const sortBy = document.getElementById('sortBy').value;
+        if (sortBy) {
+            filteredProjects = this.sortProjects(filteredProjects, sortBy);
+        }
+        
         this.renderProjectTable(filteredProjects);
         this.updateFilterStats(filteredProjects);
+    }
+    
+    sortProjects(projects, sortBy) {
+        if (!sortBy || !projects || projects.length === 0) {
+            return projects;
+        }
+        
+        // Create a copy to avoid mutating the original array
+        const sortedProjects = [...projects];
+        
+        switch (sortBy) {
+            case 'name-asc':
+                return sortedProjects.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            
+            case 'name-desc':
+                return sortedProjects.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+            
+            case 'start-date-asc':
+                return sortedProjects.sort((a, b) => {
+                    const dateA = a.startDate ? new Date(a.startDate) : new Date(0);
+                    const dateB = b.startDate ? new Date(b.startDate) : new Date(0);
+                    return dateA - dateB;
+                });
+            
+            case 'start-date-desc':
+                return sortedProjects.sort((a, b) => {
+                    const dateA = a.startDate ? new Date(a.startDate) : new Date(0);
+                    const dateB = b.startDate ? new Date(b.startDate) : new Date(0);
+                    return dateB - dateA;
+                });
+            
+            case 'due-date-asc':
+                return sortedProjects.sort((a, b) => {
+                    const dateA = a.dueDate ? new Date(a.dueDate) : new Date('9999-12-31');
+                    const dateB = b.dueDate ? new Date(b.dueDate) : new Date('9999-12-31');
+                    return dateA - dateB;
+                });
+            
+            case 'due-date-desc':
+                return sortedProjects.sort((a, b) => {
+                    const dateA = a.dueDate ? new Date(a.dueDate) : new Date('1900-01-01');
+                    const dateB = b.dueDate ? new Date(b.dueDate) : new Date('1900-01-01');
+                    return dateB - dateA;
+                });
+            
+            case 'completion-date-asc':
+                return sortedProjects.sort((a, b) => {
+                    const dateA = a.completionDate ? new Date(a.completionDate) : new Date('1900-01-01');
+                    const dateB = b.completionDate ? new Date(b.completionDate) : new Date('1900-01-01');
+                    return dateA - dateB;
+                });
+            
+            case 'completion-date-desc':
+                return sortedProjects.sort((a, b) => {
+                    const dateA = a.completionDate ? new Date(a.completionDate) : new Date('9999-12-31');
+                    const dateB = b.completionDate ? new Date(b.completionDate) : new Date('9999-12-31');
+                    return dateB - dateA;
+                });
+            
+            case 'created-date-asc':
+                return sortedProjects.sort((a, b) => {
+                    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+                    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+                    return dateA - dateB;
+                });
+            
+            case 'created-date-desc':
+                return sortedProjects.sort((a, b) => {
+                    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+                    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+                    return dateB - dateA;
+                });
+            
+            case 'priority-high':
+                return sortedProjects.sort((a, b) => {
+                    const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+                    const priorityA = priorityOrder[a.priority] || 0;
+                    const priorityB = priorityOrder[b.priority] || 0;
+                    return priorityB - priorityA;
+                });
+            
+            case 'priority-low':
+                return sortedProjects.sort((a, b) => {
+                    const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+                    const priorityA = priorityOrder[a.priority] || 0;
+                    const priorityB = priorityOrder[b.priority] || 0;
+                    return priorityA - priorityB;
+                });
+            
+            case 'progress-asc':
+                return sortedProjects.sort((a, b) => {
+                    const progressA = a.progress || 0;
+                    const progressB = b.progress || 0;
+                    return progressA - progressB;
+                });
+            
+            case 'progress-desc':
+                return sortedProjects.sort((a, b) => {
+                    const progressA = a.progress || 0;
+                    const progressB = b.progress || 0;
+                    return progressB - progressA;
+                });
+            
+            default:
+                return projects;
+        }
     }
     
     getUserName(userId) {
@@ -3962,6 +4079,7 @@ END:VCALENDAR`;
         document.getElementById('statusFilter').value = '';
         document.getElementById('userFilter').value = '';
         document.getElementById('dateFilter').value = '';
+        document.getElementById('sortBy').value = '';
         document.getElementById('priorityFilter').value = '';
         document.getElementById('categoryFilter').value = '';
         document.getElementById('progressFilter').value = '';
