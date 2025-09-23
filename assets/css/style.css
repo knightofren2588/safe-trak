@@ -1775,6 +1775,13 @@ span.status-badge-active {
     border-color: var(--safety-green) !important;
 }
 
+.status-badge-ongoing,
+span.status-badge-ongoing {
+    background: linear-gradient(135deg, var(--safety-blue) 0%, #0a58ca 100%) !important;
+    color: white !important;
+    border-color: var(--safety-blue) !important;
+}
+
 .status-badge-pending,
 span.status-badge-pending {
     background: linear-gradient(135deg, var(--safety-yellow) 0%, #e0a800 100%) !important;
@@ -2056,6 +2063,11 @@ div.fade-in {
     50% { opacity: 0.8; }
 }
 
+@keyframes pulse-info {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
 @keyframes progress-shine {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
@@ -2137,6 +2149,12 @@ span.status-icon {
 span.status-icon-active {
     background: var(--safety-green) !important;
     animation: pulse-success 2s infinite !important;
+}
+
+.status-icon-ongoing,
+span.status-icon-ongoing {
+    background: var(--safety-blue) !important;
+    animation: pulse-info 2s infinite !important;
 }
 
 .status-icon-pending,

@@ -3571,6 +3571,9 @@ END:VCALENDAR`;
                                 <button class="btn btn-success status-modal-btn" onclick="projectManager.changeProjectStatus(${projectId}, 'active'); projectManager.closeStatusModal();">
                                     <i class="fas fa-play me-2"></i>Active
                                 </button>
+                                <button class="btn btn-info status-modal-btn" onclick="projectManager.changeProjectStatus(${projectId}, 'on-going'); projectManager.closeStatusModal();">
+                                    <i class="fas fa-cog me-2"></i>On Going
+                                </button>
                                 <button class="btn btn-warning status-modal-btn" onclick="projectManager.changeProjectStatus(${projectId}, 'on-hold'); projectManager.closeStatusModal();">
                                     <i class="fas fa-pause me-2"></i>On Hold
                                 </button>
@@ -5548,6 +5551,7 @@ END:VCALENDAR`;
     getEnhancedStatusClass(project) {
         if (project.status === 'completed') return 'status-badge-completed';
         if (project.status === 'cancelled') return 'status-badge-cancelled';
+        if (project.status === 'on-going') return 'status-badge-ongoing';
         if (this.isProjectOverdue(project)) return 'status-badge-overdue';
         if (this.isProjectAtRisk(project)) return 'status-badge-at-risk';
         if (project.status === 'on-hold') return 'status-badge-pending';
@@ -5556,6 +5560,7 @@ END:VCALENDAR`;
 
     getStatusIconClass(project) {
         if (project.status === 'completed') return 'status-icon-active';
+        if (project.status === 'on-going') return 'status-icon-ongoing';
         if (this.isProjectOverdue(project)) return 'status-icon-overdue';
         if (this.isProjectAtRisk(project)) return 'status-icon-at-risk';
         return 'status-icon-pending';
@@ -5615,6 +5620,7 @@ END:VCALENDAR`;
     getStatusDisplayText(status) {
         const statusMap = {
             'active': 'Active',
+            'on-going': 'On Going',
             'on-hold': 'On Hold',
             'completed': 'Complete',
             'cancelled': 'Cancelled'
