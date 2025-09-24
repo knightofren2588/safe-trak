@@ -4507,6 +4507,55 @@ END:VCALENDAR`;
         this.showNotification(`Developer notes cleared for project ${numericProjectId}`, 'warning');
     }
     
+    // TARGET SPECIFIC STUBBORN NOTE: Force delete just one specific note
+    forceDeleteSpecificNote(projectId, noteId) {
+        const numericProjectId = Number(projectId);
+        console.log('🎯 FORCE DELETING SPECIFIC NOTE:', { projectId: numericProjectId, noteId: noteId });
+        
+        // Step 1: Remove from memory
+        if (this.developerNotes[numericProjectId]) {
+            const originalNotes = [...this.developerNotes[numericProjectId]];
+            this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(note => {
+                const shouldKeep = note.id !== noteId && note.id !== String(noteId);
+                if (!shouldKeep) {
+                    console.log('🎯 Removing specific note:', note);
+                }
+                return shouldKeep;
+            });
+            console.log('🎯 Memory updated:', this.developerNotes[numericProjectId]);
+        }
+        
+        // Step 2: Force save to local storage
+        localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+        console.log('🎯 Local storage updated');
+        
+        // Step 3: Force save to cloud with specific note removed
+        if (this.cloudStorage.isConnected) {
+            const cloudData = {};
+            Object.entries(this.developerNotes).forEach(([projId, notes]) => {
+                if (notes && notes.length > 0) {
+                    cloudData[projId] = {
+                        projectId: projId,
+                        notes: notes,
+                        lastUpdated: new Date().toISOString()
+                    };
+                }
+            });
+            
+            this.cloudStorage.saveToCloud('developer_notes', cloudData).then(() => {
+                console.log('🎯 Cloud storage updated - specific note removed');
+                this.showNotification(`Specific note ${noteId} force deleted`, 'success');
+            }).catch(error => {
+                console.log('🎯 Cloud update failed:', error);
+                this.showNotification(`Note deleted locally, cloud sync failed`, 'warning');
+            });
+        }
+        
+        // Step 4: Refresh UI
+        this.render();
+        console.log('🎯 SPECIFIC NOTE FORCE DELETED!');
+    }
+    
     renderNoteCounter(count, type = 'project') {
         if (count === 0) return '';
         
@@ -8190,6 +8239,13 @@ document.addEventListener('DOMContentLoaded', function() {
     window.forceClearProjectDeveloperNotes = (projectId) => {
         if (window.projectManager) {
             window.projectManager.forceClearProjectDeveloperNotes(projectId);
+        }
+    };
+    
+    // Target specific stubborn note for deletion
+    window.forceDeleteSpecificNote = (projectId, noteId) => {
+        if (window.projectManager) {
+            window.projectManager.forceDeleteSpecificNote(projectId, noteId);
         }
     };
 
