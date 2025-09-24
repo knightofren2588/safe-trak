@@ -4539,12 +4539,28 @@ END:VCALENDAR`;
                         notes: notes,
                         lastUpdated: new Date().toISOString()
                     };
+                } else {
+                    // Explicitly set empty array for projects with no notes
+                    cloudData[projId] = {
+                        projectId: projId,
+                        notes: [],
+                        lastUpdated: new Date().toISOString()
+                    };
                 }
             });
+            
+            console.log('🎯 Cloud data being saved:', cloudData);
             
             this.cloudStorage.saveToCloud('developer_notes', cloudData).then(() => {
                 console.log('🎯 Cloud storage updated - specific note removed');
                 this.showNotification(`Specific note ${noteId} force deleted`, 'success');
+                
+                // Force refresh the cloud data to verify
+                setTimeout(() => {
+                    this.cloudStorage.loadFromCloud('developer_notes').then(verifyData => {
+                        console.log('🎯 Verification - cloud data after save:', verifyData);
+                    });
+                }, 1000);
             }).catch(error => {
                 console.log('🎯 Cloud update failed:', error);
                 this.showNotification(`Note deleted locally, cloud sync failed`, 'warning');
@@ -4554,6 +4570,52 @@ END:VCALENDAR`;
         // Step 4: Refresh UI
         this.render();
         console.log('🎯 SPECIFIC NOTE FORCE DELETED!');
+    }
+    
+    // NUCLEAR OPTION: Completely wipe project 26's developer notes from cloud
+    nuclearClearProject26() {
+        console.log('💥 NUCLEAR CLEARING PROJECT 26 DEVELOPER NOTES...');
+        
+        // Step 1: Clear from memory
+        delete this.developerNotes[26];
+        console.log('💥 Memory cleared for project 26');
+        
+        // Step 2: Clear from local storage
+        localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+        console.log('💥 Local storage cleared for project 26');
+        
+        // Step 3: Force cloud save with project 26 completely removed
+        if (this.cloudStorage.isConnected) {
+            const cloudData = {};
+            Object.entries(this.developerNotes).forEach(([projId, notes]) => {
+                if (notes && notes.length > 0) {
+                    cloudData[projId] = {
+                        projectId: projId,
+                        notes: notes,
+                        lastUpdated: new Date().toISOString()
+                    };
+                }
+            });
+            
+            console.log('💥 Cloud data being saved (project 26 removed):', cloudData);
+            
+            this.cloudStorage.saveToCloud('developer_notes', cloudData).then(() => {
+                console.log('💥 NUCLEAR CLEAR COMPLETE - Project 26 developer notes wiped from cloud!');
+                this.showNotification('Project 26 developer notes nuclear cleared', 'warning');
+                
+                // Verify the cloud data
+                setTimeout(() => {
+                    this.cloudStorage.loadFromCloud('developer_notes').then(verifyData => {
+                        console.log('💥 Verification - cloud data after nuclear clear:', verifyData);
+                    });
+                }, 1000);
+            }).catch(error => {
+                console.log('💥 Nuclear clear failed:', error);
+            });
+        }
+        
+        // Step 4: Refresh UI
+        this.render();
     }
     
     renderNoteCounter(count, type = 'project') {
@@ -8246,6 +8308,13 @@ document.addEventListener('DOMContentLoaded', function() {
     window.forceDeleteSpecificNote = (projectId, noteId) => {
         if (window.projectManager) {
             window.projectManager.forceDeleteSpecificNote(projectId, noteId);
+        }
+    };
+    
+    // NUCLEAR OPTION: Completely clear project 26's developer notes from cloud
+    window.nuclearClearProject26 = () => {
+        if (window.projectManager) {
+            window.projectManager.nuclearClearProject26();
         }
     };
 
