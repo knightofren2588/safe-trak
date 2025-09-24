@@ -4226,9 +4226,32 @@ END:VCALENDAR`;
     async deleteDeveloperNote(projectId, noteId) {
         const numericProjectId = Number(projectId);
         
+        console.log('🗑️ Attempting to delete developer note:', {
+            projectId: numericProjectId,
+            noteId: noteId,
+            currentNotes: this.developerNotes[numericProjectId]
+        });
+        
         if (this.developerNotes[numericProjectId]) {
             const originalNotes = [...this.developerNotes[numericProjectId]];
+            const notesBeforeFilter = this.developerNotes[numericProjectId].length;
+            
             this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(note => note.id !== noteId);
+            
+            const notesAfterFilter = this.developerNotes[numericProjectId].length;
+            console.log('🗑️ Notes before filter:', notesBeforeFilter, 'after filter:', notesAfterFilter);
+            
+            // If the filter didn't work, try more aggressive deletion
+            if (notesBeforeFilter === notesAfterFilter) {
+                console.log('⚠️ Filter failed, trying aggressive deletion...');
+                this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(note => {
+                    const shouldKeep = note.id !== noteId && note.id !== String(noteId);
+                    if (!shouldKeep) {
+                        console.log('🗑️ Aggressively removing note:', note);
+                    }
+                    return shouldKeep;
+                });
+            }
             
             // Set a flag to prevent immediate sync from overwriting our deletion
             this.lastDeveloperNoteOperation = Date.now();
@@ -4246,6 +4269,9 @@ END:VCALENDAR`;
                 this.developerNotes[numericProjectId] = originalNotes;
                 this.showNotification('Failed to delete developer note. Please try again.', 'error');
             }
+        } else {
+            console.log('⚠️ No developer notes found for project:', numericProjectId);
+            this.showNotification('No developer notes found for this project', 'error');
         }
     }
     
@@ -4390,6 +4416,48 @@ END:VCALENDAR`;
     getDeveloperNotesCount(projectId) {
         const notes = this.developerNotes[projectId];
         return notes ? notes.length : 0;
+    }
+    
+    // Emergency cleanup function for corrupted developer notes
+    cleanupDeveloperNotes() {
+        console.log('🧹 Starting developer notes cleanup...');
+        let cleanedCount = 0;
+        
+        Object.keys(this.developerNotes).forEach(projectId => {
+            const notes = this.developerNotes[projectId];
+            if (Array.isArray(notes)) {
+                // Remove any notes that don't have proper structure
+                const validNotes = notes.filter(note => {
+                    if (!note || typeof note !== 'object') {
+                        console.log('🗑️ Removing invalid note (not object):', note);
+                        cleanedCount++;
+                        return false;
+                    }
+                    if (!note.id || !note.text || !note.timestamp) {
+                        console.log('🗑️ Removing incomplete note:', note);
+                        cleanedCount++;
+                        return false;
+                    }
+                    return true;
+                });
+                
+                if (validNotes.length !== notes.length) {
+                    this.developerNotes[projectId] = validNotes;
+                    console.log(`🧹 Cleaned project ${projectId}: ${notes.length} → ${validNotes.length} notes`);
+                }
+            } else {
+                console.log('🗑️ Removing non-array notes for project:', projectId);
+                delete this.developerNotes[projectId];
+                cleanedCount++;
+            }
+        });
+        
+        if (cleanedCount > 0) {
+            console.log(`🧹 Cleanup complete: ${cleanedCount} items cleaned`);
+            this.saveDeveloperNotes();
+        } else {
+            console.log('🧹 No cleanup needed');
+        }
     }
     
     renderNoteCounter(count, type = 'project') {
@@ -7785,6 +7853,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Developer notes are now loaded directly in the initialization above
         console.log('✅ Developer notes loading completed. Final state:', window.projectManager.developerNotes);
+        
+        // Clean up any corrupted developer notes
+        window.projectManager.cleanupDeveloperNotes();
     });
 
     // Load archived projects after initialization
