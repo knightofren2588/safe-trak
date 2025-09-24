@@ -74,9 +74,10 @@ class ProjectManager {
         this.currentNotesProjectId = null;
         this.userNotifications = {}; // Will be loaded asynchronously
         
-        // Developer notes system (cloud-only storage)
+        // Developer notes system (hybrid storage like project notes)
         this.developerNotes = {};
         this.currentDeveloperNotesProjectId = null;
+        this.lastDeveloperNoteOperation = null;
         
         // Auto-cleanup old notifications on startup (async, but don't wait)
         this.autoCleanupOldNotifications();
@@ -388,6 +389,7 @@ class ProjectManager {
         
         // Set a flag to prevent immediate sync from overwriting our addition
         this.lastNoteOperation = Date.now();
+        this.lastDeveloperNoteOperation = Date.now();
         
         this.renderProjectNotes(numericProjectId);
         
@@ -438,6 +440,7 @@ class ProjectManager {
             
             // Set a flag to prevent immediate sync from overwriting our deletion
             this.lastNoteOperation = Date.now();
+            this.lastDeveloperNoteOperation = Date.now();
             
             this.renderProjectNotes(numericProjectId);
             
@@ -3204,8 +3207,9 @@ END:VCALENDAR`;
             
             const success = await this.cloudStorage.syncAllData(this);
             
-            // Also sync project notes
+            // Also sync project notes and developer notes
             await this.syncProjectNotesFromCloud();
+            await this.syncDeveloperNotesFromCloud();
             
             if (success) {
                 this.showConnectionStatus();
@@ -4197,6 +4201,9 @@ END:VCALENDAR`;
         
         this.developerNotes[numericProjectId].unshift(note); // Add to beginning
         
+        // Set a flag to prevent immediate sync from overwriting our addition
+        this.lastDeveloperNoteOperation = Date.now();
+        
         const saveSuccess = await this.saveDeveloperNotes();
         if (saveSuccess) {
             this.renderDeveloperNotes(numericProjectId);
@@ -4221,6 +4228,9 @@ END:VCALENDAR`;
         if (this.developerNotes[numericProjectId]) {
             const originalNotes = [...this.developerNotes[numericProjectId]];
             this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(note => note.id !== noteId);
+            
+            // Set a flag to prevent immediate sync from overwriting our deletion
+            this.lastDeveloperNoteOperation = Date.now();
             
             const saveSuccess = await this.saveDeveloperNotes();
             if (saveSuccess) {
@@ -4311,6 +4321,39 @@ END:VCALENDAR`;
         } else {
             console.log('No developer notes found in local storage');
             this.developerNotes = {};
+        }
+    }
+    
+    async syncDeveloperNotesFromCloud() {
+        // Check if we just performed a developer note operation - if so, skip sync to prevent overwriting
+        if (this.lastDeveloperNoteOperation && (Date.now() - this.lastDeveloperNoteOperation) < 5000) {
+            console.log('Skipping developer notes sync - recent developer note operation detected');
+            return;
+        }
+        
+        // Force refresh developer notes from cloud
+        if (this.cloudStorage.isConnected) {
+            try {
+                const cloudData = await this.cloudStorage.loadFromCloud('developer_notes');
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    // Convert cloud format back to our internal format
+                    const notes = {};
+                    Object.entries(cloudData).forEach(([projectId, data]) => {
+                        if (data.notes) {
+                            notes[projectId] = data.notes;
+                        }
+                    });
+                    this.developerNotes = notes;
+                    console.log('Synced developer notes from cloud:', Object.keys(notes).length, 'projects have developer notes');
+                    
+                    // Also update local storage
+                    localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+                } else {
+                    console.log('No developer notes found in cloud');
+                }
+            } catch (error) {
+                console.error('Failed to sync developer notes from cloud:', error);
+            }
         }
     }
     
