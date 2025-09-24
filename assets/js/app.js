@@ -7717,7 +7717,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load project notes after cloud storage is ready - CLOUD FIRST
     window.projectManager.waitForCloudStorage().then(async () => {
         try {
-            // Try cloud storage first
+            // Try cloud storage first for project notes
             if (window.projectManager.cloudStorage.isConnected) {
                 const cloudData = await window.projectManager.cloudStorage.loadFromCloud('project_notes');
                 console.log('Raw cloud data loaded during init:', cloudData);
@@ -7732,9 +7732,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     window.projectManager.projectNotes = notes;
                     console.log('Project notes loaded from cloud successfully:', notes);
-                    return;
                 } else {
                     console.log('No cloud data found or empty cloud data');
+                }
+                
+                // Also load developer notes from cloud during initialization
+                const devCloudData = await window.projectManager.cloudStorage.loadFromCloud('developer_notes');
+                console.log('Raw developer notes cloud data loaded during init:', devCloudData);
+                
+                if (devCloudData && Object.keys(devCloudData).length > 0) {
+                    // Convert cloud format back to our internal format
+                    const devNotes = {};
+                    Object.entries(devCloudData).forEach(([projectId, data]) => {
+                        if (data.notes) {
+                            devNotes[projectId] = data.notes;
+                        }
+                    });
+                    window.projectManager.developerNotes = devNotes;
+                    console.log('✅ Developer notes loaded from cloud successfully during init:', devNotes);
+                    
+                    // Also save to local storage as backup
+                    localStorage.setItem('safetrack_developer_notes', JSON.stringify(window.projectManager.developerNotes));
+                    console.log('✅ Developer notes saved to local storage during init');
+                } else {
+                    console.log('No developer notes found in cloud during init');
                 }
             }
             
@@ -7743,14 +7764,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const localNotes = stored ? JSON.parse(stored) : {};
             window.projectManager.projectNotes = localNotes;
             console.log('Project notes loaded from local storage (fallback)');
+            
+            // Also fallback developer notes to local storage if not loaded from cloud
+            if (!window.projectManager.developerNotes || Object.keys(window.projectManager.developerNotes).length === 0) {
+                const devStored = localStorage.getItem('safetrack_developer_notes');
+                const devLocalNotes = devStored ? JSON.parse(devStored) : {};
+                window.projectManager.developerNotes = devLocalNotes;
+                console.log('✅ Developer notes loaded from local storage (fallback):', devLocalNotes);
+            }
         } catch (error) {
             console.error('Failed to load project notes:', error);
             window.projectManager.projectNotes = {};
+            
+            // Also fallback developer notes on error
+            const devStored = localStorage.getItem('safetrack_developer_notes');
+            const devLocalNotes = devStored ? JSON.parse(devStored) : {};
+            window.projectManager.developerNotes = devLocalNotes;
+            console.log('✅ Developer notes loaded from local storage (error fallback):', devLocalNotes);
         }
         
-        // Load developer notes (hybrid storage)
-        console.log('🔄 About to load developer notes...');
-        await window.projectManager.loadDeveloperNotes();
+        // Developer notes are now loaded directly in the initialization above
         console.log('✅ Developer notes loading completed. Final state:', window.projectManager.developerNotes);
     });
 
