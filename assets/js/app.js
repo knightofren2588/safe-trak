@@ -4460,6 +4460,53 @@ END:VCALENDAR`;
         }
     }
     
+    // NUCLEAR OPTION: Force clear all developer notes (use with caution!)
+    forceClearAllDeveloperNotes() {
+        console.log('💥 FORCE CLEARING ALL DEVELOPER NOTES...');
+        console.log('Before:', this.developerNotes);
+        
+        this.developerNotes = {};
+        
+        // Clear from local storage
+        localStorage.removeItem('safetrack_developer_notes');
+        console.log('💥 Local storage cleared');
+        
+        // Clear from cloud (if connected)
+        if (this.cloudStorage.isConnected) {
+            this.cloudStorage.saveToCloud('developer_notes', {}).then(() => {
+                console.log('💥 Cloud storage cleared');
+            }).catch(error => {
+                console.log('💥 Cloud clear failed:', error);
+            });
+        }
+        
+        console.log('After:', this.developerNotes);
+        console.log('💥 ALL DEVELOPER NOTES FORCE CLEARED!');
+        
+        // Refresh the UI
+        this.render();
+        this.showNotification('All developer notes force cleared', 'warning');
+    }
+    
+    // NUCLEAR OPTION: Force clear developer notes for specific project
+    forceClearProjectDeveloperNotes(projectId) {
+        const numericProjectId = Number(projectId);
+        console.log('💥 FORCE CLEARING DEVELOPER NOTES FOR PROJECT:', numericProjectId);
+        console.log('Before:', this.developerNotes[numericProjectId]);
+        
+        delete this.developerNotes[numericProjectId];
+        
+        // Save the changes
+        this.saveDeveloperNotes();
+        
+        console.log('After:', this.developerNotes[numericProjectId]);
+        console.log('💥 PROJECT DEVELOPER NOTES FORCE CLEARED!');
+        
+        // Refresh the UI
+        this.render();
+        this.showNotification(`Developer notes cleared for project ${numericProjectId}`, 'warning');
+    }
+    
     renderNoteCounter(count, type = 'project') {
         if (count === 0) return '';
         
@@ -8130,6 +8177,19 @@ document.addEventListener('DOMContentLoaded', function() {
     window.openDeveloperNotes = (projectId) => {
         if (window.projectManager) {
             window.projectManager.showProjectDeveloperNotes(projectId);
+        }
+    };
+    
+    // Emergency functions for stubborn developer notes
+    window.forceClearAllDeveloperNotes = () => {
+        if (window.projectManager) {
+            window.projectManager.forceClearAllDeveloperNotes();
+        }
+    };
+    
+    window.forceClearProjectDeveloperNotes = (projectId) => {
+        if (window.projectManager) {
+            window.projectManager.forceClearProjectDeveloperNotes(projectId);
         }
     };
 
