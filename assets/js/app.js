@@ -4195,33 +4195,37 @@ END:VCALENDAR`;
     }
     
     async saveDeveloperNotes() {
-        // CLOUD-ONLY STORAGE - No local storage to avoid issues
+        // Save to cloud first, with local storage backup
+        const cloudData = {};
+        Object.entries(this.developerNotes).forEach(([projectId, notes]) => {
+            if (notes && notes.length > 0) {
+                cloudData[projectId] = {
+                    projectId: projectId,
+                    notes: notes,
+                    lastUpdated: new Date().toISOString()
+                };
+            }
+        });
+        
         if (this.cloudStorage.isConnected) {
             try {
-                const cloudData = {};
-                Object.entries(this.developerNotes).forEach(([projectId, notes]) => {
-                    if (notes && notes.length > 0) {
-                        cloudData[projectId] = {
-                            projectId: projectId,
-                            notes: notes,
-                            lastUpdated: new Date().toISOString()
-                        };
-                    }
-                });
-                
                 await this.cloudStorage.saveToCloud('developer_notes', cloudData);
                 console.log('Developer notes saved to cloud successfully');
             } catch (error) {
                 console.error('Failed to save developer notes to cloud:', error);
-                this.showNotification('Failed to save developer note. Please try again.', 'error');
+                // Fall back to local storage
+                localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+                console.log('Developer notes saved to local storage as backup');
             }
         } else {
-            this.showNotification('No cloud connection. Developer notes require cloud storage.', 'error');
+            // Save to local storage if no cloud connection
+            localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+            console.log('No cloud connection: Developer notes saved to local storage');
         }
     }
     
     async loadDeveloperNotes() {
-        // CLOUD-ONLY STORAGE
+        // Try cloud first, fall back to local storage
         if (this.cloudStorage.isConnected) {
             try {
                 const cloudData = await this.cloudStorage.loadFromCloud('developer_notes');
@@ -4234,16 +4238,31 @@ END:VCALENDAR`;
                     });
                     this.developerNotes = notes;
                     console.log('Developer notes loaded from cloud:', Object.keys(notes).length, 'projects have developer notes');
+                    
+                    // Also save to local storage as backup
+                    localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+                    return;
                 } else {
-                    console.log('No developer notes found in cloud');
-                    this.developerNotes = {};
+                    console.log('No developer notes found in cloud, checking local storage');
                 }
             } catch (error) {
                 console.error('Failed to load developer notes from cloud:', error);
+                console.log('Falling back to local storage');
+            }
+        }
+        
+        // Fallback to local storage
+        const stored = localStorage.getItem('safetrack_developer_notes');
+        if (stored) {
+            try {
+                this.developerNotes = JSON.parse(stored);
+                console.log('Developer notes loaded from local storage:', Object.keys(this.developerNotes).length, 'projects have developer notes');
+            } catch (error) {
+                console.error('Failed to parse developer notes from local storage:', error);
                 this.developerNotes = {};
             }
         } else {
-            console.log('No cloud connection: Cannot load developer notes');
+            console.log('No developer notes found in local storage');
             this.developerNotes = {};
         }
     }
