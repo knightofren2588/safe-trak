@@ -391,6 +391,9 @@ class ProjectManager {
         
         this.renderProjectNotes(numericProjectId);
         
+        // Refresh project table to update note counters
+        this.render();
+        
         // Add notification for project owner(s)
         this.addNotificationForProjectOwner(numericProjectId, this.currentUser, note.text);
         
@@ -437,6 +440,10 @@ class ProjectManager {
             this.lastNoteOperation = Date.now();
             
             this.renderProjectNotes(numericProjectId);
+            
+            // Refresh project table to update note counters
+            this.render();
+            
             this.showNotification('Note deleted', 'success');
         }
     }
@@ -4193,6 +4200,10 @@ END:VCALENDAR`;
         const saveSuccess = await this.saveDeveloperNotes();
         if (saveSuccess) {
             this.renderDeveloperNotes(numericProjectId);
+            
+            // Refresh project table to update note counters
+            this.render();
+            
             this.showNotification('Developer note added', 'success');
             
             // Clear form
@@ -4214,6 +4225,10 @@ END:VCALENDAR`;
             const saveSuccess = await this.saveDeveloperNotes();
             if (saveSuccess) {
                 this.renderDeveloperNotes(numericProjectId);
+                
+                // Refresh project table to update note counters
+                this.render();
+                
                 this.showNotification('Developer note deleted', 'success');
             } else {
                 // Restore the note if save failed
@@ -4279,6 +4294,26 @@ END:VCALENDAR`;
             console.error('Failed to load developer notes from cloud:', error);
             this.developerNotes = {};
         }
+    }
+    
+    // Helper methods for note counts
+    getProjectNotesCount(projectId) {
+        const notes = this.projectNotes[projectId];
+        return notes ? notes.length : 0;
+    }
+    
+    getDeveloperNotesCount(projectId) {
+        const notes = this.developerNotes[projectId];
+        return notes ? notes.length : 0;
+    }
+    
+    renderNoteCounter(count, type = 'project') {
+        if (count === 0) return '';
+        
+        const badgeClass = type === 'developer' ? 'bg-info' : 'bg-secondary';
+        const position = type === 'developer' ? 'position-absolute top-0 start-100 translate-middle' : 'position-absolute top-0 start-100 translate-middle';
+        
+        return `<span class="badge ${badgeClass} ${position}" style="font-size: 0.65rem; min-width: 18px; height: 18px; line-height: 16px;">${count}</span>`;
     }
     
     updateFilterStats(filteredProjects) {
@@ -5137,11 +5172,13 @@ END:VCALENDAR`;
                             <button class="btn btn-sm btn-outline-info" onclick="viewArchivedProjectDetails(${project.originalId})" title="View full project details">
                                 <i class="fas fa-eye me-1"></i>Details
                             </button>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="openProjectNotes(${project.originalId})" title="View/add project notes">
+                            <button class="btn btn-sm btn-outline-secondary position-relative" onclick="openProjectNotes(${project.originalId})" title="View/add project notes">
                                 <i class="fas fa-sticky-note me-1"></i>Notes
+                                ${this.renderNoteCounter(this.getProjectNotesCount(project.originalId), 'project')}
                             </button>
-                            <button class="btn btn-sm btn-outline-info" onclick="openDeveloperNotes(${project.originalId})" title="View/add developer notes">
+                            <button class="btn btn-sm btn-outline-info position-relative" onclick="openDeveloperNotes(${project.originalId})" title="View/add developer notes">
                                 <i class="fas fa-code me-1"></i>Dev Notes
+                                ${this.renderNoteCounter(this.getDeveloperNotesCount(project.originalId), 'developer')}
                             </button>
                             <button class="btn btn-sm btn-outline-primary" onclick="restoreProject(${project.originalId})" title="Restore to active projects">
                                 <i class="fas fa-undo me-1"></i>Restore
@@ -5310,11 +5347,13 @@ END:VCALENDAR`;
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-outline-secondary" onclick="openProjectNotes(${project.originalId})">
+                            <button class="btn btn-outline-secondary position-relative" onclick="openProjectNotes(${project.originalId})">
                                 <i class="fas fa-sticky-note me-1"></i>View/Add Notes
+                                ${this.renderNoteCounter(this.getProjectNotesCount(project.originalId), 'project')}
                             </button>
-                            <button class="btn btn-outline-info" onclick="openDeveloperNotes(${project.originalId})">
+                            <button class="btn btn-outline-info position-relative" onclick="openDeveloperNotes(${project.originalId})">
                                 <i class="fas fa-code me-1"></i>Developer Notes
+                                ${this.renderNoteCounter(this.getDeveloperNotesCount(project.originalId), 'developer')}
                             </button>
                             <button class="btn btn-outline-primary" onclick="restoreProject(${project.originalId})">
                                 <i class="fas fa-undo me-1"></i>Restore Project
@@ -5798,11 +5837,13 @@ END:VCALENDAR`;
                             <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-action btn-outline-success" title="Update Progress">
                                 <i class="fas fa-chart-line"></i>
                             </button>
-                            <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary" title="Project Notes">
+                            <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary position-relative" title="Project Notes">
                                 <i class="fas fa-sticky-note"></i>
+                                ${this.renderNoteCounter(this.getProjectNotesCount(project.id), 'project')}
                             </button>
-                            <button onclick="projectManager.showProjectDeveloperNotes(${project.id})" class="btn btn-outline-info" title="Developer Notes">
+                            <button onclick="projectManager.showProjectDeveloperNotes(${project.id})" class="btn btn-outline-info position-relative" title="Developer Notes">
                                 <i class="fas fa-code"></i>
+                                ${this.renderNoteCounter(this.getDeveloperNotesCount(project.id), 'developer')}
                             </button>
                             ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
                                 <i class="fas fa-images"></i>
@@ -5816,11 +5857,13 @@ END:VCALENDAR`;
                     </div>
                     ` : `
                         <div class="btn-group btn-group-sm">
-                            <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary" title="Project Notes">
+                            <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary position-relative" title="Project Notes">
                                 <i class="fas fa-sticky-note"></i>
+                                ${this.renderNoteCounter(this.getProjectNotesCount(project.id), 'project')}
                             </button>
-                            <button onclick="projectManager.showProjectDeveloperNotes(${project.id})" class="btn btn-outline-info" title="Developer Notes">
+                            <button onclick="projectManager.showProjectDeveloperNotes(${project.id})" class="btn btn-outline-info position-relative" title="Developer Notes">
                                 <i class="fas fa-code"></i>
+                                ${this.renderNoteCounter(this.getDeveloperNotesCount(project.id), 'developer')}
                             </button>
                             ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
                                 <i class="fas fa-images"></i>
