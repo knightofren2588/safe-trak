@@ -4059,6 +4059,9 @@ END:VCALENDAR`;
         // Update modal title to show we're viewing developer notes
         document.getElementById('notesProjectTitle').textContent = `Project: ${project.name}`;
         
+        // Update cloud connection status
+        this.updateDeveloperNotesCloudStatus();
+        
         // Switch to developer notes tab
         const devNotesTab = document.getElementById('developer-notes-tab');
         if (devNotesTab) {
@@ -4071,6 +4074,19 @@ END:VCALENDAR`;
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('projectNotesModal'));
         modal.show();
+    }
+    
+    updateDeveloperNotesCloudStatus() {
+        const statusElement = document.getElementById('developerNotesCloudStatus');
+        if (statusElement) {
+            if (this.cloudStorage.isConnected) {
+                statusElement.innerHTML = '<i class="fas fa-check-circle me-1 text-success"></i>Cloud connected - Notes will be visible to team';
+                statusElement.className = 'text-success';
+            } else {
+                statusElement.innerHTML = '<i class="fas fa-exclamation-triangle me-1 text-warning"></i>No cloud connection - Developer notes unavailable';
+                statusElement.className = 'text-warning';
+            }
+        }
     }
     
     renderDeveloperNotes(projectId) {
@@ -4173,29 +4189,47 @@ END:VCALENDAR`;
         }
         
         this.developerNotes[numericProjectId].unshift(note); // Add to beginning
-        await this.saveDeveloperNotes();
         
-        this.renderDeveloperNotes(numericProjectId);
-        this.showNotification('Developer note added', 'success');
-        
-        // Clear form
-        document.getElementById('developerNoteText').value = '';
-        document.getElementById('developerNoteType').value = '';
+        const saveSuccess = await this.saveDeveloperNotes();
+        if (saveSuccess) {
+            this.renderDeveloperNotes(numericProjectId);
+            this.showNotification('Developer note added', 'success');
+            
+            // Clear form
+            document.getElementById('developerNoteText').value = '';
+            document.getElementById('developerNoteType').value = '';
+        } else {
+            // Remove the note from memory if save failed
+            this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(n => n.id !== note.id);
+        }
     }
     
     async deleteDeveloperNote(projectId, noteId) {
         const numericProjectId = Number(projectId);
         
         if (this.developerNotes[numericProjectId]) {
+            const originalNotes = [...this.developerNotes[numericProjectId]];
             this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(note => note.id !== noteId);
-            await this.saveDeveloperNotes();
-            this.renderDeveloperNotes(numericProjectId);
-            this.showNotification('Developer note deleted', 'success');
+            
+            const saveSuccess = await this.saveDeveloperNotes();
+            if (saveSuccess) {
+                this.renderDeveloperNotes(numericProjectId);
+                this.showNotification('Developer note deleted', 'success');
+            } else {
+                // Restore the note if save failed
+                this.developerNotes[numericProjectId] = originalNotes;
+                this.showNotification('Failed to delete developer note. Please try again.', 'error');
+            }
         }
     }
     
     async saveDeveloperNotes() {
-        // Save to cloud first, with local storage backup
+        // CLOUD-ONLY STORAGE - No local storage for team collaboration
+        if (!this.cloudStorage.isConnected) {
+            this.showNotification('No cloud connection. Developer notes require cloud storage for team collaboration.', 'error');
+            return false;
+        }
+
         const cloudData = {};
         Object.entries(this.developerNotes).forEach(([projectId, notes]) => {
             if (notes && notes.length > 0) {
@@ -4207,62 +4241,42 @@ END:VCALENDAR`;
             }
         });
         
-        if (this.cloudStorage.isConnected) {
-            try {
-                await this.cloudStorage.saveToCloud('developer_notes', cloudData);
-                console.log('Developer notes saved to cloud successfully');
-            } catch (error) {
-                console.error('Failed to save developer notes to cloud:', error);
-                // Fall back to local storage
-                localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
-                console.log('Developer notes saved to local storage as backup');
-            }
-        } else {
-            // Save to local storage if no cloud connection
-            localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
-            console.log('No cloud connection: Developer notes saved to local storage');
+        try {
+            await this.cloudStorage.saveToCloud('developer_notes', cloudData);
+            console.log('Developer notes saved to cloud successfully');
+            return true;
+        } catch (error) {
+            console.error('Failed to save developer notes to cloud:', error);
+            this.showNotification('Failed to save developer note to cloud. Please check connection and try again.', 'error');
+            return false;
         }
     }
     
     async loadDeveloperNotes() {
-        // Try cloud first, fall back to local storage
-        if (this.cloudStorage.isConnected) {
-            try {
-                const cloudData = await this.cloudStorage.loadFromCloud('developer_notes');
-                if (cloudData && Object.keys(cloudData).length > 0) {
-                    const notes = {};
-                    Object.entries(cloudData).forEach(([projectId, data]) => {
-                        if (data.notes) {
-                            notes[projectId] = data.notes;
-                        }
-                    });
-                    this.developerNotes = notes;
-                    console.log('Developer notes loaded from cloud:', Object.keys(notes).length, 'projects have developer notes');
-                    
-                    // Also save to local storage as backup
-                    localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
-                    return;
-                } else {
-                    console.log('No developer notes found in cloud, checking local storage');
-                }
-            } catch (error) {
-                console.error('Failed to load developer notes from cloud:', error);
-                console.log('Falling back to local storage');
-            }
+        // CLOUD-ONLY STORAGE - No local storage for team collaboration
+        if (!this.cloudStorage.isConnected) {
+            console.log('No cloud connection: Cannot load developer notes');
+            this.developerNotes = {};
+            return;
         }
-        
-        // Fallback to local storage
-        const stored = localStorage.getItem('safetrack_developer_notes');
-        if (stored) {
-            try {
-                this.developerNotes = JSON.parse(stored);
-                console.log('Developer notes loaded from local storage:', Object.keys(this.developerNotes).length, 'projects have developer notes');
-            } catch (error) {
-                console.error('Failed to parse developer notes from local storage:', error);
+
+        try {
+            const cloudData = await this.cloudStorage.loadFromCloud('developer_notes');
+            if (cloudData && Object.keys(cloudData).length > 0) {
+                const notes = {};
+                Object.entries(cloudData).forEach(([projectId, data]) => {
+                    if (data.notes) {
+                        notes[projectId] = data.notes;
+                    }
+                });
+                this.developerNotes = notes;
+                console.log('Developer notes loaded from cloud:', Object.keys(notes).length, 'projects have developer notes');
+            } else {
+                console.log('No developer notes found in cloud');
                 this.developerNotes = {};
             }
-        } else {
-            console.log('No developer notes found in local storage');
+        } catch (error) {
+            console.error('Failed to load developer notes from cloud:', error);
             this.developerNotes = {};
         }
     }
