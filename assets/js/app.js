@@ -69,16 +69,14 @@ class ProjectManager {
         // Project view mode (personal vs all team projects)
         this.projectViewMode = localStorage.getItem('safetrack_project_view_mode') || 'personal';
         
-        // Project notes system
+        // Note systems (following successful project pattern)
         this.projectNotes = {};
         this.currentNotesProjectId = null;
-        this.userNotifications = {}; // Will be loaded asynchronously
-        
-        // Developer notes system (hybrid storage like project notes)
         this.developerNotes = {};
         this.currentDeveloperNotesProjectId = null;
-        this.lastDeveloperNoteOperation = null;
-        console.log('🔧 ProjectManager constructor: developerNotes initialized as:', this.developerNotes);
+        
+        // User notifications system
+        this.userNotifications = {}; // Will be loaded asynchronously
         
         // Auto-cleanup old notifications on startup (async, but don't wait)
         this.autoCleanupOldNotifications();
@@ -3271,6 +3269,9 @@ END:VCALENDAR`;
             this.roles = roles;
             this.departments = departments;
             this.currentUser = currentUser;
+            
+            // Load notes using the new clean system
+            await this.loadNotes();
             
             // Update connection status after successful data load
             this.showConnectionStatus();
@@ -7824,6 +7825,245 @@ END:VCALENDAR`;
         document.body.insertAdjacentHTML('beforeend', sampleHtml);
         const modal = new bootstrap.Modal(document.getElementById('sampleDataModal'));
         modal.show();
+    }
+    
+    // ========================================
+    // NEW CLEAN NOTE SYSTEM (Following Project Pattern)
+    // ========================================
+    
+    // Save notes using the same successful pattern as projects
+    async saveNotes() {
+        console.log('Saving notes to cloud...');
+        try {
+            await this.cloudStorage.saveProjectNotes(this.projectNotes);
+            await this.cloudStorage.saveDeveloperNotes(this.developerNotes);
+            console.log('✅ Notes saved successfully');
+        } catch (error) {
+            console.error('❌ Failed to save notes:', error);
+            this.showNotification('Failed to save notes. Please check your connection.', 'error');
+        }
+    }
+    
+    // Load notes using the same successful pattern as projects
+    async loadNotes() {
+        console.log('Loading notes from cloud...');
+        try {
+            this.projectNotes = await this.cloudStorage.loadProjectNotes() || {};
+            this.developerNotes = await this.cloudStorage.loadDeveloperNotes() || {};
+            console.log('✅ Notes loaded successfully');
+        } catch (error) {
+            console.error('❌ Failed to load notes:', error);
+            this.showNotification('Failed to load notes. Please check your connection.', 'error');
+            this.projectNotes = {};
+            this.developerNotes = {};
+        }
+    }
+    
+    // Open project notes modal
+    openProjectNotes(projectId) {
+        this.currentNotesProjectId = projectId;
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) return;
+        
+        document.getElementById('notesProjectName').textContent = project.name;
+        this.renderProjectNotes(projectId);
+        
+        const modal = new bootstrap.Modal(document.getElementById('notesModal'));
+        modal.show();
+    }
+    
+    // Add project note
+    async addProjectNote(projectId, noteText) {
+        if (!noteText.trim()) {
+            this.showNotification('Please enter a note', 'warning');
+            return;
+        }
+        
+        const numericProjectId = Number(projectId);
+        const currentUserData = this.users.find(u => u.id === this.currentUser);
+        
+        const note = {
+            id: Date.now().toString(),
+            text: noteText.trim(),
+            authorId: this.currentUser,
+            authorName: currentUserData ? currentUserData.name : this.currentUser,
+            timestamp: new Date().toISOString()
+        };
+        
+        if (!this.projectNotes[numericProjectId]) {
+            this.projectNotes[numericProjectId] = [];
+        }
+        
+        this.projectNotes[numericProjectId].unshift(note);
+        await this.saveNotes();
+        this.renderProjectNotes(numericProjectId);
+        this.render();
+        
+        document.getElementById('noteText').value = '';
+        this.showNotification('Note added successfully', 'success');
+    }
+    
+    // Delete project note
+    async deleteProjectNote(projectId, noteId) {
+        if (!confirm('Are you sure you want to delete this note?')) return;
+        
+        const numericProjectId = Number(projectId);
+        if (this.projectNotes[numericProjectId]) {
+            this.projectNotes[numericProjectId] = this.projectNotes[numericProjectId].filter(note => note.id !== noteId);
+            await this.saveNotes();
+            this.renderProjectNotes(numericProjectId);
+            this.render();
+            this.showNotification('Note deleted', 'success');
+        }
+    }
+    
+    // Open developer notes modal
+    openDeveloperNotes(projectId) {
+        this.currentDeveloperNotesProjectId = projectId;
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) return;
+        
+        document.getElementById('developerNotesProjectName').textContent = project.name;
+        this.renderDeveloperNotes(projectId);
+        
+        const modal = new bootstrap.Modal(document.getElementById('notesModal'));
+        modal.show();
+    }
+    
+    // Add developer note
+    async addDeveloperNote(projectId, noteText, noteType) {
+        if (!noteText.trim()) {
+            this.showNotification('Please enter a developer note', 'warning');
+            return;
+        }
+        
+        if (!noteType) {
+            this.showNotification('Please select an update type', 'warning');
+            return;
+        }
+        
+        const numericProjectId = Number(projectId);
+        const note = {
+            id: Date.now().toString(),
+            text: noteText.trim(),
+            type: noteType,
+            userId: this.currentUser,
+            timestamp: new Date().toISOString()
+        };
+        
+        if (!this.developerNotes[numericProjectId]) {
+            this.developerNotes[numericProjectId] = [];
+        }
+        
+        this.developerNotes[numericProjectId].unshift(note);
+        await this.saveNotes();
+        this.renderDeveloperNotes(numericProjectId);
+        this.render();
+        
+        document.getElementById('developerNoteText').value = '';
+        document.getElementById('developerNoteType').value = '';
+        this.showNotification('Developer note added', 'success');
+    }
+    
+    // Delete developer note
+    async deleteDeveloperNote(projectId, noteId) {
+        if (!confirm('Are you sure you want to delete this developer note?')) return;
+        
+        const numericProjectId = Number(projectId);
+        if (this.developerNotes[numericProjectId]) {
+            this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(note => note.id !== noteId);
+            await this.saveNotes();
+            this.renderDeveloperNotes(numericProjectId);
+            this.render();
+            this.showNotification('Developer note deleted', 'success');
+        }
+    }
+    
+    // Render project notes
+    renderProjectNotes(projectId) {
+        const numericProjectId = Number(projectId);
+        const notes = this.projectNotes[numericProjectId] || [];
+        const notesContainer = document.getElementById('projectNotesList');
+        
+        if (notes.length === 0) {
+            notesContainer.innerHTML = '<p class="text-muted">No notes yet. Be the first to add one!</p>';
+            return;
+        }
+        
+        notesContainer.innerHTML = notes.map(note => `
+            <div class="note-item mb-3 p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="note-meta">
+                        <strong>${this.escapeHtml(note.authorName)}</strong>
+                        <small class="text-muted d-block">
+                            ${new Date(note.timestamp).toLocaleString()}
+                        </small>
+                    </div>
+                    ${note.authorId === this.currentUser ? `
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProjectNote('${projectId}', '${note.id}')" title="Delete note">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="note-content mt-2">
+                    <p class="mb-0">${this.escapeHtml(note.text)}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Render developer notes
+    renderDeveloperNotes(projectId) {
+        const numericProjectId = Number(projectId);
+        const notes = this.developerNotes[numericProjectId] || [];
+        const notesContainer = document.getElementById('developerNotesList');
+        
+        if (notes.length === 0) {
+            notesContainer.innerHTML = '<p class="text-muted">No developer notes yet. Add one to track updates!</p>';
+            return;
+        }
+        
+        notesContainer.innerHTML = notes.map(note => `
+            <div class="developer-note-item mb-3 p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="developer-note-meta">
+                        <span class="badge bg-${this.getDeveloperNoteTypeColor(note.type)}">${note.type}</span>
+                        <small class="text-muted d-block">
+                            ${new Date(note.timestamp).toLocaleString()}
+                        </small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteDeveloperNote('${note.id}')" title="Delete Note">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div class="developer-note-content">
+                    <p class="mb-0">${this.escapeHtml(note.text)}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Helper methods for developer notes
+    getDeveloperNoteTypeColor(type) {
+        const colors = {
+            'Bug Fix': 'danger',
+            'Enhancement': 'success',
+            'Feature': 'primary',
+            'Update': 'info',
+            'Documentation': 'warning'
+        };
+        return colors[type] || 'secondary';
+    }
+    
+    getDeveloperNoteTypeIcon(type) {
+        const icons = {
+            'Bug Fix': 'fas fa-bug',
+            'Enhancement': 'fas fa-rocket',
+            'Feature': 'fas fa-star',
+            'Update': 'fas fa-sync',
+            'Documentation': 'fas fa-book'
+        };
+        return icons[type] || 'fas fa-sticky-note';
     }
 }
 

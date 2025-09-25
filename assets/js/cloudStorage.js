@@ -246,6 +246,25 @@ class CloudStorageService {
         return Object.values(data);
     }
 
+    // Note system methods (following the same successful pattern as projects)
+    async saveProjectNotes(projectNotes) {
+        await this.saveToCloud('project_notes', projectNotes);
+    }
+
+    async loadProjectNotes() {
+        const data = await this.loadFromCloud('project_notes');
+        return data;
+    }
+
+    async saveDeveloperNotes(developerNotes) {
+        await this.saveToCloud('developer_notes', developerNotes);
+    }
+
+    async loadDeveloperNotes() {
+        const data = await this.loadFromCloud('developer_notes');
+        return data;
+    }
+
     async saveCurrentUser(userId) {
         if (this.isConnected) {
             try {
