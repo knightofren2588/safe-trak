@@ -256,6 +256,342 @@ class ProjectManager {
     // PROJECT NOTES SYSTEM
     // ========================================
     
+    async openProjectNotes(projectId) {
+        // Close any existing modals first for better UX
+        const existingArchiveModal = document.getElementById('archiveModal');
+        if (existingArchiveModal) {
+            const archiveModalInstance = bootstrap.Modal.getInstance(existingArchiveModal);
+            if (archiveModalInstance) {
+                archiveModalInstance.hide();
+            }
+        }
+        
+        const existingDetailsModal = document.getElementById('projectDetailsModal');
+        if (existingDetailsModal) {
+            const detailsModalInstance = bootstrap.Modal.getInstance(existingDetailsModal);
+            if (detailsModalInstance) {
+                detailsModalInstance.hide();
+            }
+        }
+        
+        // Small delay to ensure modal closing animation completes
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Convert projectId to number since project IDs are stored as numbers
+        const numericProjectId = Number(projectId);
+        this.currentNotesProjectId = numericProjectId;
+        
+        // First try to find in active projects
+        let project = this.projects.find(p => p.id === numericProjectId);
+        
+        // If not found in active projects, check archived projects
+        if (!project) {
+            const userArchive = this.archivedProjects[this.currentUser] || [];
+            project = userArchive.find(p => p.originalId === numericProjectId);
+        }
+        
+        if (!project) {
+            console.error('Project not found. Looking for ID:', numericProjectId, 'Available active projects:', this.projects.map(p => ({id: p.id, name: p.name})), 'Available archived projects:', (this.archivedProjects[this.currentUser] || []).map(p => ({id: p.originalId, name: p.name})));
+            this.showNotification('Project not found in active or archived projects', 'error');
+            return;
+        }
+        
+        // DISABLED: Sync notes from cloud before showing modal (causes note deletion issues)
+        // await this.syncProjectNotesFromCloud();
+        
+        // Update modal title
+        document.getElementById('notesProjectTitle').textContent = `Project: ${project.name}`;
+        
+        // Clear and populate notes
+        this.renderProjectNotes(numericProjectId);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('projectNotesModal'));
+        modal.show();
+    }
+    
+    renderProjectNotes(projectId) {
+        const notesList = document.getElementById('notesList');
+        const notes = this.projectNotes[projectId] || [];
+        
+        if (notes.length === 0) {
+            notesList.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-comment-slash fa-2x mb-3"></i>
+                    <p>No notes or comments yet.<br>Add the first note above!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        notesList.innerHTML = notes.map(note => `
+            <div class="note-item border rounded p-3 mb-3" style="background: rgba(13, 110, 253, 0.05);">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="note-header">
+                        <div class="d-flex align-items-center mb-1">
+                            <div class="user-avatar-small me-2" style="background: linear-gradient(135deg, var(--safety-blue) 0%, #0a58ca 100%);">
+                                ${note.authorName ? note.authorName.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <strong class="text-primary">
+                                ${this.escapeHtml(note.authorName || 'Unknown User')}
+                            </strong>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            ${new Date(note.timestamp).toLocaleString('en-US', {
+                                weekday: 'short',
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit', 
+                                minute: '2-digit'
+                            })}
+                        </small>
+                    </div>
+                    ${note.authorId === this.currentUser ? `
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProjectNote('${projectId}', '${note.id}')" title="Delete note">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="note-content mt-2">
+                    ${this.escapeHtml(note.text).replace(/\n/g, '<br>')}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    async addProjectNote(projectId, noteText) {
+        if (!noteText.trim()) {
+            this.showNotification('Please enter a note', 'warning');
+            return;
+        }
+        
+        // Ensure projectId is numeric for consistency
+        const numericProjectId = Number(projectId);
+        
+        const currentUserData = this.users.find(u => u.id === this.currentUser);
+        const note = {
+            id: Date.now().toString(),
+            text: noteText.trim(),
+            authorId: this.currentUser,
+            authorName: currentUserData ? currentUserData.name : this.currentUser,
+            timestamp: new Date().toISOString()
+        };
+        
+        if (!this.projectNotes[numericProjectId]) {
+            this.projectNotes[numericProjectId] = [];
+        }
+        
+        this.projectNotes[numericProjectId].unshift(note); // Add to beginning
+        await this.saveProjectNotes();
+        
+        // Set a flag to prevent immediate sync from overwriting our addition
+        this.lastNoteOperation = Date.now();
+        this.lastDeveloperNoteOperation = Date.now();
+        
+        this.renderProjectNotes(numericProjectId);
+        
+        // Refresh project table to update note counters
+        this.render();
+        
+        // Add notification for project owner(s)
+        this.addNotificationForProjectOwner(numericProjectId, this.currentUser, note.text);
+        
+        // Clear form
+        document.getElementById('noteText').value = '';
+        
+        this.showNotification('Note added successfully', 'success');
+    }
+    
+    async deleteProjectNote(projectId, noteId) {
+        if (!confirm('Are you sure you want to delete this note?')) {
+            return;
+        }
+        
+        // Ensure projectId is numeric for consistency
+        const numericProjectId = Number(projectId);
+        
+        if (this.projectNotes[numericProjectId]) {
+            console.log(`Deleting note ${noteId} from project ${numericProjectId}`);
+            console.log('Notes before deletion:', this.projectNotes[numericProjectId].length);
+            
+            this.projectNotes[numericProjectId] = this.projectNotes[numericProjectId].filter(note => note.id !== noteId);
+            
+            console.log('Notes after deletion:', this.projectNotes[numericProjectId].length);
+            
+            console.log('About to save notes after deletion. Current notes state:', {
+                projectId: numericProjectId,
+                notesForThisProject: this.projectNotes[numericProjectId]?.length || 0,
+                totalProjectsWithNotes: Object.keys(this.projectNotes).length,
+                allNotes: this.projectNotes
+            });
+            
+            await this.saveProjectNotes();
+            console.log('Notes saved to cloud after deletion');
+            
+            // Verify the save worked by checking what's in memory
+            console.log('After save - notes in memory:', {
+                projectId: numericProjectId,
+                notesForThisProject: this.projectNotes[numericProjectId]?.length || 0,
+                allNotes: this.projectNotes
+            });
+            
+            // Set a flag to prevent immediate sync from overwriting our deletion
+            this.lastNoteOperation = Date.now();
+            this.lastDeveloperNoteOperation = Date.now();
+            
+            this.renderProjectNotes(numericProjectId);
+            
+            // Refresh project table to update note counters
+            this.render();
+            
+            this.showNotification('Note deleted', 'success');
+        }
+    }
+    
+    async saveProjectNotes() {
+        // CLOUD FIRST: Only save to local storage if cloud fails
+        // localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
+        
+        // Save to cloud storage if connected
+        if (this.cloudStorage.isConnected) {
+            try {
+                // Convert notes format for cloud storage
+                // Cloud expects {id: item} format, so we'll use project IDs as document IDs
+                const cloudData = {};
+                Object.entries(this.projectNotes).forEach(([projectId, notes]) => {
+                    if (notes && notes.length > 0) {
+                        cloudData[projectId] = {
+                            projectId: projectId,
+                            notes: notes,
+                            lastUpdated: new Date().toISOString()
+                        };
+                    }
+                });
+                
+                if (Object.keys(cloudData).length === 0) {
+                    // If no projects have notes, delete all note documents from cloud
+                    console.log('No projects have notes - deleting all note documents from cloud');
+                    try {
+                        // Delete the entire project_notes collection by deleting all known project documents
+                        const existingData = await this.cloudStorage.loadFromCloud('project_notes');
+                        if (existingData) {
+                            for (const projectId of Object.keys(existingData)) {
+                                await this.cloudStorage.deleteFromCloud('project_notes', projectId);
+                                console.log(`Deleted cloud notes document for project ${projectId}`);
+                            }
+                        }
+                        console.log('✅ All note documents deleted from cloud storage');
+                    } catch (deleteError) {
+                        console.error('Failed to delete note documents from cloud:', deleteError);
+                    }
+                } else {
+                    console.log('Saving to cloud storage - data being saved:', cloudData);
+                    
+                    // Use direct Firebase calls to avoid automatic local fallback
+                    const collectionRef = this.cloudStorage.functions.collection(this.cloudStorage.db, 'project_notes');
+                    const promises = Object.entries(cloudData).map(([projectId, data]) => {
+                        const docRef = this.cloudStorage.functions.doc(collectionRef, projectId);
+                        return this.cloudStorage.functions.setDoc(docRef, data);
+                    });
+                    await Promise.all(promises);
+                    
+                    console.log('✅ Project notes saved to cloud successfully:', Object.keys(cloudData).length, 'projects with notes');
+                    
+                    // Only save to local storage as backup if cloud save succeeded
+                    localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
+                    console.log('✅ Project notes saved to local storage as backup');
+                }
+            } catch (error) {
+                console.error('Failed to save project notes to cloud:', error);
+                this.showNotification('Failed to save project notes to cloud. Please check your connection.', 'error');
+                // Don't save locally if cloud fails to prevent data inconsistency
+            }
+        } else {
+            console.warn('Not connected to cloud storage, cannot save project notes');
+            this.showNotification('Not connected to cloud storage. Project notes require cloud connection.', 'error');
+        }
+    }
+    
+    async loadProjectNotes() {
+        // Load from cloud only (no local fallback to prevent inconsistencies)
+        if (this.cloudStorage.isConnected) {
+            try {
+                // Use direct Firebase calls to avoid automatic local fallback
+                const collectionRef = this.cloudStorage.functions.collection(this.cloudStorage.db, 'project_notes');
+                const snapshot = await this.cloudStorage.functions.getDocs(collectionRef);
+                
+                const cloudData = {};
+                snapshot.forEach(doc => {
+                    cloudData[doc.id] = doc.data();
+                });
+                
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    // Convert cloud format back to our internal format
+                    const notes = {};
+                    Object.entries(cloudData).forEach(([projectId, data]) => {
+                        if (data.notes) {
+                            notes[projectId] = data.notes;
+                        }
+                    });
+                    console.log('Loaded project notes from cloud:', Object.keys(notes).length, 'projects with notes');
+                    
+                    // Only save to local storage as backup if cloud load succeeded
+                    localStorage.setItem('safetrack_project_notes', JSON.stringify(notes));
+                    console.log('✅ Project notes saved to local storage as backup');
+                    
+                    return notes;
+                } else {
+                    console.log('No project notes found in cloud');
+                    return {};
+                }
+            } catch (error) {
+                console.error('Failed to load project notes from cloud:', error);
+                this.showNotification('Failed to load project notes from cloud. Please check your connection.', 'error');
+                return {};
+            }
+        } else {
+            console.warn('Not connected to cloud storage, cannot load project notes');
+            this.showNotification('Not connected to cloud storage. Project notes require cloud connection.', 'error');
+            return {};
+        }
+    }
+    
+    async syncProjectNotesFromCloud() {
+        // Check if we just performed a note operation - if so, skip sync to prevent overwriting
+        if (this.lastNoteOperation && (Date.now() - this.lastNoteOperation) < 5000) {
+            console.log('Skipping sync - recent note operation detected');
+            return;
+        }
+        
+        // Force refresh notes from cloud
+        if (this.cloudStorage.isConnected) {
+            try {
+                const cloudData = await this.cloudStorage.loadFromCloud('project_notes');
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    // Convert cloud format back to our internal format
+                    const notes = {};
+                    Object.entries(cloudData).forEach(([projectId, data]) => {
+                        if (data.notes) {
+                            notes[projectId] = data.notes;
+                        }
+                    });
+                    this.projectNotes = notes;
+                    console.log('Synced project notes from cloud:', Object.keys(notes).length, 'projects have notes');
+                    
+                    // Also update local storage
+                    localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
+                } else {
+                    console.log('No project notes found in cloud');
+                }
+            } catch (error) {
+                console.error('Failed to sync project notes from cloud:', error);
+            }
+        } else {
+            console.warn('Cannot sync project notes - not connected to cloud');
+        }
+    }
 
     // ========================================
     // USER NOTIFICATIONS SYSTEM
@@ -3866,6 +4202,585 @@ END:VCALENDAR`;
         };
         return colors[type] || 'bg-secondary';
     }
+    
+    async addDeveloperNote(projectId, noteText, noteType) {
+        if (!noteText.trim()) {
+            this.showNotification('Please enter a developer note', 'warning');
+            return;
+        }
+        
+        if (!noteType) {
+            this.showNotification('Please select an update type', 'warning');
+            return;
+        }
+        
+        const numericProjectId = Number(projectId);
+        const note = {
+            id: Date.now().toString(),
+            text: noteText.trim(),
+            type: noteType,
+            userId: this.currentUser,
+            timestamp: new Date().toISOString()
+        };
+        
+        if (!this.developerNotes[numericProjectId]) {
+            this.developerNotes[numericProjectId] = [];
+        }
+        
+        this.developerNotes[numericProjectId].unshift(note); // Add to beginning
+        
+        // Set a flag to prevent immediate sync from overwriting our addition
+        this.lastDeveloperNoteOperation = Date.now();
+        
+        const saveSuccess = await this.saveDeveloperNotes();
+        if (saveSuccess) {
+            this.renderDeveloperNotes(numericProjectId);
+            
+            // Refresh project table to update note counters
+            this.render();
+            
+            this.showNotification('Developer note added', 'success');
+            
+            // Clear form
+            document.getElementById('developerNoteText').value = '';
+            document.getElementById('developerNoteType').value = '';
+        } else {
+            // Remove the note from memory if save failed
+            this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(n => n.id !== note.id);
+        }
+    }
+    
+    async deleteDeveloperNote(projectId, noteId) {
+        const numericProjectId = Number(projectId);
+        
+        console.log('🗑️ Attempting to delete developer note:', {
+            projectId: numericProjectId,
+            noteId: noteId,
+            currentNotes: this.developerNotes[numericProjectId]
+        });
+        
+        if (this.developerNotes[numericProjectId]) {
+            const originalNotes = [...this.developerNotes[numericProjectId]];
+            const notesBeforeFilter = this.developerNotes[numericProjectId].length;
+            
+            this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(note => note.id !== noteId);
+            
+            const notesAfterFilter = this.developerNotes[numericProjectId].length;
+            console.log('🗑️ Notes before filter:', notesBeforeFilter, 'after filter:', notesAfterFilter);
+            
+            // If the filter didn't work, try more aggressive deletion
+            if (notesBeforeFilter === notesAfterFilter) {
+                console.log('⚠️ Filter failed, trying aggressive deletion...');
+                this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(note => {
+                    const shouldKeep = note.id !== noteId && note.id !== String(noteId);
+                    if (!shouldKeep) {
+                        console.log('🗑️ Aggressively removing note:', note);
+                    }
+                    return shouldKeep;
+                });
+            }
+            
+            // Set a flag to prevent immediate sync from overwriting our deletion
+            this.lastDeveloperNoteOperation = Date.now();
+            
+            const saveSuccess = await this.saveDeveloperNotes();
+            if (saveSuccess) {
+                this.renderDeveloperNotes(numericProjectId);
+                
+                // Refresh project table to update note counters
+                this.render();
+                
+                this.showNotification('Developer note deleted', 'success');
+            } else {
+                // Restore the note if save failed
+                this.developerNotes[numericProjectId] = originalNotes;
+                this.showNotification('Failed to delete developer note. Please try again.', 'error');
+            }
+        } else {
+            console.log('⚠️ No developer notes found for project:', numericProjectId);
+            this.showNotification('No developer notes found for this project', 'error');
+        }
+    }
+    
+    async saveDeveloperNotes() {
+        console.log('=== SAVING DEVELOPER NOTES ===');
+        console.log('Current developer notes to save:', this.developerNotes);
+        
+        // Try to save to cloud for team collaboration
+        if (this.cloudStorage.isConnected) {
+            try {
+                // Convert notes format for cloud storage
+                const cloudData = {};
+                Object.entries(this.developerNotes).forEach(([projectId, notes]) => {
+                    if (notes && notes.length > 0) {
+                        cloudData[projectId] = {
+                            projectId: projectId,
+                            notes: notes,
+                            lastUpdated: new Date().toISOString()
+                        };
+                    }
+                });
+                
+                console.log('Cloud data to save:', cloudData);
+                
+                // Use direct Firebase calls to avoid automatic local fallback
+                const collectionRef = this.cloudStorage.functions.collection(this.cloudStorage.db, 'developer_notes');
+                const promises = Object.entries(cloudData).map(([projectId, data]) => {
+                    const docRef = this.cloudStorage.functions.doc(collectionRef, projectId);
+                    return this.cloudStorage.functions.setDoc(docRef, data);
+                });
+                await Promise.all(promises);
+                
+                console.log('✅ Developer notes saved to cloud successfully');
+                
+                // Only save to local storage as backup if cloud save succeeded
+                localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+                console.log('✅ Developer notes saved to local storage as backup');
+                
+                return true;
+            } catch (error) {
+                console.error('Failed to save developer notes to cloud:', error);
+                // Don't save locally if cloud fails - this prevents data inconsistency
+                this.showNotification('Failed to save developer notes to cloud. Please check your connection.', 'error');
+                return false;
+            }
+        } else {
+            console.warn('Not connected to cloud storage, cannot save developer notes');
+            this.showNotification('Not connected to cloud storage. Developer notes require cloud connection.', 'error');
+            return false;
+        }
+    }
+    
+    async loadDeveloperNotes() {
+        console.log('=== LOADING DEVELOPER NOTES ===');
+        console.log('Cloud connected:', this.cloudStorage.isConnected);
+        
+        // Load from cloud only (no local fallback to prevent inconsistencies)
+        if (this.cloudStorage.isConnected) {
+            try {
+                // Use direct Firebase calls to avoid automatic local fallback
+                const collectionRef = this.cloudStorage.functions.collection(this.cloudStorage.db, 'developer_notes');
+                const snapshot = await this.cloudStorage.functions.getDocs(collectionRef);
+                
+                const cloudData = {};
+                snapshot.forEach(doc => {
+                    cloudData[doc.id] = doc.data();
+                });
+                
+                console.log('Cloud data received:', cloudData);
+                
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    const notes = {};
+                    Object.entries(cloudData).forEach(([projectId, data]) => {
+                        if (data.notes) {
+                            notes[projectId] = data.notes;
+                        }
+                    });
+                    this.developerNotes = notes;
+                    console.log('✅ Developer notes loaded from cloud:', Object.keys(notes).length, 'projects have developer notes');
+                    console.log('Developer notes data:', this.developerNotes);
+                    
+                    // Only save to local storage as backup if cloud load succeeded
+                    localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+                    console.log('✅ Saved to local storage as backup');
+                    return;
+                } else {
+                    console.log('No developer notes found in cloud');
+                    this.developerNotes = {};
+                }
+            } catch (error) {
+                console.error('Failed to load developer notes from cloud:', error);
+                this.showNotification('Failed to load developer notes from cloud. Please check your connection.', 'error');
+                this.developerNotes = {};
+            }
+        } else {
+            console.warn('Not connected to cloud storage, cannot load developer notes');
+            this.showNotification('Not connected to cloud storage. Developer notes require cloud connection.', 'error');
+            this.developerNotes = {};
+        }
+    }
+    
+    async syncDeveloperNotesFromCloud() {
+        // Check if we just performed a developer note operation - if so, skip sync to prevent overwriting
+        if (this.lastDeveloperNoteOperation && (Date.now() - this.lastDeveloperNoteOperation) < 5000) {
+            console.log('Skipping developer notes sync - recent developer note operation detected');
+            return;
+        }
+        
+        // Force refresh developer notes from cloud
+        if (this.cloudStorage.isConnected) {
+            try {
+                const cloudData = await this.cloudStorage.loadFromCloud('developer_notes');
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    // Convert cloud format back to our internal format
+                    const notes = {};
+                    Object.entries(cloudData).forEach(([projectId, data]) => {
+                        if (data.notes) {
+                            notes[projectId] = data.notes;
+                        }
+                    });
+                    this.developerNotes = notes;
+                    console.log('Synced developer notes from cloud:', Object.keys(notes).length, 'projects have developer notes');
+                    
+                    // Also update local storage
+                    localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+                } else {
+                    console.log('No developer notes found in cloud');
+                }
+            } catch (error) {
+                console.error('Failed to sync developer notes from cloud:', error);
+            }
+        }
+    }
+    
+    // Helper methods for note counts
+    getProjectNotesCount(projectId) {
+        const notes = this.projectNotes[projectId];
+        return notes ? notes.length : 0;
+    }
+    
+    getDeveloperNotesCount(projectId) {
+        const notes = this.developerNotes[projectId];
+        return notes ? notes.length : 0;
+    }
+    
+    // Emergency cleanup function for corrupted developer notes
+    cleanupDeveloperNotes() {
+        console.log('🧹 Starting developer notes cleanup...');
+        let cleanedCount = 0;
+        
+        Object.keys(this.developerNotes).forEach(projectId => {
+            const notes = this.developerNotes[projectId];
+            if (Array.isArray(notes)) {
+                // Remove any notes that don't have proper structure
+                const validNotes = notes.filter(note => {
+                    if (!note || typeof note !== 'object') {
+                        console.log('🗑️ Removing invalid note (not object):', note);
+                        cleanedCount++;
+                        return false;
+                    }
+                    if (!note.id || !note.text || !note.timestamp) {
+                        console.log('🗑️ Removing incomplete note:', note);
+                        cleanedCount++;
+                        return false;
+                    }
+                    return true;
+                });
+                
+                if (validNotes.length !== notes.length) {
+                    this.developerNotes[projectId] = validNotes;
+                    console.log(`🧹 Cleaned project ${projectId}: ${notes.length} → ${validNotes.length} notes`);
+                }
+            } else {
+                console.log('🗑️ Removing non-array notes for project:', projectId);
+                delete this.developerNotes[projectId];
+                cleanedCount++;
+            }
+        });
+        
+        if (cleanedCount > 0) {
+            console.log(`🧹 Cleanup complete: ${cleanedCount} items cleaned`);
+            this.saveDeveloperNotes();
+        } else {
+            console.log('🧹 No cleanup needed');
+        }
+    }
+    
+    // NUCLEAR OPTION: Force clear all developer notes (use with caution!)
+    forceClearAllDeveloperNotes() {
+        console.log('💥 FORCE CLEARING ALL DEVELOPER NOTES...');
+        console.log('Before:', this.developerNotes);
+        
+        this.developerNotes = {};
+        
+        // Clear from local storage
+        localStorage.removeItem('safetrack_developer_notes');
+        console.log('💥 Local storage cleared');
+        
+        // Clear from cloud (if connected)
+        if (this.cloudStorage.isConnected) {
+            this.cloudStorage.saveToCloud('developer_notes', {}).then(() => {
+                console.log('💥 Cloud storage cleared');
+            }).catch(error => {
+                console.log('💥 Cloud clear failed:', error);
+            });
+        }
+        
+        console.log('After:', this.developerNotes);
+        console.log('💥 ALL DEVELOPER NOTES FORCE CLEARED!');
+        
+        // Refresh the UI
+        this.render();
+        this.showNotification('All developer notes force cleared', 'warning');
+    }
+    
+    // NUCLEAR OPTION: Force clear developer notes for specific project
+    forceClearProjectDeveloperNotes(projectId) {
+        const numericProjectId = Number(projectId);
+        console.log('💥 FORCE CLEARING DEVELOPER NOTES FOR PROJECT:', numericProjectId);
+        console.log('Before:', this.developerNotes[numericProjectId]);
+        
+        delete this.developerNotes[numericProjectId];
+        
+        // Save the changes
+        this.saveDeveloperNotes();
+        
+        console.log('After:', this.developerNotes[numericProjectId]);
+        console.log('💥 PROJECT DEVELOPER NOTES FORCE CLEARED!');
+        
+        // Refresh the UI
+        this.render();
+        this.showNotification(`Developer notes cleared for project ${numericProjectId}`, 'warning');
+    }
+    
+    // TARGET SPECIFIC STUBBORN NOTE: Force delete just one specific note
+    forceDeleteSpecificNote(projectId, noteId) {
+        const numericProjectId = Number(projectId);
+        console.log('🎯 FORCE DELETING SPECIFIC NOTE:', { projectId: numericProjectId, noteId: noteId });
+        
+        // Step 1: Remove from memory
+        if (this.developerNotes[numericProjectId]) {
+            const originalNotes = [...this.developerNotes[numericProjectId]];
+            this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(note => {
+                const shouldKeep = note.id !== noteId && note.id !== String(noteId);
+                if (!shouldKeep) {
+                    console.log('🎯 Removing specific note:', note);
+                }
+                return shouldKeep;
+            });
+            console.log('🎯 Memory updated:', this.developerNotes[numericProjectId]);
+        }
+        
+        // Step 2: Force save to local storage
+        localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+        console.log('🎯 Local storage updated');
+        
+        // Step 3: Force save to cloud with specific note removed
+        if (this.cloudStorage.isConnected) {
+            const cloudData = {};
+            Object.entries(this.developerNotes).forEach(([projId, notes]) => {
+                if (notes && notes.length > 0) {
+                    cloudData[projId] = {
+                        projectId: projId,
+                        notes: notes,
+                        lastUpdated: new Date().toISOString()
+                    };
+                } else {
+                    // Explicitly set empty array for projects with no notes
+                    cloudData[projId] = {
+                        projectId: projId,
+                        notes: [],
+                        lastUpdated: new Date().toISOString()
+                    };
+                }
+            });
+            
+            console.log('🎯 Cloud data being saved:', cloudData);
+            
+            this.cloudStorage.saveToCloud('developer_notes', cloudData).then(() => {
+                console.log('🎯 Cloud storage updated - specific note removed');
+                this.showNotification(`Specific note ${noteId} force deleted`, 'success');
+                
+                // Force refresh the cloud data to verify
+                setTimeout(() => {
+                    this.cloudStorage.loadFromCloud('developer_notes').then(verifyData => {
+                        console.log('🎯 Verification - cloud data after save:', verifyData);
+                    });
+                }, 1000);
+            }).catch(error => {
+                console.log('🎯 Cloud update failed:', error);
+                this.showNotification(`Note deleted locally, cloud sync failed`, 'warning');
+            });
+        }
+        
+        // Step 4: Refresh UI
+        this.render();
+        console.log('🎯 SPECIFIC NOTE FORCE DELETED!');
+    }
+    
+    // NUCLEAR OPTION: Completely wipe project 26's developer notes from cloud
+    nuclearClearProject26() {
+        console.log('💥 NUCLEAR CLEARING PROJECT 26 DEVELOPER NOTES...');
+        
+        // Step 1: Clear from memory
+        delete this.developerNotes[26];
+        console.log('💥 Memory cleared for project 26');
+        
+        // Step 2: Clear from local storage
+        localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+        console.log('💥 Local storage cleared for project 26');
+        
+        // Step 3: Force cloud save with project 26 completely removed
+        if (this.cloudStorage.isConnected) {
+            const cloudData = {};
+            Object.entries(this.developerNotes).forEach(([projId, notes]) => {
+                if (notes && notes.length > 0) {
+                    cloudData[projId] = {
+                        projectId: projId,
+                        notes: notes,
+                        lastUpdated: new Date().toISOString()
+                    };
+                }
+            });
+            
+            console.log('💥 Cloud data being saved (project 26 removed):', cloudData);
+            
+            this.cloudStorage.saveToCloud('developer_notes', cloudData).then(() => {
+                console.log('💥 NUCLEAR CLEAR COMPLETE - Project 26 developer notes wiped from cloud!');
+                this.showNotification('Project 26 developer notes nuclear cleared', 'warning');
+                
+                // Verify the cloud data
+                setTimeout(() => {
+                    this.cloudStorage.loadFromCloud('developer_notes').then(verifyData => {
+                        console.log('💥 Verification - cloud data after nuclear clear:', verifyData);
+                    });
+                }, 1000);
+            }).catch(error => {
+                console.log('💥 Nuclear clear failed:', error);
+            });
+        }
+        
+        // Step 4: Refresh UI
+        this.render();
+    }
+    
+    renderNoteCounter(count, type = 'project') {
+        if (count === 0) return '';
+        
+        const badgeClass = type === 'developer' ? 'bg-info' : 'bg-secondary';
+        const position = type === 'developer' ? 'position-absolute top-0 start-100 translate-middle' : 'position-absolute top-0 start-100 translate-middle';
+        
+        return `<span class="badge ${badgeClass} ${position}" style="font-size: 0.65rem; min-width: 18px; height: 18px; line-height: 16px;">${count}</span>`;
+    }
+    
+    updateFilterStats(filteredProjects) {
+        // Update the table title to show filter results
+        const titleElement = document.getElementById('projectTableTitle');
+        if (titleElement) {
+            const total = this.projects.length;
+            const filtered = filteredProjects.length;
+            if (filtered !== total) {
+                titleElement.textContent = `Safety Projects (${filtered} of ${total})`;
+            } else {
+                titleElement.textContent = 'All Safety Projects';
+            }
+        }
+    }
+    
+    populateFilterDropdowns() {
+        // Populate user filter
+        const userFilter = document.getElementById('userFilter');
+        if (userFilter) {
+            const currentOptions = Array.from(userFilter.options).map(option => option.value);
+            const userOptions = this.users.map(user => 
+                `<option value="${user.id}" ${currentOptions.includes(user.id) ? 'selected' : ''}>${user.name}</option>`
+            ).join('');
+            userFilter.innerHTML = `<option value="">All Users</option>${userOptions}`;
+        }
+        
+        // Populate category filter
+        const categoryFilter = document.getElementById('categoryFilter');
+        if (categoryFilter && this.categories) {
+            const categoryOptions = this.categories.map(category => 
+                `<option value="${category.name}">${category.name}</option>`
+            ).join('');
+            categoryFilter.innerHTML = `<option value="">All Categories</option>${categoryOptions}`;
+        }
+    }
+    
+    clearAllFilters() {
+        // Clear all filter inputs
+        document.getElementById('searchInput').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('userFilter').value = '';
+        document.getElementById('dateFilter').value = '';
+        document.getElementById('sortBy').value = '';
+        document.getElementById('priorityFilter').value = '';
+        document.getElementById('categoryFilter').value = '';
+        document.getElementById('progressFilter').value = '';
+        document.getElementById('startDateFilter').value = '';
+        document.getElementById('endDateFilter').value = '';
+        
+        // Hide advanced filters
+        const advancedFilters = document.getElementById('advancedFilters');
+        const button = document.getElementById('moreFiltersBtn');
+        if (advancedFilters && button) {
+            advancedFilters.style.display = 'none';
+            button.innerHTML = '<i class="fas fa-filter me-1"></i>More Filters';
+            button.classList.remove('btn-secondary');
+            button.classList.add('btn-outline-secondary');
+        }
+        
+        // Re-render with no filters
+        this.filterProjects();
+        this.showNotification('All filters cleared', 'info');
+    }
+
+    // ========================================
+    // MULTI-USER ASSIGNMENT SYSTEM
+    // ========================================
+    
+    addAssignedUser() {
+        const select = document.getElementById('projectAssignedTo');
+        const userId = select.value;
+        
+        if (!userId || this.selectedAssignedUsers.includes(userId)) {
+            select.value = ''; // Reset selection
+            return;
+        }
+        
+        this.selectedAssignedUsers.push(userId);
+        this.renderAssignedUsers();
+        select.value = ''; // Reset selection
+    }
+    
+    removeAssignedUser(userId) {
+        this.selectedAssignedUsers = this.selectedAssignedUsers.filter(id => id !== userId);
+        this.renderAssignedUsers();
+    }
+    
+    renderAssignedUsers() {
+        const container = document.getElementById('assignedUsersContainer');
+        if (!container) return;
+        
+        if (this.selectedAssignedUsers.length === 0) {
+            container.innerHTML = '<div class="text-muted small p-2">No team members assigned yet</div>';
+            return;
+        }
+        
+        container.innerHTML = this.selectedAssignedUsers.map(userId => {
+            const user = this.users.find(u => u.id === userId);
+            if (!user) return '';
+            
+            return `
+                <div class="assigned-user-tag d-inline-flex align-items-center me-2 mb-2">
+                    <div class="user-avatar-small me-1" style="background: ${this.getUserColor(userId)};">
+                        ${user.avatar || user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span class="me-2">${this.escapeHtml(user.name)}</span>
+                    <button type="button" class="btn-close btn-close-sm" onclick="removeAssignedUser('${userId}')" title="Remove ${user.name}"></button>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    populateAssignedUsersDropdown() {
+        const select = document.getElementById('projectAssignedTo');
+        if (!select) return;
+        
+        // Get users not already selected
+        const availableUsers = this.users.filter(user => !this.selectedAssignedUsers.includes(user.id));
+        
+        const options = availableUsers.map(user => 
+            `<option value="${user.id}">${user.name}</option>`
+        ).join('');
+        
+        select.innerHTML = `<option value="">+ Add Team Member</option>${options}`;
+    }
+
+    // ========================================
+    // PROJECT ARCHIVE SYSTEM
+    // ========================================
     
     async archiveProject(projectId) {
         const project = this.projects.find(p => p.id === projectId);
