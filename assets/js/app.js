@@ -7181,6 +7181,24 @@ END:VCALENDAR`;
         };
         return icons[type] || 'fas fa-sticky-note';
     }
+    
+    // Missing functions that were causing errors
+    cleanupDeveloperNotes() {
+        console.log('🧹 Developer notes cleanup - no action needed');
+        // This function was called but didn't exist, causing errors
+    }
+    
+    getProjectNotesCount(projectId) {
+        const numericProjectId = Number(projectId);
+        const notes = this.projectNotes[numericProjectId] || [];
+        return notes.length;
+    }
+    
+    getDeveloperNotesCount(projectId) {
+        const numericProjectId = Number(projectId);
+        const notes = this.developerNotes[numericProjectId] || [];
+        return notes.length;
+    }
 }
 
 // Modal functions
