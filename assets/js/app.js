@@ -2917,6 +2917,9 @@ END:VCALENDAR`;
 
     async loadAllData() {
         try {
+            console.log('🔍 DIAGNOSTIC: Starting data load...');
+            console.log('🔍 DIAGNOSTIC: Cloud storage connected:', this.cloudStorage.isConnected);
+            
             // Load all data in parallel
             const [projects, users, categories, roles, departments, currentUser] = await Promise.all([
                 this.cloudStorage.loadProjects(),
@@ -2926,6 +2929,15 @@ END:VCALENDAR`;
                 this.cloudStorage.loadDepartments(),
                 this.cloudStorage.loadCurrentUser()
             ]);
+            
+            console.log('🔍 DIAGNOSTIC: Loaded data counts:', {
+                projects: projects.length,
+                users: users.length,
+                categories: categories.length,
+                roles: roles.length,
+                departments: departments.length,
+                currentUser: currentUser
+            });
             
             this.projects = projects;
             this.users = users;
@@ -2937,23 +2949,42 @@ END:VCALENDAR`;
             // Load notes using the new clean system
             await this.loadNotes();
             
+            console.log('🔍 DIAGNOSTIC: Final data counts:', {
+                projects: this.projects.length,
+                users: this.users.length,
+                categories: this.categories.length,
+                roles: this.roles.length,
+                departments: this.departments.length,
+                currentUser: this.currentUser
+            });
+            
             // Update connection status after successful data load
             this.showConnectionStatus();
         } catch (error) {
-            console.error('Error loading data from cloud storage:', error);
+            console.error('❌ ERROR loading data from cloud storage:', error);
+            console.log('🔄 FALLBACK: Loading from local storage...');
             // Fallback to local storage
             await this.loadFromLocalStorage();
         }
     }
 
     async loadFromLocalStorage() {
-        console.log('Falling back to local storage...');
+        console.log('🔄 FALLBACK: Loading from local storage...');
         this.projects = this.loadProjectsLocal();
         this.users = this.loadUsersLocal();
         this.categories = this.loadCategoriesLocal();
         this.roles = this.loadRolesLocal();
         this.departments = this.loadDepartmentsLocal();
         this.currentUser = this.loadCurrentUserLocal();
+        
+        console.log('🔍 FALLBACK DIAGNOSTIC: Local storage data counts:', {
+            projects: this.projects.length,
+            users: this.users.length,
+            categories: this.categories.length,
+            roles: this.roles.length,
+            departments: this.departments.length,
+            currentUser: this.currentUser
+        });
         
         // Load archived projects and ensure proper separation
         this.archivedProjects = await this.loadArchivedProjects();
