@@ -6832,9 +6832,6 @@ window.openProjectModal = () => {
 document.addEventListener('DOMContentLoaded', function() {
     window.projectManager = new ProjectManager();
     
-        try {
-            // Try cloud storage first for project notes
-            if (window.projectManager.cloudStorage.isConnected) {
                 const cloudData = await window.projectManager.cloudStorage.loadFromCloud('project_notes');
                 console.log('Raw cloud data loaded during init:', cloudData);
                 
