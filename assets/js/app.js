@@ -6984,11 +6984,22 @@ END:VCALENDAR`;
         const project = this.projects.find(p => p.id === projectId);
         if (!project) return;
         
-        document.getElementById('notesProjectName').textContent = project.name;
+        const notesProjectNameElement = document.getElementById('notesProjectName');
+        if (notesProjectNameElement) {
+            notesProjectNameElement.textContent = project.name;
+        } else {
+            console.error('Notes project name element not found');
+        }
+        
         this.renderProjectNotes(projectId);
         
-        const modal = new bootstrap.Modal(document.getElementById('notesModal'));
-        modal.show();
+        const notesModal = document.getElementById('notesModal');
+        if (notesModal) {
+            const modal = new bootstrap.Modal(notesModal);
+            modal.show();
+        } else {
+            console.error('Notes modal not found');
+        }
     }
     
     // Add project note
@@ -7104,6 +7115,20 @@ END:VCALENDAR`;
         const notes = this.projectNotes[numericProjectId] || [];
         const notesContainer = document.getElementById('projectNotesList');
         
+        // Safety check - ensure notes is an array
+        if (!Array.isArray(notes)) {
+            console.error('Project notes is not an array:', notes);
+            if (notesContainer) {
+                notesContainer.innerHTML = '<p class="text-muted">Error loading project notes.</p>';
+            }
+            return;
+        }
+        
+        if (!notesContainer) {
+            console.error('Project notes container not found');
+            return;
+        }
+        
         if (notes.length === 0) {
             notesContainer.innerHTML = '<p class="text-muted">No notes yet. Be the first to add one!</p>';
             return;
@@ -7136,6 +7161,20 @@ END:VCALENDAR`;
         const numericProjectId = Number(projectId);
         const notes = this.developerNotes[numericProjectId] || [];
         const notesContainer = document.getElementById('developerNotesList');
+        
+        // Safety check - ensure notes is an array
+        if (!Array.isArray(notes)) {
+            console.error('Developer notes is not an array:', notes);
+            if (notesContainer) {
+                notesContainer.innerHTML = '<p class="text-muted">Error loading developer notes.</p>';
+            }
+            return;
+        }
+        
+        if (!notesContainer) {
+            console.error('Developer notes container not found');
+            return;
+        }
         
         if (notes.length === 0) {
             notesContainer.innerHTML = '<p class="text-muted">No developer notes yet. Add one to track updates!</p>';
