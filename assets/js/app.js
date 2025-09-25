@@ -69,11 +69,6 @@ class ProjectManager {
         // Project view mode (personal vs all team projects)
         this.projectViewMode = localStorage.getItem('safetrack_project_view_mode') || 'personal';
         
-        // Note systems (following successful project pattern)
-        this.projectNotes = {};
-        this.currentNotesProjectId = null;
-        this.developerNotes = {};
-        this.currentDeveloperNotesProjectId = null;
         
         // User notifications system
         this.userNotifications = {}; // Will be loaded asynchronously
@@ -1646,14 +1641,6 @@ END:VCALENDAR`;
         // Load user notifications from cloud
         this.userNotifications = await this.loadUserNotifications();
         
-        // Cleanup orphaned notes after all data is loaded
-        console.log('About to run orphaned notes cleanup...');
-        console.log('Data state before cleanup:', {
-            projects: this.projects?.length || 0,
-            archivedProjects: this.archivedProjects ? Object.keys(this.archivedProjects).length : 0,
-            projectNotes: this.projectNotes ? Object.keys(this.projectNotes).length : 0
-        });
-        await this.cleanupOrphanedNotes();
         
         // TEMPORARILY DISABLED: Compliance and Certification loading
         // this.complianceItems = this.loadComplianceItems();
@@ -2899,9 +2886,6 @@ END:VCALENDAR`;
             
             const success = await this.cloudStorage.syncAllData(this);
             
-            // Also sync project notes and developer notes
-            await this.syncProjectNotesFromCloud();
-            await this.syncDeveloperNotesFromCloud();
             
             if (success) {
                 this.showConnectionStatus();
@@ -2949,8 +2933,6 @@ END:VCALENDAR`;
             this.departments = departments;
             this.currentUser = currentUser;
             
-            // Load notes using the new clean system
-            await this.loadNotes();
             
             console.log('🔍 DIAGNOSTIC: Final data counts:', {
                 projects: this.projects.length,
@@ -3780,126 +3762,6 @@ END:VCALENDAR`;
     }
     
     // ========================================
-    // DEVELOPER NOTES SYSTEM (CLOUD-ONLY)
-    // ========================================
-    
-    showProjectDeveloperNotes(projectId) {
-        const project = this.projects.find(p => p.id === projectId);
-        if (!project) {
-            this.showNotification('Project not found', 'error');
-            return;
-        }
-        
-        // Store current project ID for developer notes
-        this.currentDeveloperNotesProjectId = projectId;
-        
-        // Update modal title to show we're viewing developer notes
-        document.getElementById('notesProjectTitle').textContent = `Project: ${project.name}`;
-        
-        // Update cloud connection status
-        this.updateDeveloperNotesCloudStatus();
-        
-        // Switch to developer notes tab
-        const devNotesTab = document.getElementById('developer-notes-tab');
-        if (devNotesTab) {
-            devNotesTab.click();
-        }
-        
-        // Render developer notes
-        this.renderDeveloperNotes(projectId);
-        
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('projectNotesModal'));
-        modal.show();
-    }
-    
-    updateDeveloperNotesCloudStatus() {
-        const statusElement = document.getElementById('developerNotesCloudStatus');
-        if (statusElement) {
-            if (this.cloudStorage.isConnected) {
-                statusElement.innerHTML = '<i class="fas fa-check-circle me-1 text-success"></i>Cloud connected - Notes will be visible to team';
-                statusElement.className = 'text-success';
-            } else {
-                statusElement.innerHTML = '<i class="fas fa-info-circle me-1 text-info"></i>No cloud connection - Notes saved locally, will sync when connected';
-                statusElement.className = 'text-info';
-            }
-        }
-    }
-    
-    renderDeveloperNotes(projectId) {
-        const notesList = document.getElementById('developerNotesList');
-        const notes = this.developerNotes[projectId] || [];
-        
-        if (notes.length === 0) {
-            notesList.innerHTML = `
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-code fa-3x mb-3 opacity-50"></i>
-                    <p class="mb-0">No developer notes yet.</p>
-                    <small>Add your first developer update above.</small>
-                </div>
-            `;
-            return;
-        }
-        
-        notesList.innerHTML = notes.map(note => {
-            const user = this.users.find(u => u.id === note.userId);
-            const userName = user ? user.name : 'Unknown';
-            const userColor = this.getUserColor(user ? user.id : 'unknown');
-            const typeIcon = this.getDeveloperNoteTypeIcon(note.type);
-            const typeColor = this.getDeveloperNoteTypeColor(note.type);
-            
-            return `
-                <div class="developer-note-item mb-3 p-3 border-start border-info border-3 bg-light">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div class="d-flex align-items-center">
-                            <span class="badge ${typeColor} me-2">${typeIcon} ${note.type}</span>
-                            <strong style="color: ${userColor};">${userName}</strong>
-                        </div>
-                        <div class="text-muted small">
-                            <i class="fas fa-clock me-1"></i>
-                            ${new Date(note.timestamp).toLocaleString()}
-                        </div>
-                    </div>
-                    <div class="developer-note-content">
-                        <p class="mb-0">${this.escapeHtml(note.text)}</p>
-                    </div>
-                    <div class="mt-2 d-flex justify-content-end">
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteDeveloperNote('${note.id}')" title="Delete Note">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-    
-    getDeveloperNoteTypeIcon(type) {
-        const icons = {
-            'enhancement': '🚀',
-            'bugfix': '🐛',
-            'feature': '✨',
-            'update': '🔄',
-            'maintenance': '🔧',
-            'performance': '⚡',
-            'security': '🔒',
-            'documentation': '📚'
-        };
-        return icons[type] || '📝';
-    }
-    
-    getDeveloperNoteTypeColor(type) {
-        const colors = {
-            'enhancement': 'bg-success',
-            'bugfix': 'bg-warning',
-            'feature': 'bg-primary',
-            'update': 'bg-info',
-            'maintenance': 'bg-secondary',
-            'performance': 'bg-purple',
-            'security': 'bg-danger',
-            'documentation': 'bg-dark'
-        };
-        return colors[type] || 'bg-secondary';
-    }
     
     async archiveProject(projectId) {
         const project = this.projects.find(p => p.id === projectId);
@@ -4039,12 +3901,6 @@ END:VCALENDAR`;
         this.archivedProjects[this.currentUser].splice(projectIndex, 1);
         console.log(`Delete: Removed project ${projectId} from archive. Remaining archived: ${this.archivedProjects[this.currentUser].length}`);
         
-        // Remove project notes for this project
-        if (this.projectNotes[projectId]) {
-            delete this.projectNotes[projectId];
-            await this.saveProjectNotes();
-            console.log(`Delete: Removed notes for project ${projectId}`);
-        }
         
         // CRITICAL: Ensure this project ID is completely removed from active projects
         const activeProjectsBefore = this.projects.length;
@@ -4116,7 +3972,6 @@ END:VCALENDAR`;
             userManagement: this.testUserManagement(),
             projectManagement: this.testProjectManagement(),
             archiveSystem: this.testArchiveSystem(),
-            notesSystem: this.testNotesSystem(),
             cloudStorage: this.testCloudStorageConnection(),
             security: this.testSecurityFeatures()
         };
@@ -4137,55 +3992,6 @@ END:VCALENDAR`;
         return testResults;
     }
     
-    async cleanupOrphanedNotes() {
-        console.log('🧹 Cleaning up orphaned notes...');
-        
-        let cleanedCount = 0;
-        const validProjectIds = new Set();
-        
-        // Collect all valid project IDs (active projects)
-        if (Array.isArray(this.projects)) {
-            this.projects.forEach(p => {
-                if (p && p.id) {
-                    validProjectIds.add(p.id);
-                }
-            });
-        }
-        
-        // Collect all valid archived project IDs
-        if (this.archivedProjects && typeof this.archivedProjects === 'object') {
-            Object.values(this.archivedProjects).forEach(userArchive => {
-                if (Array.isArray(userArchive)) {
-                    userArchive.forEach(p => {
-                        if (p && p.originalId) {
-                            validProjectIds.add(p.originalId);
-                        }
-                    });
-                }
-            });
-        }
-        
-        // Remove notes for non-existent projects
-        if (this.projectNotes && typeof this.projectNotes === 'object') {
-            Object.keys(this.projectNotes).forEach(projectId => {
-                const numericId = Number(projectId);
-                if (!validProjectIds.has(numericId)) {
-                    console.log(`Removing orphaned notes for project ${projectId}`);
-                    delete this.projectNotes[projectId];
-                    cleanedCount++;
-                }
-            });
-        }
-        
-        if (cleanedCount > 0) {
-            await this.saveProjectNotes();
-            console.log(`✅ Cleaned up ${cleanedCount} orphaned note collections`);
-        } else {
-            console.log('✅ No orphaned notes found');
-        }
-        
-        return cleanedCount;
-    }
     
     clearUnnecessaryLocalStorage() {
         console.log('🧹 CLEARING UNNECESSARY LOCAL STORAGE FOR MULTI-USER SAFETY...');
@@ -4230,8 +4036,6 @@ END:VCALENDAR`;
     async runFullSystemCheck() {
         console.log('🔧 RUNNING FULL SYSTEM CHECK WITH CLEANUP...');
         
-        // First, clean up any orphaned notes
-        await this.cleanupOrphanedNotes();
         
         // Clear unnecessary local storage for multi-user safety
         this.clearUnnecessaryLocalStorage();
@@ -4370,38 +4174,6 @@ END:VCALENDAR`;
         }
     }
     
-    testNotesSystem() {
-        try {
-            const issues = [];
-            
-            // Check notes structure
-            if (typeof this.projectNotes !== 'object') issues.push('Project notes not an object');
-            
-            // Check if notes reference valid projects
-            Object.keys(this.projectNotes).forEach(projectId => {
-                const numericId = Number(projectId);
-                const projectExists = this.projects.find(p => p.id === numericId);
-                const archivedExists = Object.values(this.archivedProjects).some(userArchive => 
-                    userArchive?.find(p => p.originalId === numericId)
-                );
-                
-                if (!projectExists && !archivedExists) {
-                    issues.push(`Notes exist for non-existent project: ${projectId}`);
-                }
-            });
-            
-            return {
-                status: issues.length === 0 ? 'PASS' : 'FAIL',
-                issues: issues,
-                data: {
-                    totalProjectsWithNotes: Object.keys(this.projectNotes).length,
-                    totalNotes: Object.values(this.projectNotes).reduce((sum, notes) => sum + (notes?.length || 0), 0)
-                }
-            };
-        } catch (error) {
-            return { status: 'ERROR', error: error.message };
-        }
-    }
     
     testCloudStorageConnection() {
         try {
@@ -4628,14 +4400,6 @@ END:VCALENDAR`;
                             <button class="btn btn-sm btn-outline-info" onclick="viewArchivedProjectDetails(${project.originalId})" title="View full project details">
                                 <i class="fas fa-eye me-1"></i>Details
                             </button>
-                            <button class="btn btn-sm btn-outline-secondary position-relative" onclick="openProjectNotes(${project.originalId})" title="View/add project notes">
-                                <i class="fas fa-sticky-note me-1"></i>Notes
-                                ${this.renderNoteCounter(this.getProjectNotesCount(project.originalId), 'project')}
-                            </button>
-                            <button class="btn btn-sm btn-outline-info position-relative" onclick="openDeveloperNotes(${project.originalId})" title="View/add developer notes">
-                                <i class="fas fa-code me-1"></i>Dev Notes
-                                ${this.renderNoteCounter(this.getDeveloperNotesCount(project.originalId), 'developer')}
-                            </button>
                             <button class="btn btn-sm btn-outline-primary" onclick="restoreProject(${project.originalId})" title="Restore to active projects">
                                 <i class="fas fa-undo me-1"></i>Restore
                             </button>
@@ -4803,14 +4567,6 @@ END:VCALENDAR`;
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button class="btn btn-outline-secondary position-relative" onclick="openProjectNotes(${project.originalId})">
-                                <i class="fas fa-sticky-note me-1"></i>View/Add Notes
-                                ${this.renderNoteCounter(this.getProjectNotesCount(project.originalId), 'project')}
-                            </button>
-                            <button class="btn btn-outline-info position-relative" onclick="openDeveloperNotes(${project.originalId})">
-                                <i class="fas fa-code me-1"></i>Developer Notes
-                                ${this.renderNoteCounter(this.getDeveloperNotesCount(project.originalId), 'developer')}
-                            </button>
                             <button class="btn btn-outline-primary" onclick="restoreProject(${project.originalId})">
                                 <i class="fas fa-undo me-1"></i>Restore Project
                             </button>
@@ -5293,14 +5049,6 @@ END:VCALENDAR`;
                             <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-action btn-outline-success" title="Update Progress">
                                 <i class="fas fa-chart-line"></i>
                             </button>
-                            <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary position-relative" title="Project Notes">
-                                <i class="fas fa-sticky-note"></i>
-                                ${this.renderNoteCounter(this.getProjectNotesCount(project.id), 'project')}
-                            </button>
-                            <button onclick="projectManager.showProjectDeveloperNotes(${project.id})" class="btn btn-outline-info position-relative" title="Developer Notes">
-                                <i class="fas fa-code"></i>
-                                ${this.renderNoteCounter(this.getDeveloperNotesCount(project.id), 'developer')}
-                            </button>
                             ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
                                 <i class="fas fa-images"></i>
                             </button>` : ''}
@@ -5313,14 +5061,6 @@ END:VCALENDAR`;
                     </div>
                     ` : `
                         <div class="btn-group btn-group-sm">
-                            <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-secondary position-relative" title="Project Notes">
-                                <i class="fas fa-sticky-note"></i>
-                                ${this.renderNoteCounter(this.getProjectNotesCount(project.id), 'project')}
-                            </button>
-                            <button onclick="projectManager.showProjectDeveloperNotes(${project.id})" class="btn btn-outline-info position-relative" title="Developer Notes">
-                                <i class="fas fa-code"></i>
-                                ${this.renderNoteCounter(this.getDeveloperNotesCount(project.id), 'developer')}
-                            </button>
                             ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
                                 <i class="fas fa-images"></i>
                             </button>` : ''}
@@ -6946,314 +6686,6 @@ END:VCALENDAR`;
         modal.show();
     }
     
-    // ========================================
-    // NEW CLEAN NOTE SYSTEM (Following Project Pattern)
-    // ========================================
-    
-    // Save notes using the same successful pattern as projects
-    async saveNotes() {
-        console.log('Saving notes to cloud...');
-        try {
-            await this.cloudStorage.saveProjectNotes(this.projectNotes);
-            await this.cloudStorage.saveDeveloperNotes(this.developerNotes);
-            console.log('✅ Notes saved successfully');
-        } catch (error) {
-            console.error('❌ Failed to save notes:', error);
-            this.showNotification('Failed to save notes. Please check your connection.', 'error');
-        }
-    }
-    
-    // Load notes using the same successful pattern as projects
-    async loadNotes() {
-        console.log('Loading notes from cloud...');
-        try {
-            this.projectNotes = await this.cloudStorage.loadProjectNotes() || {};
-            this.developerNotes = await this.cloudStorage.loadDeveloperNotes() || {};
-            console.log('✅ Notes loaded successfully');
-        } catch (error) {
-            console.error('❌ Failed to load notes:', error);
-            this.showNotification('Failed to load notes. Please check your connection.', 'error');
-            this.projectNotes = {};
-            this.developerNotes = {};
-        }
-    }
-    
-    // Open project notes modal
-    openProjectNotes(projectId) {
-        this.currentNotesProjectId = projectId;
-        const project = this.projects.find(p => p.id === projectId);
-        if (!project) return;
-        
-        const notesProjectNameElement = document.getElementById('notesProjectName');
-        if (notesProjectNameElement) {
-            notesProjectNameElement.textContent = project.name;
-        } else {
-            console.error('Notes project name element not found');
-        }
-        
-        this.renderProjectNotes(projectId);
-        
-        const notesModal = document.getElementById('notesModal');
-        if (notesModal) {
-            const modal = new bootstrap.Modal(notesModal);
-            modal.show();
-        } else {
-            console.error('Notes modal not found');
-        }
-    }
-    
-    // Add project note
-    async addProjectNote(projectId, noteText) {
-        if (!noteText.trim()) {
-            this.showNotification('Please enter a note', 'warning');
-            return;
-        }
-        
-        const numericProjectId = Number(projectId);
-        const currentUserData = this.users.find(u => u.id === this.currentUser);
-        
-        const note = {
-            id: Date.now().toString(),
-            text: noteText.trim(),
-            authorId: this.currentUser,
-            authorName: currentUserData ? currentUserData.name : this.currentUser,
-            timestamp: new Date().toISOString()
-        };
-        
-        if (!this.projectNotes[numericProjectId]) {
-            this.projectNotes[numericProjectId] = [];
-        }
-        
-        this.projectNotes[numericProjectId].unshift(note);
-        await this.saveNotes();
-        this.renderProjectNotes(numericProjectId);
-        this.render();
-        
-        document.getElementById('noteText').value = '';
-        this.showNotification('Note added successfully', 'success');
-    }
-    
-    // Delete project note
-    async deleteProjectNote(projectId, noteId) {
-        if (!confirm('Are you sure you want to delete this note?')) return;
-        
-        const numericProjectId = Number(projectId);
-        if (this.projectNotes[numericProjectId]) {
-            this.projectNotes[numericProjectId] = this.projectNotes[numericProjectId].filter(note => note.id !== noteId);
-            await this.saveNotes();
-            this.renderProjectNotes(numericProjectId);
-            this.render();
-            this.showNotification('Note deleted', 'success');
-        }
-    }
-    
-    // Open developer notes modal
-    openDeveloperNotes(projectId) {
-        this.currentDeveloperNotesProjectId = projectId;
-        const project = this.projects.find(p => p.id === projectId);
-        if (!project) return;
-        
-        document.getElementById('developerNotesProjectName').textContent = project.name;
-        this.renderDeveloperNotes(projectId);
-        
-        const modal = new bootstrap.Modal(document.getElementById('notesModal'));
-        modal.show();
-    }
-    
-    // Add developer note
-    async addDeveloperNote(projectId, noteText, noteType) {
-        if (!noteText.trim()) {
-            this.showNotification('Please enter a developer note', 'warning');
-            return;
-        }
-        
-        if (!noteType) {
-            this.showNotification('Please select an update type', 'warning');
-            return;
-        }
-        
-        const numericProjectId = Number(projectId);
-        const note = {
-            id: Date.now().toString(),
-            text: noteText.trim(),
-            type: noteType,
-            userId: this.currentUser,
-            timestamp: new Date().toISOString()
-        };
-        
-        if (!this.developerNotes[numericProjectId]) {
-            this.developerNotes[numericProjectId] = [];
-        }
-        
-        this.developerNotes[numericProjectId].unshift(note);
-        await this.saveNotes();
-        this.renderDeveloperNotes(numericProjectId);
-        this.render();
-        
-        document.getElementById('developerNoteText').value = '';
-        document.getElementById('developerNoteType').value = '';
-        this.showNotification('Developer note added', 'success');
-    }
-    
-    // Delete developer note
-    async deleteDeveloperNote(projectId, noteId) {
-        if (!confirm('Are you sure you want to delete this developer note?')) return;
-        
-        const numericProjectId = Number(projectId);
-        if (this.developerNotes[numericProjectId]) {
-            this.developerNotes[numericProjectId] = this.developerNotes[numericProjectId].filter(note => note.id !== noteId);
-            await this.saveNotes();
-            this.renderDeveloperNotes(numericProjectId);
-            this.render();
-            this.showNotification('Developer note deleted', 'success');
-        }
-    }
-    
-    // Render project notes
-    renderProjectNotes(projectId) {
-        const numericProjectId = Number(projectId);
-        const notes = this.projectNotes[numericProjectId] || [];
-        const notesContainer = document.getElementById('projectNotesList');
-        
-        // Safety check - ensure notes is an array
-        if (!Array.isArray(notes)) {
-            console.error('Project notes is not an array:', notes);
-            if (notesContainer) {
-                notesContainer.innerHTML = '<p class="text-muted">Error loading project notes.</p>';
-            }
-            return;
-        }
-        
-        if (!notesContainer) {
-            console.error('Project notes container not found');
-            return;
-        }
-        
-        if (notes.length === 0) {
-            notesContainer.innerHTML = '<p class="text-muted">No notes yet. Be the first to add one!</p>';
-            return;
-        }
-        
-        notesContainer.innerHTML = notes.map(note => `
-            <div class="note-item mb-3 p-3 border rounded">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="note-meta">
-                        <strong>${this.escapeHtml(note.authorName)}</strong>
-                        <small class="text-muted d-block">
-                            ${new Date(note.timestamp).toLocaleString()}
-                        </small>
-                    </div>
-                    ${note.authorId === this.currentUser ? `
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProjectNote('${projectId}', '${note.id}')" title="Delete note">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    ` : ''}
-                </div>
-                <div class="note-content mt-2">
-                    <p class="mb-0">${this.escapeHtml(note.text)}</p>
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    // Render developer notes
-    renderDeveloperNotes(projectId) {
-        const numericProjectId = Number(projectId);
-        const notes = this.developerNotes[numericProjectId] || [];
-        const notesContainer = document.getElementById('developerNotesList');
-        
-        // Safety check - ensure notes is an array
-        if (!Array.isArray(notes)) {
-            console.error('Developer notes is not an array:', notes);
-            if (notesContainer) {
-                notesContainer.innerHTML = '<p class="text-muted">Error loading developer notes.</p>';
-            }
-            return;
-        }
-        
-        if (!notesContainer) {
-            console.error('Developer notes container not found');
-            return;
-        }
-        
-        if (notes.length === 0) {
-            notesContainer.innerHTML = '<p class="text-muted">No developer notes yet. Add one to track updates!</p>';
-            return;
-        }
-        
-        notesContainer.innerHTML = notes.map(note => `
-            <div class="developer-note-item mb-3 p-3 border rounded">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="developer-note-meta">
-                        <span class="badge bg-${this.getDeveloperNoteTypeColor(note.type)}">${note.type}</span>
-                        <small class="text-muted d-block">
-                            ${new Date(note.timestamp).toLocaleString()}
-                        </small>
-                    </div>
-                    <button class="btn btn-sm btn-outline-danger" onclick="deleteDeveloperNote('${note.id}')" title="Delete Note">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-                <div class="developer-note-content">
-                    <p class="mb-0">${this.escapeHtml(note.text)}</p>
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    // Helper methods for developer notes
-    getDeveloperNoteTypeColor(type) {
-        const colors = {
-            'Bug Fix': 'danger',
-            'Enhancement': 'success',
-            'Feature': 'primary',
-            'Update': 'info',
-            'Documentation': 'warning'
-        };
-        return colors[type] || 'secondary';
-    }
-    
-    getDeveloperNoteTypeIcon(type) {
-        const icons = {
-            'Bug Fix': 'fas fa-bug',
-            'Enhancement': 'fas fa-rocket',
-            'Feature': 'fas fa-star',
-            'Update': 'fas fa-sync',
-            'Documentation': 'fas fa-book'
-        };
-        return icons[type] || 'fas fa-sticky-note';
-    }
-    
-    // Missing functions that were causing errors
-    cleanupDeveloperNotes() {
-        console.log('🧹 Developer notes cleanup - no action needed');
-        // This function was called but didn't exist, causing errors
-    }
-    
-    getProjectNotesCount(projectId) {
-        const numericProjectId = Number(projectId);
-        const notes = this.projectNotes[numericProjectId] || [];
-        return notes.length;
-    }
-    
-    getDeveloperNotesCount(projectId) {
-        const numericProjectId = Number(projectId);
-        const notes = this.developerNotes[numericProjectId] || [];
-        return notes.length;
-    }
-    
-    renderNoteCounter(count, type) {
-        if (count === 0) return '';
-        const badgeClass = type === 'project' ? 'bg-primary' : 'bg-success';
-        return `<span class="badge ${badgeClass} ms-1">${count}</span>`;
-    }
-    
-    populateFilterDropdowns() {
-        // This function was called but didn't exist, causing errors
-        // For now, just log that it was called
-        console.log('📋 Filter dropdowns populated');
-    }
-    
     // Emergency function to reset user selection
     resetUserSelection() {
         localStorage.removeItem('safetrack_current_user');
@@ -7400,8 +6832,6 @@ window.openProjectModal = () => {
 document.addEventListener('DOMContentLoaded', function() {
     window.projectManager = new ProjectManager();
     
-    // Load project notes after cloud storage is ready - CLOUD FIRST
-    window.projectManager.waitForCloudStorage().then(async () => {
         try {
             // Try cloud storage first for project notes
             if (window.projectManager.cloudStorage.isConnected) {
@@ -7739,44 +7169,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    window.openProjectNotes = (projectId) => {
-        if (window.projectManager) {
-            window.projectManager.openProjectNotes(projectId);
-        }
-    };
 
-    window.openDeveloperNotes = (projectId) => {
-        if (window.projectManager) {
-            window.projectManager.showProjectDeveloperNotes(projectId);
-        }
-    };
     
-    // Emergency functions for stubborn developer notes
-    window.forceClearAllDeveloperNotes = () => {
-        if (window.projectManager) {
-            window.projectManager.forceClearAllDeveloperNotes();
-        }
-    };
-    
-    window.forceClearProjectDeveloperNotes = (projectId) => {
-        if (window.projectManager) {
-            window.projectManager.forceClearProjectDeveloperNotes(projectId);
-        }
-    };
-    
-    // Target specific stubborn note for deletion
-    window.forceDeleteSpecificNote = (projectId, noteId) => {
-        if (window.projectManager) {
-            window.projectManager.forceDeleteSpecificNote(projectId, noteId);
-        }
-    };
-    
-    // NUCLEAR OPTION: Completely clear project 26's developer notes from cloud
-    window.nuclearClearProject26 = () => {
-        if (window.projectManager) {
-            window.projectManager.nuclearClearProject26();
-        }
-    };
 
     window.deleteArchivedProject = (projectId) => {
         if (window.projectManager) {
