@@ -782,7 +782,6 @@ class ProjectManager {
         const modal = new bootstrap.Modal(document.getElementById('userSelectionModal'));
         modal.show();
     }
-    
     populateUserSelectionCards() {
         const grid = document.getElementById('userSelectionGrid');
         if (!grid) return;
@@ -1109,8 +1108,14 @@ class ProjectManager {
         }
     }
     
-    saveCustomQuotes() {
-        localStorage.setItem('safetrack_custom_quotes', JSON.stringify(this.customQuotes));
+    saveCustomQuotes(quotes) {
+        try {
+            const value = JSON.stringify(quotes);
+            window.localStorage.setItem("safetrack_custom_quotes", value);
+            return true;
+        } catch (_) {
+            return false; // graceful failure when storage is blocked
+        }
     }
     
     loadCustomQuotes() {
@@ -2363,7 +2368,6 @@ END:VCALENDAR`;
             default: return 'status-icon-pending';
         }
     }
-
     updateCertificationStats() {
         const userCertifications = this.certifications.filter(cert => cert.userId === this.currentUser);
         
@@ -2946,6 +2950,12 @@ END:VCALENDAR`;
                 currentUser: this.currentUser
             });
             
+            // Load archived projects
+            this.archivedProjects = await this.loadArchivedProjects();
+            
+            // Reconcile active vs archive to ensure consistency
+            this.reconcileActiveVsArchive();
+            
             // Update connection status after successful data load
             this.showConnectionStatus();
         } catch (error) {
@@ -2974,22 +2984,11 @@ END:VCALENDAR`;
             currentUser: this.currentUser
         });
         
-        // Load archived projects and ensure proper separation
+        // Load archived projects
         this.archivedProjects = await this.loadArchivedProjects();
         
-        // Re-enable cleanup with better logic (local storage fallback)
-        if (this.projects.length > 0 && Object.keys(this.archivedProjects).length > 0) {
-            // Only run cleanup if there was a recent archive operation
-            const recentArchiveOperation = localStorage.getItem('recent_archive_operation');
-            
-            if (recentArchiveOperation) {
-                console.log('Running cleanup (local storage) - recent archive operation detected');
-                await this.cleanupArchivedProjectsFromActive();
-                localStorage.removeItem('recent_archive_operation'); // Clear the flag
-            } else {
-                console.log('Skipping cleanup (local storage) - no recent archive operations');
-            }
-        }
+        // Reconcile active vs archive to ensure consistency
+        this.reconcileActiveVsArchive();
     }
 
     loadProjects() {
@@ -3141,7 +3140,6 @@ END:VCALENDAR`;
         this.saveUsers();
         console.log('Default users loaded:', this.users.length);
     }
-
     resetAllData() {
         // Admin access already verified at profile selection
         if (confirm('Are you sure you want to reset all data? This will delete all users, projects, categories, roles, and departments. This action cannot be undone.')) {
@@ -3839,7 +3837,7 @@ END:VCALENDAR`;
     // ========================================
     
     async archiveProject(projectId) {
-        const project = this.projects.find(p => p.id === projectId);
+        const project = this.projects.find(p => String(p.id) === String(projectId));
         if (!project) {
             this.showNotification('Project not found', 'error');
             return;
@@ -3861,43 +3859,50 @@ END:VCALENDAR`;
             return;
         }
         
-        // Add archive metadata
+        // move: add to archive
         const archivedProject = {
             ...project,
             archivedAt: new Date().toISOString(),
             archivedBy: this.currentUser,
-            originalId: project.id
+            originalId: String(project.id),
+            status: 'archived'
         };
         
-        // Add to user's archive
         if (!this.archivedProjects[this.currentUser]) {
             this.archivedProjects[this.currentUser] = [];
         }
+        
+        // Idempotency: Check if already archived
+        if (this.archivedProjects[this.currentUser].some(p => String(p.originalId) === String(projectId))) {
+            this.showNotification('Project already archived', 'info');
+            return;
+        }
+        
         this.archivedProjects[this.currentUser].unshift(archivedProject);
         
-        // Remove from active projects
-        const originalProjectCount = this.projects.length;
-        this.projects = this.projects.filter(p => p.id !== projectId);
-        const newProjectCount = this.projects.length;
+        // move: remove from active
+        const originalProjects = [...this.projects];
+        this.projects = this.projects.filter(p => String(p.id) !== String(projectId));
         
-        console.log(`Archive: Removed project ${projectId}. Projects count: ${originalProjectCount} → ${newProjectCount}`);
-        console.log(`Archive: Active projects after filter:`, this.projects.map(p => ({id: p.id, name: p.name})));
-        
-        // Save both active projects and archive
-        await this.saveProjects();
-        await this.saveArchivedProjects();
-        
-        console.log(`Archive: Saved to cloud. Active projects: ${this.projects.length}, Archived projects: ${this.archivedProjects[this.currentUser]?.length || 0}`);
-        
-        // Set flag to indicate recent archive operation for cleanup
-        localStorage.setItem('recent_archive_operation', 'true');
-        console.log('Archive: Set flag for cleanup to run on next page load');
-        
-        // Update interface
-        this.render();
-        this.showNotification(`Project "${project.name}" archived successfully`, 'success');
+        // persist: active + archive
+        try {
+            await this.saveProjects();
+            await this.saveArchivedProjects();
+            
+            // Reconcile to ensure consistency
+            this.reconcileActiveVsArchive();
+            
+            // Update interface
+            this.render();
+            this.showNotification(`Project "${project.name}" archived successfully`, 'success');
+        } catch (error) {
+            // rollback on failure
+            console.warn('Failed to archive project:', error);
+            this.projects = originalProjects; // Restore original state
+            this.archivedProjects[this.currentUser] = this.archivedProjects[this.currentUser].filter(p => String(p.originalId) !== String(projectId));
+            this.showNotification('Failed to archive project. Please try again.', 'error');
+        }
     }
-    
     async restoreProject(archivedProjectId) {
         const userArchive = this.archivedProjects[this.currentUser] || [];
         const archivedProject = userArchive.find(p => p.originalId === archivedProjectId);
@@ -4293,6 +4298,22 @@ END:VCALENDAR`;
         }
     }
     
+    // Helper to reconcile active vs archive lists
+    reconcileActiveVsArchive() {
+        // reconcile: remove archived ids from active
+        const userId = this.currentUser?.id || this.currentUser?.uid || this.currentUser;
+        if (!userId || !this.archivedProjects || !this.archivedProjects[userId]) return;
+        
+        const archivedIds = new Set((this.archivedProjects[userId] || []).map(p => String(p.originalId || p.id)));
+        const before = this.projects.length;
+        this.projects = this.projects.filter(p => !archivedIds.has(String(p.id)));
+        
+        if (this.projects.length !== before) {
+            // persist the reduced active list
+            this.saveProjects();
+        }
+    }
+    
     async cleanupArchivedProjectsFromActive() {
         // Get all archived project IDs across all users
         const archivedProjectIds = new Set();
@@ -4301,14 +4322,14 @@ END:VCALENDAR`;
             const userArchive = this.archivedProjects[userId] || [];
             userArchive.forEach(archivedProject => {
                 if (archivedProject.originalId) {
-                    archivedProjectIds.add(archivedProject.originalId);
+                    archivedProjectIds.add(String(archivedProject.originalId));
                 }
             });
         }
         
         // Remove any projects from active list that are in archived list
         const originalCount = this.projects.length;
-        this.projects = this.projects.filter(project => !archivedProjectIds.has(project.id));
+        this.projects = this.projects.filter(project => !archivedProjectIds.has(String(project.id)));
         const newCount = this.projects.length;
         
         if (originalCount !== newCount) {
@@ -4670,7 +4691,6 @@ END:VCALENDAR`;
             this.remove();
         });
     }
-    
     // Archive export functions
     exportArchiveToExcel() {
         const userArchive = this.archivedProjects[this.currentUser] || [];
@@ -5471,7 +5491,6 @@ END:VCALENDAR`;
             await this.addUser(userData);
         }
     }
-
     closeUserModal() {
         const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
         if (modal) {
@@ -6236,7 +6255,6 @@ END:VCALENDAR`;
         const modal = new bootstrap.Modal(document.getElementById('departmentModal'));
         modal.show();
     }
-
     renderDepartmentTable() {
         const tbody = document.getElementById('departmentTableBody');
         
@@ -6273,7 +6291,6 @@ END:VCALENDAR`;
             `;
         }).join('');
     }
-
     populateDepartmentDropdowns() {
         const userDepartmentSelect = document.getElementById('userDepartment');
         if (userDepartmentSelect) {
@@ -6933,9 +6950,7 @@ window.openProjectModal = () => {
         modal.show();
     }
 };
-
 // User management is now handled by the dropdown
-
 // Initialize the project manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     window.projectManager = new ProjectManager();

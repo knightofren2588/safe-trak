@@ -4,12 +4,17 @@
   "description": "A modern, responsive safety management application combining the power of Tailwind CSS and Bootstrap 5.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "firebase-tools": "^14.16.0"
+  },
+  "devDependencies": {
+    "vitest": "^0.34.1",
+    "jsdom": "^22.1.0"
   }
 }
