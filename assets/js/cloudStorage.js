@@ -188,23 +188,26 @@ class CloudStorageService {
         const data = await this.loadFromCloud('users');
         const users = Object.values(data);
         
+        // TEMPORARILY DISABLE USER FILTERING TO RESTORE MISSING USERS
         // Filter out ONLY the specific old default users (not any user with similar names)
-        const oldDefaultUsers = [
-            {id: 'sarah', name: 'Sarah Johnson'},
-            {id: 'mike', name: 'MIke'},  // Note: this was the old default "MIke" with capital I
-            {id: 'lisa', name: 'Lisa Davis'},
-            {id: 'david', name: 'David Wilson'}
-        ];
+        // const oldDefaultUsers = [
+        //     {id: 'sarah', name: 'Sarah Johnson'},
+        //     {id: 'mike', name: 'MIke'},  // Note: this was the old default "MIke" with capital I
+        //     {id: 'lisa', name: 'Lisa Davis'},
+        //     {id: 'david', name: 'David Wilson'}
+        // ];
         
-        const filteredUsers = users.filter(user => {
-            // Only filter if BOTH id AND name match exactly (to avoid filtering real users)
-            const isOldDefault = oldDefaultUsers.some(oldUser => 
-                oldUser.id === user.id && oldUser.name === user.name
-            );
-            return !isOldDefault;
-        });
+        // const filteredUsers = users.filter(user => {
+        //     // Only filter if BOTH id AND name match exactly (to avoid filtering real users)
+        //     const isOldDefault = oldDefaultUsers.some(oldUser => 
+        //         oldUser.id === user.id && oldUser.name === user.name
+        //     );
+        //     return !isOldDefault;
+        // });
         
-        return filteredUsers;
+        // Return ALL users for now to restore missing users
+        console.log('Loading users from cloud:', users.length, 'users found');
+        return users;
     }
 
     async saveCategories(categories) {
