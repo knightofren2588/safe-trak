@@ -9,7 +9,7 @@ class ProjectManager {
         this.departments = [];
         this.complianceItems = [];
         this.certifications = [];
-        this.currentUser = 'admin'; // Default to admin user's view
+        this.currentUser = null; // Set to null to trigger user selection modal
         this.currentEditId = null;
         this.currentUserEditId = null;
         
@@ -1607,6 +1607,16 @@ END:VCALENDAR`;
         // Load data from cloud storage
         await this.loadAllData();
         
+        // Check if we need to show user selection modal
+        if (this.currentUser === null) {
+            console.log('🔍 No current user selected, will show user selection modal');
+            // Make sure we have at least one user before showing the modal
+            if (this.users.length === 0) {
+                this.loadDefaultUsers();
+            }
+            this.showUserSelectionModal();
+        }
+        
         // Load archived projects and ensure proper separation
         this.archivedProjects = await this.loadArchivedProjects();
         
@@ -3084,7 +3094,59 @@ END:VCALENDAR`;
 
     loadCurrentUserLocal() {
         const stored = localStorage.getItem('safetrack_current_user');
-        return stored ? JSON.parse(stored) : 'all';
+        // Return null to trigger user selection modal instead of defaulting to 'all'
+        return stored ? JSON.parse(stored) : null;
+    }
+    
+    loadDefaultUsers() {
+        console.log('Loading default users');
+        // Create default users if none exist
+        const defaultUsers = [
+            {
+                id: 'admin',
+                name: 'Admin User',
+                email: 'admin@safetrack.com',
+                role: 'Administrator',
+                department: 'Safety',
+                avatar: 'A'
+            },
+            {
+                id: 'mike',
+                name: 'Mike Butcher',
+                email: 'mike@safetrack.com',
+                role: 'Safety Liaison',
+                department: 'Operations',
+                avatar: 'M'
+            },
+            {
+                id: 'tyson',
+                name: 'Tyson Crenshaw',
+                email: 'tyson@safetrack.com',
+                role: 'Associate Director of Safety',
+                department: 'Safety',
+                avatar: 'T'
+            },
+            {
+                id: 'marcena',
+                name: 'Marcena Cudzilo',
+                email: 'marcena@safetrack.com',
+                role: 'Safety Coordinator',
+                department: 'Operations',
+                avatar: 'M'
+            },
+            {
+                id: 'matt',
+                name: 'Matt Hoyt',
+                email: 'matt@safetrack.com',
+                role: 'Safety Specialist',
+                department: 'Safety',
+                avatar: 'M'
+            }
+        ];
+        
+        this.users = defaultUsers;
+        this.saveUsers();
+        console.log('Default users loaded:', this.users.length);
     }
 
     resetAllData() {
