@@ -201,19 +201,11 @@ class ProjectManager {
             
             this.hideLoginModal();
             
-            // Initialize app first to load users
-            await this.init();
+            // Clear any existing user preference
+            localStorage.removeItem('safetrack_current_user');
             
-            // Show user selection prompt only if no user preference is saved
-            const hasUserPreference = localStorage.getItem('safetrack_current_user');
-            console.log('🔍 USER SELECTION: hasUserPreference =', hasUserPreference);
-            if (!hasUserPreference) {
-                console.log('🔍 USER SELECTION: Showing user selection modal');
-                this.showUserSelectionModal();
-            } else {
-                console.log('🔍 USER SELECTION: User preference found, skipping modal');
-                this.showNotification('Welcome to SafeTrack!', 'success');
-            }
+            // Initialize app which will show the user selection modal
+            await this.init();
         } else {
             // Failed login
             console.log('Login failed'); // Debug
@@ -1607,15 +1599,16 @@ END:VCALENDAR`;
         // Load data from cloud storage
         await this.loadAllData();
         
-        // Check if we need to show user selection modal
-        if (this.currentUser === null) {
-            console.log('🔍 No current user selected, will show user selection modal');
-            // Make sure we have at least one user before showing the modal
-            if (this.users.length === 0) {
-                this.loadDefaultUsers();
-            }
-            this.showUserSelectionModal();
+        // Always show user selection modal on login
+        // Make sure we have at least one user before showing the modal
+        if (this.users.length === 0) {
+            this.loadDefaultUsers();
         }
+        
+        // Force show user selection modal regardless of current user
+        localStorage.removeItem('safetrack_current_user');
+        this.currentUser = null;
+        this.showUserSelectionModal();
         
         // Load archived projects and ensure proper separation
         this.archivedProjects = await this.loadArchivedProjects();
@@ -5517,6 +5510,39 @@ END:VCALENDAR`;
         this.updateNotificationBadge();
     }
 
+    populateFilterDropdowns() {
+        // Get filter dropdowns
+        const statusFilter = document.getElementById('statusFilter');
+        const priorityFilter = document.getElementById('priorityFilter');
+        const categoryFilter = document.getElementById('categoryFilter');
+        
+        // If any of these don't exist, just return
+        if (!statusFilter && !priorityFilter && !categoryFilter) {
+            return;
+        }
+        
+        // Populate status filter
+        if (statusFilter) {
+            const statuses = [...new Set(this.projects.map(p => p.status))].filter(Boolean);
+            const statusOptions = statuses.map(status => `<option value="${status}">${status}</option>`).join('');
+            statusFilter.innerHTML = '<option value="">All Statuses</option>' + statusOptions;
+        }
+        
+        // Populate priority filter
+        if (priorityFilter) {
+            const priorities = [...new Set(this.projects.map(p => p.priority))].filter(Boolean);
+            const priorityOptions = priorities.map(priority => `<option value="${priority}">${priority}</option>`).join('');
+            priorityFilter.innerHTML = '<option value="">All Priorities</option>' + priorityOptions;
+        }
+        
+        // Populate category filter
+        if (categoryFilter) {
+            const categories = [...new Set(this.projects.map(p => p.category))].filter(Boolean);
+            const categoryOptions = categories.map(category => `<option value="${category}">${category}</option>`).join('');
+            categoryFilter.innerHTML = '<option value="">All Categories</option>' + categoryOptions;
+        }
+    }
+    
     updateViewModeInterface() {
         const currentViewMode = document.getElementById('currentViewMode');
         if (this.projectViewMode === 'all') {
@@ -7281,45 +7307,51 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Certification form submission handler
-    document.getElementById('certificationForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        if (!window.projectManager) return;
-        
-        const formData = new FormData(this);
-        const certificationData = {
-            name: document.getElementById('certificationName').value,
-            provider: document.getElementById('certificationProvider').value,
-            number: document.getElementById('certificationNumber').value,
-            level: document.getElementById('certificationLevel').value,
-            issueDate: document.getElementById('certificationIssueDate').value,
-            expiryDate: document.getElementById('certificationExpiryDate').value,
-            description: document.getElementById('certificationDescription').value,
-            certificateFile: window.currentCertificateFile || null,
-            certificateFileName: window.currentCertificateFileName || null
-        };
-        
-        if (window.projectManager.currentCertificationEditId) {
-            window.projectManager.editCertification(window.projectManager.currentCertificationEditId, certificationData);
-        } else {
-            window.projectManager.addCertification(certificationData);
-        }
-    });
+    const certificationForm = document.getElementById('certificationForm');
+    if (certificationForm) {
+        certificationForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!window.projectManager) return;
+            
+            const formData = new FormData(this);
+            const certificationData = {
+                name: document.getElementById('certificationName').value,
+                provider: document.getElementById('certificationProvider').value,
+                number: document.getElementById('certificationNumber').value,
+                level: document.getElementById('certificationLevel').value,
+                issueDate: document.getElementById('certificationIssueDate').value,
+                expiryDate: document.getElementById('certificationExpiryDate').value,
+                description: document.getElementById('certificationDescription').value,
+                certificateFile: window.currentCertificateFile || null,
+                certificateFileName: window.currentCertificateFileName || null
+            };
+            
+            if (window.projectManager.currentCertificationEditId) {
+                window.projectManager.editCertification(window.projectManager.currentCertificationEditId, certificationData);
+            } else {
+                window.projectManager.addCertification(certificationData);
+            }
+        });
+    }
 
     // Custom quote form submission handler
-    document.getElementById('customQuoteForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        if (!window.projectManager) return;
-        
-        const quoteText = document.getElementById('customQuoteText').value.trim();
-        const author = document.getElementById('customQuoteAuthor').value.trim();
-        
-        if (quoteText) {
-            window.projectManager.addCustomQuote(quoteText, author);
-            this.reset(); // Clear the form
-        }
-    });
+    const customQuoteForm = document.getElementById('customQuoteForm');
+    if (customQuoteForm) {
+        customQuoteForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!window.projectManager) return;
+            
+            const quoteText = document.getElementById('customQuoteText').value.trim();
+            const author = document.getElementById('customQuoteAuthor').value.trim();
+            
+            if (quoteText) {
+                window.projectManager.addCustomQuote(quoteText, author);
+                this.reset(); // Clear the form
+            }
+        });
+    }
 
     // Setup login form handler after ProjectManager is created
     if (document.getElementById('loginForm')) {
@@ -7340,34 +7372,43 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Admin password form submission handler
-    document.getElementById('adminPasswordForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const password = document.getElementById('adminPassword').value;
-        
-        if (password && window.projectManager) {
-            window.projectManager.verifyAdminPassword(password);
-        }
-    });
+    const adminPasswordForm = document.getElementById('adminPasswordForm');
+    if (adminPasswordForm) {
+        adminPasswordForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('adminPassword').value;
+            
+            if (password && window.projectManager) {
+                window.projectManager.verifyAdminPassword(password);
+            }
+        });
+    }
 
     // Project notes form submission handler
-    document.getElementById('addNoteForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const noteText = document.getElementById('noteText').value;
-        if (noteText && window.projectManager && window.projectManager.currentNotesProjectId) {
-            await window.projectManager.addProjectNote(window.projectManager.currentNotesProjectId, noteText);
-        }
-    });
+    const addNoteForm = document.getElementById('addNoteForm');
+    if (addNoteForm) {
+        addNoteForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const noteText = document.getElementById('noteText').value;
+            if (noteText && window.projectManager && window.projectManager.currentNotesProjectId) {
+                await window.projectManager.addProjectNote(window.projectManager.currentNotesProjectId, noteText);
+            }
+        });
+    }
 
     // Developer notes form submission handler
-    document.getElementById('addDeveloperNoteForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const noteText = document.getElementById('developerNoteText').value;
-        const noteType = document.getElementById('developerNoteType').value;
-        if (noteText && noteType && window.projectManager && window.projectManager.currentDeveloperNotesProjectId) {
-            await window.projectManager.addDeveloperNote(window.projectManager.currentDeveloperNotesProjectId, noteText, noteType);
-        }
-    });
+    const addDeveloperNoteForm = document.getElementById('addDeveloperNoteForm');
+    if (addDeveloperNoteForm) {
+        addDeveloperNoteForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const noteText = document.getElementById('developerNoteText').value;
+            const noteType = document.getElementById('developerNoteType').value;
+            if (noteText && noteType && window.projectManager && window.projectManager.currentDeveloperNotesProjectId) {
+                await window.projectManager.addDeveloperNote(window.projectManager.currentDeveloperNotesProjectId, noteText, noteType);
+            }
+        });
+    }
 
     // Global developer notes functions
     window.deleteDeveloperNote = (noteId) => {
