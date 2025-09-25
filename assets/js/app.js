@@ -7199,6 +7199,12 @@ END:VCALENDAR`;
         const notes = this.developerNotes[numericProjectId] || [];
         return notes.length;
     }
+    
+    renderNoteCounter(count, type) {
+        if (count === 0) return '';
+        const badgeClass = type === 'project' ? 'bg-primary' : 'bg-success';
+        return `<span class="badge ${badgeClass} ms-1">${count}</span>`;
+    }
 }
 
 // Modal functions
