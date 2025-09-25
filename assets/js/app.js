@@ -3811,6 +3811,26 @@ END:VCALENDAR`;
         }
     }
     
+    updateFilterStats(filteredProjects) {
+        // Get the filter stats element
+        const filterStatsElement = document.getElementById('filterStats');
+        if (!filterStatsElement) return; // Exit if element doesn't exist
+        
+        // Calculate stats
+        const totalProjects = filteredProjects.length;
+        const completedProjects = filteredProjects.filter(p => p.status === 'completed').length;
+        const activeProjects = filteredProjects.filter(p => p.status === 'active').length;
+        const overdueProjects = filteredProjects.filter(p => this.isProjectOverdue(p)).length;
+        
+        // Update the stats display
+        filterStatsElement.innerHTML = `
+            <span class="badge bg-primary me-2">Total: ${totalProjects}</span>
+            <span class="badge bg-success me-2">Completed: ${completedProjects}</span>
+            <span class="badge bg-info me-2">Active: ${activeProjects}</span>
+            ${overdueProjects > 0 ? `<span class="badge bg-danger me-2">Overdue: ${overdueProjects}</span>` : ''}
+        `;
+    }
+    
     getUserName(userId) {
         const user = this.users.find(u => u.id === userId);
         return user ? user.name : 'Unknown';
