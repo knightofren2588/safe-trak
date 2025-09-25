@@ -490,27 +490,45 @@ class ProjectManager {
                     }
                 } else {
                     console.log('Saving to cloud storage - data being saved:', cloudData);
-                    await this.cloudStorage.saveToCloud('project_notes', cloudData);
+                    
+                    // Use direct Firebase calls to avoid automatic local fallback
+                    const collectionRef = this.cloudStorage.functions.collection(this.cloudStorage.db, 'project_notes');
+                    const promises = Object.entries(cloudData).map(([projectId, data]) => {
+                        const docRef = this.cloudStorage.functions.doc(collectionRef, projectId);
+                        return this.cloudStorage.functions.setDoc(docRef, data);
+                    });
+                    await Promise.all(promises);
+                    
                     console.log('✅ Project notes saved to cloud successfully:', Object.keys(cloudData).length, 'projects with notes');
+                    
+                    // Only save to local storage as backup if cloud save succeeded
+                    localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
+                    console.log('✅ Project notes saved to local storage as backup');
                 }
             } catch (error) {
                 console.error('Failed to save project notes to cloud:', error);
-                // Only fallback to local storage if cloud fails
-                localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
-                console.log('Fallback: Saved project notes to local storage');
+                this.showNotification('Failed to save project notes to cloud. Please check your connection.', 'error');
+                // Don't save locally if cloud fails to prevent data inconsistency
             }
         } else {
-            // Only use local storage if not connected to cloud
-            localStorage.setItem('safetrack_project_notes', JSON.stringify(this.projectNotes));
-            console.log('No cloud connection: Saved project notes to local storage');
+            console.warn('Not connected to cloud storage, cannot save project notes');
+            this.showNotification('Not connected to cloud storage. Project notes require cloud connection.', 'error');
         }
     }
     
     async loadProjectNotes() {
-        // Try to load from cloud first
+        // Load from cloud only (no local fallback to prevent inconsistencies)
         if (this.cloudStorage.isConnected) {
             try {
-                const cloudData = await this.cloudStorage.loadFromCloud('project_notes');
+                // Use direct Firebase calls to avoid automatic local fallback
+                const collectionRef = this.cloudStorage.functions.collection(this.cloudStorage.db, 'project_notes');
+                const snapshot = await this.cloudStorage.functions.getDocs(collectionRef);
+                
+                const cloudData = {};
+                snapshot.forEach(doc => {
+                    cloudData[doc.id] = doc.data();
+                });
+                
                 if (cloudData && Object.keys(cloudData).length > 0) {
                     // Convert cloud format back to our internal format
                     const notes = {};
@@ -520,18 +538,26 @@ class ProjectManager {
                         }
                     });
                     console.log('Loaded project notes from cloud:', Object.keys(notes).length, 'projects with notes');
+                    
+                    // Only save to local storage as backup if cloud load succeeded
+                    localStorage.setItem('safetrack_project_notes', JSON.stringify(notes));
+                    console.log('✅ Project notes saved to local storage as backup');
+                    
                     return notes;
+                } else {
+                    console.log('No project notes found in cloud');
+                    return {};
                 }
             } catch (error) {
                 console.error('Failed to load project notes from cloud:', error);
+                this.showNotification('Failed to load project notes from cloud. Please check your connection.', 'error');
+                return {};
             }
+        } else {
+            console.warn('Not connected to cloud storage, cannot load project notes');
+            this.showNotification('Not connected to cloud storage. Project notes require cloud connection.', 'error');
+            return {};
         }
-        
-        // Fallback to local storage
-        const stored = localStorage.getItem('safetrack_project_notes');
-        const localNotes = stored ? JSON.parse(stored) : {};
-        console.log('Loaded project notes from local storage');
-        return localNotes;
     }
     
     async syncProjectNotesFromCloud() {
@@ -4279,41 +4305,48 @@ END:VCALENDAR`;
         console.log('=== SAVING DEVELOPER NOTES ===');
         console.log('Current developer notes to save:', this.developerNotes);
         
-        const cloudData = {};
-        Object.entries(this.developerNotes).forEach(([projectId, notes]) => {
-            if (notes && notes.length > 0) {
-                cloudData[projectId] = {
-                    projectId: projectId,
-                    notes: notes,
-                    lastUpdated: new Date().toISOString()
-                };
-            }
-        });
-        
-        console.log('Cloud data to save:', cloudData);
-        
-        // Always save to local storage as backup (like project notes)
-        localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
-        console.log('✅ Developer notes saved to local storage');
-        
-        // Verify the save worked
-        const verifySave = localStorage.getItem('safetrack_developer_notes');
-        console.log('Verification - saved data:', verifySave);
-        
         // Try to save to cloud for team collaboration
         if (this.cloudStorage.isConnected) {
             try {
-                await this.cloudStorage.saveToCloud('developer_notes', cloudData);
+                // Convert notes format for cloud storage
+                const cloudData = {};
+                Object.entries(this.developerNotes).forEach(([projectId, notes]) => {
+                    if (notes && notes.length > 0) {
+                        cloudData[projectId] = {
+                            projectId: projectId,
+                            notes: notes,
+                            lastUpdated: new Date().toISOString()
+                        };
+                    }
+                });
+                
+                console.log('Cloud data to save:', cloudData);
+                
+                // Use direct Firebase calls to avoid automatic local fallback
+                const collectionRef = this.cloudStorage.functions.collection(this.cloudStorage.db, 'developer_notes');
+                const promises = Object.entries(cloudData).map(([projectId, data]) => {
+                    const docRef = this.cloudStorage.functions.doc(collectionRef, projectId);
+                    return this.cloudStorage.functions.setDoc(docRef, data);
+                });
+                await Promise.all(promises);
+                
                 console.log('✅ Developer notes saved to cloud successfully');
+                
+                // Only save to local storage as backup if cloud save succeeded
+                localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
+                console.log('✅ Developer notes saved to local storage as backup');
+                
                 return true;
             } catch (error) {
                 console.error('Failed to save developer notes to cloud:', error);
-                console.log('Developer notes saved locally, will sync to cloud when connection restored');
-                return true; // Still return true since local save succeeded
+                // Don't save locally if cloud fails - this prevents data inconsistency
+                this.showNotification('Failed to save developer notes to cloud. Please check your connection.', 'error');
+                return false;
             }
         } else {
-            console.log('No cloud connection: Developer notes saved locally, will sync when connected');
-            return true; // Still return true since local save succeeded
+            console.warn('Not connected to cloud storage, cannot save developer notes');
+            this.showNotification('Not connected to cloud storage. Developer notes require cloud connection.', 'error');
+            return false;
         }
     }
     
@@ -4321,10 +4354,18 @@ END:VCALENDAR`;
         console.log('=== LOADING DEVELOPER NOTES ===');
         console.log('Cloud connected:', this.cloudStorage.isConnected);
         
-        // Try cloud first, fall back to local storage (like project notes)
+        // Load from cloud only (no local fallback to prevent inconsistencies)
         if (this.cloudStorage.isConnected) {
             try {
-                const cloudData = await this.cloudStorage.loadFromCloud('developer_notes');
+                // Use direct Firebase calls to avoid automatic local fallback
+                const collectionRef = this.cloudStorage.functions.collection(this.cloudStorage.db, 'developer_notes');
+                const snapshot = await this.cloudStorage.functions.getDocs(collectionRef);
+                
+                const cloudData = {};
+                snapshot.forEach(doc => {
+                    cloudData[doc.id] = doc.data();
+                });
+                
                 console.log('Cloud data received:', cloudData);
                 
                 if (cloudData && Object.keys(cloudData).length > 0) {
@@ -4338,40 +4379,24 @@ END:VCALENDAR`;
                     console.log('✅ Developer notes loaded from cloud:', Object.keys(notes).length, 'projects have developer notes');
                     console.log('Developer notes data:', this.developerNotes);
                     
-                    // Also save to local storage as backup
+                    // Only save to local storage as backup if cloud load succeeded
                     localStorage.setItem('safetrack_developer_notes', JSON.stringify(this.developerNotes));
                     console.log('✅ Saved to local storage as backup');
                     return;
                 } else {
-                    console.log('No developer notes found in cloud, checking local storage');
+                    console.log('No developer notes found in cloud');
+                    this.developerNotes = {};
                 }
             } catch (error) {
                 console.error('Failed to load developer notes from cloud:', error);
-                console.log('Falling back to local storage');
-            }
-        }
-        
-        // Fallback to local storage
-        const stored = localStorage.getItem('safetrack_developer_notes');
-        console.log('Local storage data:', stored);
-        
-        if (stored) {
-            try {
-                this.developerNotes = JSON.parse(stored);
-                console.log('✅ Developer notes loaded from local storage:', Object.keys(this.developerNotes).length, 'projects have developer notes');
-                console.log('Developer notes data:', this.developerNotes);
-            } catch (error) {
-                console.error('Failed to parse developer notes from local storage:', error);
+                this.showNotification('Failed to load developer notes from cloud. Please check your connection.', 'error');
                 this.developerNotes = {};
             }
         } else {
-            console.log('No developer notes found in local storage');
+            console.warn('Not connected to cloud storage, cannot load developer notes');
+            this.showNotification('Not connected to cloud storage. Developer notes require cloud connection.', 'error');
             this.developerNotes = {};
         }
-        
-        console.log('=== FINAL DEVELOPER NOTES STATE ===');
-        console.log('this.developerNotes:', this.developerNotes);
-        console.log('Object.keys(this.developerNotes):', Object.keys(this.developerNotes));
     }
     
     async syncDeveloperNotesFromCloud() {
