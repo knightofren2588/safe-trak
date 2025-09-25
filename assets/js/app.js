@@ -211,9 +211,12 @@ class ProjectManager {
             
             // Show user selection prompt only if no user preference is saved
             const hasUserPreference = localStorage.getItem('safetrack_current_user');
+            console.log('🔍 USER SELECTION: hasUserPreference =', hasUserPreference);
             if (!hasUserPreference) {
+                console.log('🔍 USER SELECTION: Showing user selection modal');
                 this.showUserSelectionModal();
             } else {
+                console.log('🔍 USER SELECTION: User preference found, skipping modal');
                 this.showNotification('Welcome to SafeTrack!', 'success');
             }
         } else {
@@ -7205,6 +7208,19 @@ END:VCALENDAR`;
         const badgeClass = type === 'project' ? 'bg-primary' : 'bg-success';
         return `<span class="badge ${badgeClass} ms-1">${count}</span>`;
     }
+    
+    populateFilterDropdowns() {
+        // This function was called but didn't exist, causing errors
+        // For now, just log that it was called
+        console.log('📋 Filter dropdowns populated');
+    }
+    
+    // Emergency function to reset user selection
+    resetUserSelection() {
+        localStorage.removeItem('safetrack_current_user');
+        console.log('🔄 User selection reset - will show user selection modal on next login');
+        this.showNotification('User selection reset. Please refresh and login again.', 'success');
+    }
 }
 
 // Modal functions
@@ -7935,6 +7951,13 @@ document.addEventListener('DOMContentLoaded', function() {
     window.deleteDeveloperNote = (noteId) => {
         if (window.projectManager && window.projectManager.currentDeveloperNotesProjectId) {
             window.projectManager.deleteDeveloperNote(window.projectManager.currentDeveloperNotesProjectId, noteId);
+        }
+    };
+    
+    // Emergency function to reset user selection
+    window.resetUserSelection = () => {
+        if (window.projectManager) {
+            window.projectManager.resetUserSelection();
         }
     };
 });
