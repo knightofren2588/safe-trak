@@ -186,7 +186,8 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-describe("Archive functionality", () => {
+// Archive system removed — this test is deprecated.
+describe.skip("Archive functionality", () => {
   it("should move a project from active to archive", async () => {
     // Skip if pm is not properly initialized
     if (!pm) {
