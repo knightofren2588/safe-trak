@@ -71,16 +71,9 @@ class ProjectManager {
         this.projectViewMode = localStorage.getItem('safetrack_project_view_mode') || 'personal';
         
         
-        // User notifications system
-        this.userNotifications = {}; // Will be loaded asynchronously
-        
-        // Auto-cleanup old notifications on startup (async, but don't wait)
-        this.autoCleanupOldNotifications();
-        
-        // Set up periodic notification cleanup (every hour)
-        setInterval(() => {
-            this.autoCleanupOldNotifications();
-        }, 60 * 60 * 1000); // 1 hour
+        // User notifications system (disabled)
+        this.userNotifications = {};
+        // Notifications feature disabled: skip auto cleanup and interval
         
         // Multi-user assignment system
         this.selectedAssignedUsers = [];
@@ -310,317 +303,32 @@ class ProjectManager {
     // USER NOTIFICATIONS SYSTEM
     // ========================================
     
-    async loadUserNotifications() {
-        // CLOUD FIRST: Load from cloud storage if connected
-        if (this.cloudStorage && this.cloudStorage.isConnected) {
-            try {
-                const cloudData = await this.cloudStorage.loadFromCloud('user_notifications');
-                if (cloudData && Object.keys(cloudData).length > 0) {
-                    // Convert cloud format back to our internal format
-                    const notifications = {};
-                    Object.entries(cloudData).forEach(([userId, data]) => {
-                        if (data.notifications) {
-                            notifications[userId] = data.notifications;
-                        }
-                    });
-                    console.log('User notifications loaded from cloud');
-                    return notifications;
-                }
-            } catch (error) {
-                console.error('Failed to load notifications from cloud:', error);
-            }
-        }
-        
-        // Fallback to local storage
-        const stored = localStorage.getItem('safetrack_user_notifications');
-        const localNotifications = stored ? JSON.parse(stored) : {};
-        console.log('User notifications loaded from local storage (fallback)');
-        return localNotifications;
-    }
+    async loadUserNotifications() { return {}; }
     
-    async saveUserNotifications() {
-        // CLOUD FIRST: Save to cloud storage if connected
-        if (this.cloudStorage.isConnected) {
-            try {
-                // Convert user notifications to proper cloud storage format
-                const cloudData = {};
-                Object.entries(this.userNotifications).forEach(([userId, notifications]) => {
-                    if (notifications && notifications.length > 0) {
-                        cloudData[userId] = {
-                            userId: userId,
-                            notifications: notifications,
-                            lastUpdated: new Date().toISOString()
-                        };
-                    }
-                });
-                
-                console.log('Saving notifications to cloud:', cloudData);
-                await this.cloudStorage.saveToCloud('user_notifications', cloudData);
-                console.log('✅ User notifications saved to cloud successfully');
-            } catch (error) {
-                console.error('Failed to save notifications to cloud:', error);
-                // FALLBACK ONLY: Save to local storage if cloud fails
-                localStorage.setItem('safetrack_user_notifications', JSON.stringify(this.userNotifications));
-                console.log('Fallback: Notifications saved to local storage');
-            }
-        } else {
-            // Only use local storage if not connected to cloud
-            localStorage.setItem('safetrack_user_notifications', JSON.stringify(this.userNotifications));
-            console.log('No cloud connection: Notifications saved to local storage');
-        }
-    }
+    async saveUserNotifications() { return; }
     
-    addNotificationForProjectOwner(projectId, noteAuthor, noteText) {
-        const numericProjectId = Number(projectId);
-        const project = this.projects.find(p => p.id === numericProjectId);
-        
-        if (!project) return;
-        
-        // Notify project creator and all assigned users
-        const usersToNotify = [project.createdBy];
-        const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-        
-        // Add all assigned users to notification list
-        assignedUsers.forEach(userId => {
-            if (userId && userId !== project.createdBy && !usersToNotify.includes(userId)) {
-                usersToNotify.push(userId);
-            }
-        });
-        
-        // Don't notify the author of the note
-        const filteredUsers = usersToNotify.filter(userId => userId !== noteAuthor);
-        
-        filteredUsers.forEach(userId => {
-            if (!this.userNotifications[userId]) {
-                this.userNotifications[userId] = [];
-            }
-            
-            const notification = {
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                type: 'note_added',
-                projectId: numericProjectId,
-                projectName: project.name,
-                noteAuthor: noteAuthor,
-                noteAuthorName: this.users.find(u => u.id === noteAuthor)?.name || noteAuthor,
-                notePreview: noteText.substring(0, 100) + (noteText.length > 100 ? '...' : ''),
-                timestamp: new Date().toISOString(),
-                read: false
-            };
-            
-            this.userNotifications[userId].unshift(notification);
-        });
-        
-        this.saveUserNotifications();
-    }
+    addNotificationForProjectOwner() { return; }
     
-    getUnreadNotificationCount(userId) {
-        const userNotifications = this.userNotifications[userId] || [];
-        return userNotifications.filter(n => !n.read).length;
-    }
+    getUnreadNotificationCount() { return 0; }
     
-    markNotificationAsRead(notificationId) {
-        Object.keys(this.userNotifications).forEach(userId => {
-            this.userNotifications[userId] = this.userNotifications[userId].map(notification => {
-                if (notification.id === notificationId) {
-                    notification.read = true;
-                }
-                return notification;
-            });
-        });
-        this.saveUserNotifications();
-    }
+    markNotificationAsRead() { return; }
     
-    showUserNotifications() {
-        const notifications = this.userNotifications[this.currentUser] || [];
-        
-        if (notifications.length === 0) {
-            this.showNotification('No notifications', 'info');
-            return;
-        }
-        
-        // Create notifications modal content
-        const notificationsHtml = notifications.map(notification => `
-            <div class="notification-item ${notification.read ? 'read' : 'unread'} border rounded p-3 mb-2">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="notification-content flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="fas fa-sticky-note text-primary me-2"></i>
-                            <strong class="text-primary">New note on "${notification.projectName}"</strong>
-                            ${!notification.read ? '<span class="badge bg-danger ms-2">New</span>' : ''}
-                        </div>
-                        <p class="mb-2 text-muted">
-                            <strong>${notification.noteAuthorName}</strong> added: "${notification.notePreview}"
-                        </p>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i>
-                            ${new Date(notification.timestamp).toLocaleString()}
-                        </small>
-                    </div>
-                    <div class="notification-actions ms-3">
-                        <button class="btn btn-sm btn-outline-primary" onclick="viewProjectFromNotification(${notification.projectId}, '${notification.id}')">
-                            <i class="fas fa-eye me-1"></i>View Project
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-        
-        // Show in a modal or alert (for now, let's use a simple modal approach)
-        this.showNotificationModal(notificationsHtml);
-    }
+    showUserNotifications() { return false; }
     
-    showNotificationModal(content) {
-        // Create a temporary modal for notifications
-        const modalHtml = `
-            <div class="modal fade" id="notificationsModal" tabindex="-1">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">
-                                <i class="fas fa-bell me-2"></i>Your Notifications
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            ${content}
-                        </div>
-                        <div class="modal-footer">
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-secondary" onclick="markAllNotificationsRead()">
-                                    <i class="fas fa-check-double me-1"></i>Mark All Read
-                                </button>
-                                <button type="button" class="btn btn-outline-warning" onclick="clearReadNotifications()">
-                                    <i class="fas fa-broom me-1"></i>Clear Read
-                                </button>
-                                <button type="button" class="btn btn-outline-danger" onclick="clearAllNotifications()">
-                                    <i class="fas fa-trash me-1"></i>Clear All
-                                </button>
-                            </div>
-                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Remove existing modal if any
-        const existingModal = document.getElementById('notificationsModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        // Add modal to body
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('notificationsModal'));
-        modal.show();
-        
-        // Clean up modal after it's hidden
-        document.getElementById('notificationsModal').addEventListener('hidden.bs.modal', function() {
-            this.remove();
-        });
-    }
+    showNotificationModal() { return false; }
     
-    async markAllNotificationsRead() {
-        if (this.userNotifications[this.currentUser]) {
-            this.userNotifications[this.currentUser].forEach(notification => {
-                notification.read = true;
-            });
-            await this.saveUserNotifications();
-            this.updateNotificationBadge();
-            
-            // Close modal and show success
-            const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
-            if (modal) modal.hide();
-            this.showNotification('All notifications marked as read', 'success');
-        }
-    }
+    async markAllNotificationsRead() { return; }
     
-    async clearReadNotifications() {
-        if (this.userNotifications[this.currentUser]) {
-            const originalCount = this.userNotifications[this.currentUser].length;
-            this.userNotifications[this.currentUser] = this.userNotifications[this.currentUser].filter(notification => !notification.read);
-            const clearedCount = originalCount - this.userNotifications[this.currentUser].length;
-            
-            await this.saveUserNotifications();
-            this.updateNotificationBadge();
-            
-            // Close modal and show success
-            const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
-            if (modal) modal.hide();
-            
-            this.showNotification(`Cleared ${clearedCount} read notifications`, 'success');
-        }
-    }
+    async clearReadNotifications() { return; }
     
-    async clearAllNotifications() {
-        if (this.userNotifications[this.currentUser]) {
-            const clearedCount = this.userNotifications[this.currentUser].length;
-            
-            if (clearedCount === 0) {
-                this.showNotification('No notifications to clear', 'info');
-                return;
-            }
-            
-            // Confirm clearing all notifications
-            if (!confirm(`Are you sure you want to clear all ${clearedCount} notifications?\n\nThis action cannot be undone.`)) {
-                return;
-            }
-            
-            this.userNotifications[this.currentUser] = [];
-            await this.saveUserNotifications();
-            this.updateNotificationBadge();
-            
-            // Close modal and show success
-            const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
-            if (modal) modal.hide();
-            
-            this.showNotification(`Cleared all ${clearedCount} notifications`, 'success');
-        }
-    }
+    async clearAllNotifications() { return; }
     
     // Automatic cleanup - removes read notifications older than 7 days
-    async autoCleanupOldNotifications() {
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        
-        let totalCleaned = 0;
-        
-        for (const userId in this.userNotifications) {
-            if (this.userNotifications[userId]) {
-                const originalCount = this.userNotifications[userId].length;
-                this.userNotifications[userId] = this.userNotifications[userId].filter(notification => {
-                    // Keep unread notifications regardless of age
-                    if (!notification.read) return true;
-                    
-                    // Keep read notifications less than 7 days old
-                    const notificationDate = new Date(notification.timestamp);
-                    return notificationDate > sevenDaysAgo;
-                });
-                totalCleaned += originalCount - this.userNotifications[userId].length;
-            }
-        }
-        
-        if (totalCleaned > 0) {
-            console.log(`Auto-cleanup: Removed ${totalCleaned} old read notifications`);
-        await this.saveUserNotifications();
-        this.updateNotificationBadge();
-        }
-    }
+    async autoCleanupOldNotifications() { return; }
     
     updateNotificationBadge() {
         const badge = document.getElementById('notificationBadge');
-        const count = this.getUnreadNotificationCount(this.currentUser);
-        
-        if (badge) {
-            if (count > 0) {
-                badge.textContent = count > 99 ? '99+' : count;
-                badge.style.display = 'inline-block';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
+        if (badge) badge.style.display = 'none';
     }
 
     // ========================================
