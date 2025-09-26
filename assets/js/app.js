@@ -1,12 +1,15 @@
 // Ensure the constructor is globally visible for tests and tools
-;(function (PM) {
+queueMicrotask(() => {
   try {
-    if (typeof window !== 'undefined' && PM && !window.ProjectManager) {
+    const PM = (typeof ProjectManager !== 'undefined' && ProjectManager)
+      || (typeof window !== 'undefined' && window.ProjectManager);
+    if (!PM) return;
+    if (typeof window !== 'undefined' && typeof window.ProjectManager !== 'function') {
       window.ProjectManager = PM;
-      console.log('[APP] ProjectManager exposed globally');
+      // console.log('[APP] ProjectManager exposed globally (microtask)');
     }
   } catch {}
-})(typeof ProjectManager !== 'undefined' ? ProjectManager : null);
+});
 
 // Add diagnostic logs
 console.log('[APP] app.js executing');
@@ -202,21 +205,27 @@ class ProjectManager {
           this.__signalReady?.();
         };
 
-        // In constructor or init, call the test loader when in TEST
-        if (IS_TEST && typeof this.__testLoadNow === 'function') {
-          await this.__testLoadNow();
+        // Wrap the conditional block in an async function
+        async function initializeTestMode() {
+          // In constructor or init, call the test loader when in TEST
+          if (IS_TEST && typeof this.__testLoadNow === 'function') {
+            await this.__testLoadNow();
+          }
+
+          // In ProjectManager constructor or init()
+          if (IS_TEST && typeof window.CloudStorageService === 'function') {
+            this.cloudStorage = new window.CloudStorageService();
+            this.cloudConnected = true;
+          } else {
+            // existing Firebase/cloud init
+          }
+
+          // Call this once after initial load finishes
+          this.__signalReady?.();
         }
 
-        // In ProjectManager constructor or init()
-        if (IS_TEST && typeof window.CloudStorageService === 'function') {
-          this.cloudStorage = new window.CloudStorageService();
-          this.cloudConnected = true;
-        } else {
-          // existing Firebase/cloud init
-        }
-
-        // Call this once after initial load finishes
-        this.__signalReady?.();
+        // Call the async function
+        initializeTestMode.call(this);
     }
 
     // ========================================
@@ -3956,7 +3965,9 @@ END:VCALENDAR`;
     
     async archiveProject(projectId) {
         // 1) Normalize project/user
-        const uid = String(this.currentUser?.id ?? this.currentUser ?? 'unknown');
+        const bucketKey = (typeof this.currentArchiveBucketKey === 'function')
+          ? this.currentArchiveBucketKey()
+          : String(this.currentUser?.id ?? this.currentUser ?? 'unknown').toLowerCase().replace(/\W+/g, '').slice(0,40);
 
         // 2) Find the project
         const idx = (this.projects || []).findIndex(p => String(p.id) === String(projectId));
@@ -3978,9 +3989,9 @@ END:VCALENDAR`;
 
         // 4) Move to archive (dedupe)
         this.archivedProjects = this.archivedProjects || {};
-        const bucket = this.archivedProjects[uid] = Array.isArray(this.archivedProjects[uid]) ? this.archivedProjects[uid] : [];
+        const bucket = this.archivedProjects[bucketKey] = Array.isArray(this.archivedProjects[bucketKey]) ? this.archivedProjects[bucketKey] : [];
         if (!bucket.some(p => String(p.id) === String(project.id))) {
-            const copy = { ...project, archived: true, archivedAt: new Date().toISOString(), archivedBy: uid };
+            const copy = { ...project, archived: true, archivedAt: new Date().toISOString(), archivedBy: bucketKey };
             bucket.push(copy);
         }
 
@@ -3991,26 +4002,12 @@ END:VCALENDAR`;
         await this.saveProjects?.(this.projects);
         await this.saveArchivedProjects?.();
 
-        // 7) Refresh UI
-        this.render?.();
+        // 7) Notify
         this.showNotification?.('Project archived.', 'success');
 
-        // Guard against "zombie" items on startup (filter active vs archive)
-        const archivedIds = new Set((this.archivedProjects?.[uid] || []).map(p => String(p.id)));
-        if (Array.isArray(this.projects) && archivedIds.size) {
-            this.projects = this.projects.filter(p => !archivedIds.has(String(p.id)));
-        }
-
-        // Add a tiny "force-save" after archive (handles cloud eventual consistency)
-        if (typeof this.reloadProjectsFromSource === 'function') {
-            await this.reloadProjectsFromSource(); // your existing loader if present
-            // Apply the same 6-line guard here, too (optional, but safe)
-            const archivedIds = new Set((this.archivedProjects?.[uid] || []).map(p => String(p.id)));
-            if (Array.isArray(this.projects) && archivedIds.size) {
-                this.projects = this.projects.filter(p => !archivedIds.has(String(p.id)));
-            }
-            this.render?.();
-        }
+        // 8) Apply archive exclusions
+        this.applyArchiveExclusions?.();
+        this.render?.();
     }
     async restoreProject(archivedProjectId) {
         const userArchive = this.archivedProjects[this.currentUser] || [];
@@ -7058,6 +7055,18 @@ document.addEventListener('DOMContentLoaded', function() {
     window.projectManager = new ProjectManager();
     
 
+    // Test-only bootstrap: run initializeTestMode after instance exists (non-blocking)
+    if (typeof window !== 'undefined' &&
+        window.__TEST__ === true &&
+        window.projectManager &&
+        typeof window.projectManager.initializeTestMode === 'function' &&
+        !window.projectManager.__initTestModeDone) {
+      window.projectManager.__initTestModeDone = true;
+      Promise.resolve()
+        .then(() => window.projectManager.initializeTestMode())
+        .catch(() => {});
+    }
+
     // Load archived projects after initialization
     window.projectManager.loadArchivedProjects().then(archive => {
         window.projectManager.archivedProjects = archive;
@@ -7562,15 +7571,114 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 });
 
-// ---- test/prod-safe global exposure (no side effects) ----
-;(function () {
-  try {
-    if (typeof window !== 'undefined') {
-      // If the class is defined in this scope but not on window, expose it once.
-      if (typeof window.ProjectManager !== 'function' && typeof ProjectManager === 'function') {
-        window.ProjectManager = ProjectManager;
-      }
-      // Do NOT auto-create window.projectManager here — the app or tests do that.
+// Test-only fallback: ensure initializeTestMode runs once when DOM is ready
+(function () {
+  if (typeof window === 'undefined') return;
+  function runOnce() {
+    const pm = window.projectManager;
+    if (!pm || pm.__initTestModeDone) return;
+    if (window.__TEST__ === true && typeof pm.initializeTestMode === 'function') {
+      pm.__initTestModeDone = true;
+      Promise.resolve().then(() => pm.initializeTestMode()).catch(() => {});
     }
-  } catch (_) { /* ignore in older environments */ }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runOnce, { once: true });
+  } else {
+    runOnce();
+  }
 })();
+
+// ---- test/prod-safe global exposure (no side effects) ----
+queueMicrotask(() => {
+  try {
+    const PM = (typeof ProjectManager !== 'undefined' && ProjectManager)
+      || (typeof window !== 'undefined' && window.ProjectManager);
+    if (!PM) return;
+    if (typeof window !== 'undefined' && typeof window.ProjectManager !== 'function') {
+      window.ProjectManager = PM;
+      // console.log('[APP] ProjectManager exposed globally (microtask)');
+    }
+  } catch {}
+});
+
+// ---------- [archive bucket helper + safe expose] ----------
+(function () {
+  // Expose ProjectManager after evaluation completes
+  try {
+    queueMicrotask(() => {
+      try {
+        const PM = (typeof ProjectManager !== 'undefined' && ProjectManager)
+                || (typeof window !== 'undefined' && window.ProjectManager);
+        if (PM && typeof window !== 'undefined' && typeof window.ProjectManager !== 'function') {
+          window.ProjectManager = PM;
+        }
+      } catch {}
+    });
+  } catch {
+    Promise.resolve().then(() => {
+      try {
+        const PM = (typeof ProjectManager !== 'undefined' && ProjectManager)
+                || (typeof window !== 'undefined' && window.ProjectManager);
+        if (PM && typeof window !== 'undefined' && typeof window.ProjectManager !== 'function') {
+          window.ProjectManager = PM;
+        }
+      } catch {}
+    });
+  }
+
+  // Attach a stable helper to compute the archive bucket key used by the app.
+  function installBucketKeyHelper(PM) {
+    if (!PM || !PM.prototype) return;
+    if (typeof PM.prototype.currentArchiveBucketKey === 'function') return;
+    PM.prototype.currentArchiveBucketKey = function (user = this.currentUser) {
+      const u = user || {};
+      const raw = (u.username || u.email || u.login || u.name || u.id || u || 'unknown') + '';
+      const key = raw.toLowerCase().replace(/\W+/g, '').slice(0, 40);
+      return key || 'unknown';
+    };
+  }
+
+  // Install immediately if PM is already present; otherwise after a microtask.
+  try { installBucketKeyHelper(typeof ProjectManager !== 'undefined' ? ProjectManager : null); } catch {}
+  Promise.resolve().then(() => {
+    try { installBucketKeyHelper(typeof ProjectManager !== 'undefined' ? ProjectManager : (window && window.ProjectManager)); } catch {}
+  });
+})();
+// ---------- [end helper] ----------
+
+// -------- post-load reconcile: run once both projects and archive are loaded --------
+if (typeof ProjectManager !== 'undefined' && ProjectManager.prototype) {
+  if (typeof ProjectManager.prototype._markLoaded !== 'function') {
+    ProjectManager.prototype._markLoaded = function(kind) {
+      if (kind === 'projects') this.__loadedProjects = true;
+      if (kind === 'archive')  this.__loadedArchive  = true;
+
+      // When both are in, reconcile once on a microtask
+      queueMicrotask(async () => {
+        try {
+          if (this.__loadedProjects && this.__loadedArchive && !this.__reconciledOnce) {
+            this.__reconciledOnce = true;
+            // Remove any IDs from Active that exist in ANY archive bucket
+            if (typeof this.applyArchiveExclusions === 'function') {
+              this.applyArchiveExclusions();
+            } else {
+              const archivedIds = new Set();
+              for (const k of Object.keys(this.archivedProjects || {})) {
+                const list = this.archivedProjects[k] || [];
+                for (const p of list) archivedIds.add(String(p.id));
+              }
+              if (archivedIds.size && Array.isArray(this.projects)) {
+                this.projects = this.projects.filter(p => !archivedIds.has(String(p.id)));
+              }
+            }
+            // Persist cleaned Active so reloads stay clean
+            try { await this.saveProjects?.(this.projects); } catch {}
+            // Optional UI refresh
+            this.render?.();
+          }
+        } catch {}
+      });
+    };
+  }
+}

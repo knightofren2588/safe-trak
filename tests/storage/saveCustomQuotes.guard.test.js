@@ -1,47 +1,30 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { loadScript } from "../helpers/loadScript.js";
+import { ensurePM } from '../helpers/ensurePM.js';
 
-let pm;
+beforeAll(async () => {
+  // --- test boot standardization ---
+  localStorage.clear();
+  window.__TEST__ = true;
 
-beforeAll(() => {
-  // Simulate privacy mode / blocked storage
-  Object.defineProperty(window, "localStorage", {
-    configurable: true,
-    get() { throw new Error("blocked"); },
-  });
+  // (seed anything your test needs)
+  localStorage.setItem('safetrack_current_user', JSON.stringify({ id: 'u1', role: 'admin', name: 'Admin' }));
+  // example seed:
+  const seeded = [{ id: 101, name: 'Completed X', completed: true, status: 'completed', percentComplete: 100, archived: false }];
+  localStorage.setItem('projects', JSON.stringify(seeded));
+  localStorage.setItem('safetrack_projects', JSON.stringify(seeded));
+  localStorage.setItem('safetrack_archived_projects', JSON.stringify({}));
 
-  // Stub required globals
-  window.firebaseApp = {};
-  window.firestore = {};
-  window.firebaseAuth = {};
-  window.firebaseFunctions = {};
+  // optional: stub cloud before load if your test needs it
+  try {
+    const { CloudStub } = await import('../helpers/cloudStub.mjs');
+    window.CloudStorageService = CloudStub;
+  } catch (_) {}
 
-  // Minimal stub so ProjectManager can new CloudStorageService(...) without crashing
-  window.CloudStorageService = class {
-    constructor(...args) {
-      // no-op
-    }
-    // Return shapes the app expects during init/use. Add methods if tests complain.
-    saveToLocalStorage(key, value) { return true; }
-    loadFromLocalStorage(key) { return null; }
-    saveCurrentUser(user) { return true; }
-    getCurrentUser() { return { role: "user" }; }
-    saveUserSession(session) { return true; }
-    getUserSession() { return null; }
-    // If your app calls others (Cursor can list them), add no-op methods here:
-    // saveProjects, saveCertifications, saveComplianceItems, etc.
-  };
-
-  // Load scripts in exact order
-  loadScript("assets/js/cloudStorage.js");
-  loadScript("assets/js/app.js");
-
-  // Fire DOMContentLoaded and load events
-  document.dispatchEvent(new Event("DOMContentLoaded"));
-  window.dispatchEvent(new Event("load"));
-
-  // Capture the ProjectManager instance
-  pm = window.projectManager;
+  // obtain pm deterministically
+  const pm = await ensurePM();
+  global.pm = pm; // if convenient for subsequent tests
+  // --- end standardization ---
 });
 
 describe("Storage guard: saveCustomQuotes", () => {
