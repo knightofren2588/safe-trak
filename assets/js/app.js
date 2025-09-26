@@ -1,16 +1,3 @@
-// Ensure the constructor is globally visible for tests and tools
-;(function (PM) {
-  try {
-    if (typeof window !== 'undefined' && PM && !window.ProjectManager) {
-      window.ProjectManager = PM;
-      console.log('[APP] ProjectManager exposed globally');
-    }
-  } catch {}
-})(typeof ProjectManager !== 'undefined' ? ProjectManager : null);
-
-// Add diagnostic logs
-console.log('[APP] app.js executing');
-
 // Project data management
 class ProjectManager {
     constructor() {
@@ -204,7 +191,7 @@ class ProjectManager {
 
         // In constructor or init, call the test loader when in TEST
         if (IS_TEST && typeof this.__testLoadNow === 'function') {
-          await this.__testLoadNow();
+          this.__testLoadNow();
         }
 
         // In ProjectManager constructor or init()
