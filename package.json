@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
-    "smoke": "node scripts/smoke.mjs",
-    "lint": "eslint ."
+    "smoke": "node scripts/smoke.mjs"
   },
   "keywords": [],
   "author": "",
