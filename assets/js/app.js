@@ -3434,8 +3434,8 @@ END:VCALENDAR`;
         this.hasUserInteracted = true;
         localStorage.setItem('safetrack_user_interacted', 'true');
         
-        // If current user is 'all', default to admin for project creation
-        const creatorId = this.currentUser === 'all' ? 'admin' : this.currentUser;
+        // If current user is not set or is 'all', default to admin for project creation
+        const creatorId = (!this.currentUser || this.currentUser === 'all') ? 'admin' : this.currentUser;
         
         // Handle multiple assigned users
         let assignedUsers = projectData.assignedTo;
@@ -4101,92 +4101,7 @@ END:VCALENDAR`;
     
     async loadArchivedProjects() { return {}; }
     
-    showUserArchive() {
-        const userArchive = this.archivedProjects[this.currentUser] || [];
-        
-        if (userArchive.length === 0) {
-            this.showNotification('No archived projects found', 'info');
-            return;
-        }
-        
-        // Create archive modal content
-        const archiveHtml = userArchive.map(project => {
-            // Handle multiple assigned users for archived projects
-            const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-            const assignedUsersData = assignedUsers.map(userId => {
-                const user = this.users.find(u => u.id === userId);
-                return user ? { name: user.name, avatar: user.avatar, id: userId } : { name: 'Unknown', avatar: '?', id: userId };
-            });
-            
-            return `
-                <div class="archive-item border rounded p-3 mb-3" style="background: ${this.getUserColorMedium(project.createdBy)}; border-left: 4px solid ${this.getUserColor(project.createdBy)};">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="archive-content flex-grow-1">
-                            <div class="d-flex align-items-center mb-2">
-                                <div class="bg-${this.getCategoryColor(project.category)} text-white p-2 rounded me-3">
-                                    <i class="fas ${this.getCategoryIcon(project.category)} small"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-bold">${this.escapeHtml(project.name)}</h6>
-                                    <small class="text-muted">${this.escapeHtml(project.description || 'No description')}</small>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge bg-success">Completed</span>
-                                    <div class="small text-muted mt-1">${project.priority.toUpperCase()} Priority</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Detailed Project Information -->
-                            <div class="row g-2 mb-2">
-                                <div class="col-md-6">
-                                    <div class="small">
-                                        <strong>📅 Timeline:</strong><br>
-                                        <span class="text-muted">Started: ${this.formatDate(project.startDate)}</span><br>
-                                        <span class="text-muted">Due: ${project.dueDate ? this.formatDate(project.dueDate) : 'No deadline'}</span><br>
-                                        <span class="text-success">Completed: ${this.formatDate(project.completionDate)}</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="small">
-                                        <strong>👥 Team:</strong><br>
-                                        <div class="d-flex flex-wrap gap-1 mt-1">
-                                            ${assignedUsersData.map(user => `
-                                                <div class="d-flex align-items-center me-2">
-                                                    <div class="user-avatar-small me-1" style="background: ${this.getUserColor(user.id)};">
-                                                        ${user.avatar}
-                                                    </div>
-                                                    <span class="text-muted small">${user.name}</span>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="d-flex gap-3 text-muted small">
-                                <span><i class="fas fa-archive me-1"></i>Archived: ${this.formatDate(project.archivedAt)}</span>
-                                <span><i class="fas fa-chart-line me-1"></i>Progress: ${project.progress}%</span>
-                                <span><i class="fas fa-folder me-1"></i>Category: ${project.category}</span>
-                            </div>
-                        </div>
-                        <div class="archive-actions ms-3 d-flex flex-column gap-1">
-                            <button class="btn btn-sm btn-outline-info" onclick="viewArchivedProjectDetails(${project.originalId})" title="View full project details">
-                                <i class="fas fa-eye me-1"></i>Details
-                            </button>
-                            <button class="btn btn-sm btn-outline-primary" onclick="restoreProject(${project.originalId})" title="Restore to active projects">
-                                <i class="fas fa-undo me-1"></i>Restore
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteArchivedProject(${project.originalId})" title="Permanently delete archived project">
-                                <i class="fas fa-trash me-1"></i>Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-        // Archive UI removed
-    }
+    showUserArchive() { return false; }
     
     showArchiveModal(content) {
         // Archive UI removed
