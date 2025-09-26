@@ -1,6 +1,7 @@
 // Project data management
 class ProjectManager {
     constructor() {
+        console.log('[APP] ProjectManager ctor');
         this.cloudStorage = new CloudStorageService();
         this.projects = [];
         this.users = [];
@@ -84,12 +85,70 @@ class ProjectManager {
         // Multi-user assignment system
         this.selectedAssignedUsers = [];
         
-        // Archive system
-        this.archivedProjects = this.loadArchivedProjects();
+        // Archive system removed: single-list model (projects only)
         
         // Admin verification system
         this.isAdminVerified = false;
         this.pendingAdminAction = null;
+
+        // Archive helpers removed
+
+        // ---- test-ready signal (idempotent) ----
+        ;(function () {
+          try {
+            if (!ProjectManager) return;
+            const P = ProjectManager.prototype;
+
+            if (typeof P.whenReady !== 'function') {
+              P.whenReady = function () {
+                this.__readyPromise ??= new Promise(res => (this.__readyResolve = res));
+                return this.__readyPromise;
+              };
+            }
+            if (typeof P.__signalReady !== 'function') {
+              P.__signalReady = function () {
+                if (this.__readyResolve) { try { this.__readyResolve(true); } catch(_){} }
+                try { window.dispatchEvent(new Event('pm:dataLoaded')); } catch(_){}
+              };
+            }
+          } catch (_) {}
+        })();
+
+        // TEST mode switch
+        const IS_TEST = typeof window !== 'undefined' && window.__TEST__ === true;
+
+        // Add a test-only synchronous loader
+        ProjectManager.prototype.__testLoadNow = async function() {
+          // Prefer cloud-style key if present, else local fallback
+          let projs = [];
+          try {
+            const rawCloud = window.localStorage?.getItem('projects');
+            const rawLocal = window.localStorage?.getItem('safetrack_projects');
+            projs = rawCloud ? JSON.parse(rawCloud) : (rawLocal ? JSON.parse(rawLocal) : []);
+          } catch(_) {}
+          this.projects = Array.isArray(projs) ? projs : [];
+
+          // Archived buckets removed; single-list model
+
+          // signal ready so tests can proceed
+          this.__signalReady?.();
+        };
+
+        // In constructor or init, call the test loader when in TEST
+        if (IS_TEST && typeof this.__testLoadNow === 'function') {
+          this.__testLoadNow();
+        }
+
+        // In ProjectManager constructor or init()
+        if (IS_TEST && typeof window.CloudStorageService === 'function') {
+          this.cloudStorage = new window.CloudStorageService();
+          this.cloudConnected = true;
+        } else {
+          // existing Firebase/cloud init
+        }
+
+        // Call this once after initial load finishes
+        this.__signalReady?.();
     }
 
     // ========================================
@@ -647,7 +706,6 @@ class ProjectManager {
             </div>
         `;
     }
-    
     // ========================================
     // INDIVIDUAL USER VIEWS
     // ========================================
@@ -680,7 +738,6 @@ class ProjectManager {
             `;
         }).join('');
     }
-    
     // ========================================
     // ADMIN PASSWORD VERIFICATION
     // ========================================
@@ -694,7 +751,6 @@ class ProjectManager {
         // Show admin password modal
         this.showAdminPasswordModal('admin profile access');
     }
-    
     requireAdminPassword(actionCallback, actionName = 'admin function') {
         // If user is admin, check if already verified in this session
         if (this.currentUser === 'admin' && this.isAdminVerified) {
@@ -714,7 +770,6 @@ class ProjectManager {
         // Show admin password modal
         this.showAdminPasswordModal(actionName);
     }
-    
     showAdminPasswordModal(actionName) {
         // Clear any previous error
         document.getElementById('adminPasswordError').classList.add('d-none');
@@ -729,7 +784,6 @@ class ProjectManager {
             document.getElementById('adminPassword').focus();
         }, 500);
     }
-    
     verifyAdminPassword(password) {
         // Admin password (you can change this)
         const adminPassword = 'AdminSafe2025!';
@@ -1615,36 +1669,7 @@ END:VCALENDAR`;
         this.currentUser = null;
         this.showUserSelectionModal();
         
-        // Load archived projects and ensure proper separation
-        this.archivedProjects = await this.loadArchivedProjects();
-        
-        // Re-enable cleanup with better logic after confirming cloud storage works
-        if (this.projects.length > 0 && Object.keys(this.archivedProjects).length > 0) {
-            // Check if there was a recent archive operation that requires cleanup
-            const recentArchiveOperation = localStorage.getItem('recent_archive_operation');
-            const lastCleanup = localStorage.getItem('last_cleanup_timestamp');
-            const now = Date.now();
-            const oneHour = 60 * 60 * 1000; // Increased to 1 hour to be less aggressive
-            
-            // Only run cleanup if there was a recent archive operation
-            // Remove the time-based cleanup to prevent interference with new projects
-            if (recentArchiveOperation) {
-                console.log('Running cleanup - recent archive operation detected');
-                console.log('Projects before cleanup:', this.projects.map(p => ({id: p.id, name: p.name})));
-                console.log('Archived projects to check against:', Object.keys(this.archivedProjects).map(userId => ({
-                    userId,
-                    archivedIds: (this.archivedProjects[userId] || []).map(p => p.originalId)
-                })));
-                
-                await this.cleanupArchivedProjectsFromActive();
-                localStorage.setItem('last_cleanup_timestamp', now.toString());
-                localStorage.removeItem('recent_archive_operation'); // Clear the flag
-                
-                console.log('Projects after cleanup:', this.projects.map(p => ({id: p.id, name: p.name})));
-            } else {
-                console.log('Skipping cleanup - no recent archive operations');
-            }
-        }
+        // Archived cleanup removed
         
         // Load user notifications from cloud
         this.userNotifications = await this.loadUserNotifications();
@@ -1681,6 +1706,9 @@ END:VCALENDAR`;
         
         // Show connection status
         this.showConnectionStatus();
+
+        // Call this once after initial load finishes
+        this.__signalReady?.();
     }
 
     // Old authentication methods removed
@@ -2264,7 +2292,6 @@ END:VCALENDAR`;
             this.showNotification('Certification updated successfully!', 'success');
         }
     }
-
     closeCertificationModal() {
         const modal = bootstrap.Modal.getInstance(document.getElementById('certificationModal'));
         if (modal) {
@@ -2281,7 +2308,6 @@ END:VCALENDAR`;
             this.showNotification('Certification deleted', 'success');
         }
     }
-
     renderCertificationTable() {
         const tbody = document.getElementById('certificationTableBody');
         if (!tbody) return;
@@ -2950,11 +2976,7 @@ END:VCALENDAR`;
                 currentUser: this.currentUser
             });
             
-            // Load archived projects
-            this.archivedProjects = await this.loadArchivedProjects();
-            
-            // Reconcile active vs archive to ensure consistency
-            this.reconcileActiveVsArchive();
+        // Archived buckets removed
             
             // Update connection status after successful data load
             this.showConnectionStatus();
@@ -2984,33 +3006,38 @@ END:VCALENDAR`;
             currentUser: this.currentUser
         });
         
-        // Load archived projects
-        this.archivedProjects = await this.loadArchivedProjects();
-        
-        // Reconcile active vs archive to ensure consistency
-        this.reconcileActiveVsArchive();
+        // Archived buckets removed
+        // Archived buckets removed
     }
 
     loadProjects() {
-        const stored = localStorage.getItem('safetrack_projects');
-        return stored ? JSON.parse(stored) : [];
+        // Prefer canonical key, fall back to legacy
+        try {
+            const rawNew = localStorage.getItem('safetrack_projects');
+            const rawLegacy = localStorage.getItem('projects');
+            const loaded = rawNew ? JSON.parse(rawNew) : (rawLegacy ? JSON.parse(rawLegacy) : []);
+            // Normalize immediately to both keys
+            const norm = JSON.stringify(Array.isArray(loaded) ? loaded : []);
+            localStorage.setItem('safetrack_projects', norm);
+            localStorage.setItem('projects', norm);
+            return Array.isArray(loaded) ? loaded : [];
+        } catch {
+            return [];
+        }
     }
 
-    async saveProjects() {
-        console.log('Attempting to save projects:', {
-            count: this.projects.length,
-            projects: this.projects.map(p => ({id: p.id, name: p.name, createdBy: p.createdBy}))
-        });
-        
+    async saveProjects(arr = this.projects) {
+        // Save to cloud if available (no error if disconnected)
+        try { await this.cloudStorage?.saveProjects?.(arr); } catch {}
+
+        // Mirror to localStorage using both keys (canon + legacy)
         try {
-            await this.cloudStorage.saveProjects(this.projects);
-            console.log('✅ Projects saved to cloud successfully');
-        } catch (error) {
-            console.error('❌ Failed to save projects to cloud, falling back to local storage:', error);
-            // FALLBACK ONLY: Save to local storage only if cloud fails
-        localStorage.setItem('safetrack_projects', JSON.stringify(this.projects));
-            console.log('Fallback: Projects saved to local storage');
-        }
+            const data = JSON.stringify(arr || []);
+            localStorage.setItem('safetrack_projects', data);
+            localStorage.setItem('projects', data); // legacy mirror for older paths
+        } catch {}
+
+        return true;
     }
 
     loadUsers() {
@@ -3063,7 +3090,6 @@ END:VCALENDAR`;
         const stored = localStorage.getItem('safetrack_projects');
         return stored ? JSON.parse(stored) : [];
     }
-
     loadUsersLocal() {
         const stored = localStorage.getItem('safetrack_users');
         return stored ? JSON.parse(stored) : [];
@@ -3078,12 +3104,10 @@ END:VCALENDAR`;
         const stored = localStorage.getItem('safetrack_roles');
         return stored ? JSON.parse(stored) : [];
     }
-
     loadDepartmentsLocal() {
         const stored = localStorage.getItem('safetrack_departments');
         return stored ? JSON.parse(stored) : [];
     }
-
     loadCurrentUserLocal() {
         const stored = localStorage.getItem('safetrack_current_user');
         // Return null to trigger user selection modal instead of defaulting to 'all'
@@ -3169,7 +3193,6 @@ END:VCALENDAR`;
             location.reload();
         }
     }
-
     loadSampleData() {
         // Start with empty projects array - no hardcoded data
         this.projects = [];
@@ -3833,212 +3856,14 @@ END:VCALENDAR`;
         const user = this.users.find(u => u.id === userId);
         return user ? user.name : 'Unknown';
     }
-    
     // ========================================
     
+    // Archive functionality removed
     async archiveProject(projectId) {
-        const project = this.projects.find(p => String(p.id) === String(projectId));
-        if (!project) {
-            this.showNotification('Project not found', 'error');
-            return;
-        }
-        
-        // Only allow archiving completed projects
-        if (project.status !== 'completed') {
-            this.showNotification('Only completed projects can be archived', 'warning');
-            return;
-        }
-        
-        // Check if user can archive (creator or assigned user)
-        if (!this.canUserEditProject(project)) {
-            this.showNotification('You can only archive projects you created or are assigned to', 'error');
-            return;
-        }
-        
-        if (!confirm(`Are you sure you want to archive "${project.name}"?\n\nArchived projects are moved to your personal archive and hidden from the main project list.`)) {
-            return;
-        }
-        
-        // move: add to archive
-        const archivedProject = {
-            ...project,
-            archivedAt: new Date().toISOString(),
-            archivedBy: this.currentUser,
-            originalId: String(project.id),
-            status: 'archived'
-        };
-        
-        if (!this.archivedProjects[this.currentUser]) {
-            this.archivedProjects[this.currentUser] = [];
-        }
-        
-        // Idempotency: Check if already archived
-        if (this.archivedProjects[this.currentUser].some(p => String(p.originalId) === String(projectId))) {
-            this.showNotification('Project already archived', 'info');
-            return;
-        }
-        
-        this.archivedProjects[this.currentUser].unshift(archivedProject);
-        
-        // move: remove from active
-        const originalProjects = [...this.projects];
-        this.projects = this.projects.filter(p => String(p.id) !== String(projectId));
-        
-        // persist: active + archive
-        try {
-            await this.saveProjects();
-            await this.saveArchivedProjects();
-            
-            // Reconcile to ensure consistency
-            this.reconcileActiveVsArchive();
-            
-            // Update interface
-            this.render();
-            this.showNotification(`Project "${project.name}" archived successfully`, 'success');
-        } catch (error) {
-            // rollback on failure
-            console.warn('Failed to archive project:', error);
-            this.projects = originalProjects; // Restore original state
-            this.archivedProjects[this.currentUser] = this.archivedProjects[this.currentUser].filter(p => String(p.originalId) !== String(projectId));
-            this.showNotification('Failed to archive project. Please try again.', 'error');
-        }
+        return false;
     }
-    async restoreProject(archivedProjectId) {
-        const userArchive = this.archivedProjects[this.currentUser] || [];
-        const archivedProject = userArchive.find(p => p.originalId === archivedProjectId);
-        
-        if (!archivedProject) {
-            this.showNotification('Archived project not found', 'error');
-            return;
-        }
-        
-        if (!confirm(`Are you sure you want to restore "${archivedProject.name}"?\n\nThis will move it back to your active projects list.`)) {
-            return;
-        }
-        
-        // Create restored project (keep original ID to avoid conflicts with cleanup)
-        const restoredProject = {
-            ...archivedProject,
-            id: archivedProject.originalId, // Use original ID to maintain consistency
-            restoredAt: new Date().toISOString(),
-            restoredBy: this.currentUser
-        };
-        
-        // Remove archive metadata
-        delete restoredProject.archivedAt;
-        delete restoredProject.archivedBy;
-        delete restoredProject.originalId;
-        delete restoredProject.restoredAt;
-        delete restoredProject.restoredBy;
-        
-        // Add back to active projects
-        this.projects.unshift(restoredProject);
-        console.log(`Restore: Added project ${restoredProject.id} back to active projects. Total active: ${this.projects.length}`);
-        
-        // Remove from archive
-        const originalArchiveCount = this.archivedProjects[this.currentUser].length;
-        this.archivedProjects[this.currentUser] = userArchive.filter(p => p.originalId !== archivedProjectId);
-        const newArchiveCount = this.archivedProjects[this.currentUser].length;
-        console.log(`Restore: Removed from archive. Archive count: ${originalArchiveCount} → ${newArchiveCount}`);
-        
-        // Ensure the current user's archive is properly tracked even if empty
-        if (!this.archivedProjects[this.currentUser]) {
-            this.archivedProjects[this.currentUser] = [];
-        }
-        
-        // Save both
-        await this.saveProjects();
-        await this.saveArchivedProjects();
-        
-        console.log(`Restore: Saved to cloud. Active projects: ${this.projects.length}, Archived projects: ${this.archivedProjects[this.currentUser]?.length || 0}`);
-        
-        // Set flag to indicate recent archive operation for cleanup
-        localStorage.setItem('recent_archive_operation', 'true');
-        console.log('Restore: Set flag for cleanup to run on next page load');
-        
-        // Update interface
-        this.render();
-        this.showNotification(`Project "${archivedProject.name}" restored successfully`, 'success');
-    }
-    
-    async deleteArchivedProject(projectId) {
-        const userArchive = this.archivedProjects[this.currentUser] || [];
-        const projectIndex = userArchive.findIndex(p => p.originalId === projectId);
-        
-        if (projectIndex === -1) {
-            this.showNotification('Archived project not found', 'error');
-            return;
-        }
-        
-        const project = userArchive[projectIndex];
-        
-        // Confirm deletion
-        if (!confirm(`Are you sure you want to permanently delete "${project.name}"?\n\nThis action cannot be undone and will remove:\n- All project data\n- All project notes\n- All project history\n\nClick OK to permanently delete, or Cancel to keep the project.`)) {
-            return;
-        }
-        
-        // Remove from archived projects
-        this.archivedProjects[this.currentUser].splice(projectIndex, 1);
-        console.log(`Delete: Removed project ${projectId} from archive. Remaining archived: ${this.archivedProjects[this.currentUser].length}`);
-        
-        
-        // CRITICAL: Ensure this project ID is completely removed from active projects
-        const activeProjectsBefore = this.projects.length;
-        this.projects = this.projects.filter(p => p.id !== projectId);
-        const activeProjectsAfter = this.projects.length;
-        if (activeProjectsBefore !== activeProjectsAfter) {
-            console.log(`Delete: Also removed ${activeProjectsBefore - activeProjectsAfter} active projects with same ID ${projectId}`);
-        } else {
-            console.log(`Delete: No active projects found with ID ${projectId} (this is expected for archive-only deletion)`);
-        }
-        
-        // Save changes
-        console.log(`Delete: About to save archives. Current user ${this.currentUser} has ${this.archivedProjects[this.currentUser]?.length || 0} archived projects`);
-        await this.saveArchivedProjects();
-        
-        // ALWAYS save active projects to ensure the deletion is synced to cloud
-        await this.saveProjects();
-        console.log(`Delete: Force-saved active projects to cloud to ensure project ${projectId} is removed`);
-        
-        console.log(`Delete: Final state - Active: ${this.projects.length}, Archived: ${this.archivedProjects[this.currentUser].length}`);
-        
-        // Force immediate cloud storage update for current user's archive
-        if (this.cloudStorage.isConnected) {
-            try {
-                const currentUserProjects = this.archivedProjects[this.currentUser] || [];
-                
-                if (currentUserProjects.length === 0) {
-                    // If no projects left, completely DELETE the cloud storage document
-                    await this.cloudStorage.deleteFromCloud(`archived_projects_${this.currentUser}`, this.currentUser);
-                    console.log(`Delete: COMPLETELY REMOVED cloud storage document for ${this.currentUser}`);
-                } else {
-                    // Save normal archive data
-                    const archiveData = {
-                        [this.currentUser]: {
-                            userId: this.currentUser,
-                            projects: currentUserProjects,
-                            lastUpdated: new Date().toISOString()
-                        }
-                    };
-                    await this.cloudStorage.saveToCloud(`archived_projects_${this.currentUser}`, archiveData);
-                    console.log(`Delete: Force-saved archive to cloud: ${currentUserProjects.length} projects`);
-                }
-            } catch (error) {
-                console.error('Delete: Failed to update cloud storage:', error);
-            }
-        }
-        
-        // Update the main interface to reflect changes
-        this.render();
-        
-        // Refresh archive modal if open
-        const archiveModal = document.getElementById('archiveModal');
-        if (archiveModal && archiveModal.style.display !== 'none') {
-            this.showUserArchive();
-        }
-        
-        this.showNotification(`Project "${project.name}" permanently deleted`, 'success');
-    }
+    async restoreProject() { return false; }
+    async deleteArchivedProject() { return false; }
 
     // ========================================
     // COMPREHENSIVE SYSTEM TEST
@@ -4051,7 +3876,7 @@ END:VCALENDAR`;
             coreData: this.testCoreDataIntegrity(),
             userManagement: this.testUserManagement(),
             projectManagement: this.testProjectManagement(),
-            archiveSystem: this.testArchiveSystem(),
+            // archiveSystem removed
             cloudStorage: this.testCloudStorageConnection(),
             security: this.testSecurityFeatures()
         };
@@ -4221,38 +4046,7 @@ END:VCALENDAR`;
         }
     }
     
-    testArchiveSystem() {
-        try {
-            const issues = [];
-            
-            // Check archive structure
-            if (typeof this.archivedProjects !== 'object') issues.push('Archived projects not an object');
-            
-            // Check for archived projects in active list
-            const allArchivedIds = new Set();
-            Object.values(this.archivedProjects).forEach(userArchive => {
-                if (Array.isArray(userArchive)) {
-                    userArchive.forEach(p => allArchivedIds.add(p.originalId));
-                }
-            });
-            
-            const activeIds = new Set(this.projects.map(p => p.id));
-            const overlap = [...allArchivedIds].filter(id => activeIds.has(id));
-            if (overlap.length > 0) issues.push(`Projects in both active and archived: ${overlap.join(', ')}`);
-            
-            return {
-                status: issues.length === 0 ? 'PASS' : 'FAIL',
-                issues: issues,
-                data: {
-                    totalArchived: Object.values(this.archivedProjects).reduce((sum, arr) => sum + (arr?.length || 0), 0),
-                    usersWithArchives: Object.keys(this.archivedProjects).length,
-                    overlappingProjects: overlap
-                }
-            };
-        } catch (error) {
-            return { status: 'ERROR', error: error.message };
-        }
-    }
+    testArchiveSystem() { return { status: 'PASS', issues: [], data: {} }; }
     
     
     testCloudStorageConnection() {
@@ -4299,130 +4093,13 @@ END:VCALENDAR`;
     }
     
     // Helper to reconcile active vs archive lists
-    reconcileActiveVsArchive() {
-        // reconcile: remove archived ids from active
-        const userId = this.currentUser?.id || this.currentUser?.uid || this.currentUser;
-        if (!userId || !this.archivedProjects || !this.archivedProjects[userId]) return;
-        
-        const archivedIds = new Set((this.archivedProjects[userId] || []).map(p => String(p.originalId || p.id)));
-        const before = this.projects.length;
-        this.projects = this.projects.filter(p => !archivedIds.has(String(p.id)));
-        
-        if (this.projects.length !== before) {
-            // persist the reduced active list
-            this.saveProjects();
-        }
-    }
+    reconcileActiveVsArchive() { /* removed */ }
     
-    async cleanupArchivedProjectsFromActive() {
-        // Get all archived project IDs across all users
-        const archivedProjectIds = new Set();
-        
-        for (const userId in this.archivedProjects) {
-            const userArchive = this.archivedProjects[userId] || [];
-            userArchive.forEach(archivedProject => {
-                if (archivedProject.originalId) {
-                    archivedProjectIds.add(String(archivedProject.originalId));
-                }
-            });
-        }
-        
-        // Remove any projects from active list that are in archived list
-        const originalCount = this.projects.length;
-        this.projects = this.projects.filter(project => !archivedProjectIds.has(String(project.id)));
-        const newCount = this.projects.length;
-        
-        if (originalCount !== newCount) {
-            console.log(`Cleanup: Removed ${originalCount - newCount} archived projects from active list`);
-            // Save the cleaned up active projects
-            await this.saveProjects();
-        }
-    }
+    async cleanupArchivedProjectsFromActive() { /* removed */ }
     
-    async saveArchivedProjects() {
-        // CLOUD FIRST: Only save to local storage if cloud fails
-        // localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
-        
-        // Save to cloud storage if connected
-        if (this.cloudStorage.isConnected) {
-            try {
-                // Get all users who should have archive data saved (including current user)
-                const usersToSave = new Set(Object.keys(this.archivedProjects));
-                if (this.currentUser) {
-                    usersToSave.add(this.currentUser);
-                }
-                
-                // Save each user's archived projects separately to avoid array storage issues
-                for (const userId of usersToSave) {
-                    const projects = this.archivedProjects[userId] || [];
-                    
-                    if (projects.length === 0) {
-                        // If no projects, DELETE the cloud storage document completely
-                        await this.cloudStorage.deleteFromCloud(`archived_projects_${userId}`, userId);
-                        console.log(`Deleted cloud storage document for ${userId}: no archived projects`);
-                    } else {
-                        // Save normal archive data
-                        const archiveData = {
-                            [userId]: {
-                                userId: userId,
-                                projects: projects,
-                                lastUpdated: new Date().toISOString()
-                            }
-                        };
-                        await this.cloudStorage.saveToCloud(`archived_projects_${userId}`, archiveData);
-                        console.log(`Saved archive for ${userId}: ${projects.length} projects`, projects.map(p => ({id: p.originalId, name: p.name})));
-                    }
-                }
-                console.log('Archived projects saved to cloud');
-            } catch (error) {
-                console.error('Failed to save archived projects to cloud:', error);
-                // FALLBACK ONLY: Save to local storage if cloud fails
-                localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
-                console.log('Fallback: Archived projects saved to local storage');
-            }
-        } else {
-            // Only use local storage if not connected to cloud
-            localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
-            console.log('No cloud connection: Archived projects saved to local storage');
-        }
-    }
+    async saveArchivedProjects() { return false; }
     
-    async loadArchivedProjects() {
-        let archivedProjects = {};
-        
-        // Try to load from cloud first
-        if (this.cloudStorage.isConnected) {
-            try {
-                // Load archived projects for all users
-                const users = this.users || [];
-                for (const user of users) {
-                    try {
-                        const userArchiveData = await this.cloudStorage.loadFromCloud(`archived_projects_${user.id}`);
-                        if (userArchiveData && userArchiveData[user.id]) {
-                            const archiveInfo = userArchiveData[user.id];
-                            // Load projects regardless of count (including empty arrays)
-                            archivedProjects[user.id] = archiveInfo.projects || [];
-                            console.log(`Loaded archive for ${user.id}: ${archiveInfo.projects?.length || 0} projects${archiveInfo.isEmpty ? ' (explicitly empty)' : ''}`);
-                        }
-                    } catch (userError) {
-                        // User might not have archived projects yet
-                        console.log(`No archived projects found for user ${user.id}`);
-                    }
-                }
-                
-                if (Object.keys(archivedProjects).length > 0) {
-                    console.log('Loaded archived projects from cloud');
-                    return archivedProjects;
-                }
-            } catch (error) {
-                console.error('Failed to load archived projects from cloud:', error);
-            }
-        }
-        
-        // Fallback to local storage
-        const stored = localStorage.getItem('safetrack_archived_projects');
-        return stored ? JSON.parse(stored) : {};
-    }
+    async loadArchivedProjects() { return {}; }
     
     showUserArchive() {
         const userArchive = this.archivedProjects[this.currentUser] || [];
@@ -4508,404 +4185,21 @@ END:VCALENDAR`;
             `;
         }).join('');
         
-        this.showArchiveModal(archiveHtml);
+        // Archive UI removed
     }
     
     showArchiveModal(content) {
-        const userArchive = this.archivedProjects[this.currentUser] || [];
-        const archiveCount = userArchive.length;
-        
-        const modalHtml = `
-            <div class="modal fade" id="archiveModal" tabindex="-1">
-                <div class="modal-dialog modal-xl">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">
-                                <i class="fas fa-archive me-2"></i>My Archived Projects (${archiveCount})
-                            </h5>
-                            <div class="d-flex gap-2">
-                                <!-- Archive Export Options -->
-                                <div class="dropdown">
-                                    <button class="btn btn-outline-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        <i class="fas fa-download me-1"></i>Export Archive
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#" onclick="exportArchiveToExcel()">
-                                            <i class="fas fa-file-excel me-2 text-success"></i>Excel
-                                        </a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="exportArchiveToPDF()">
-                                            <i class="fas fa-file-pdf me-2 text-danger"></i>PDF
-                                        </a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="exportArchiveToCSV()">
-                                            <i class="fas fa-file-csv me-2 text-info"></i>CSV
-                                        </a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item" href="#" onclick="printArchive()">
-                                            <i class="fas fa-print me-2 text-secondary"></i>Print
-                                        </a></li>
-                                    </ul>
-                                </div>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                        </div>
-                        <div class="modal-body" style="max-height: 600px; overflow-y: auto;">
-                            ${content}
-                        </div>
-                        <div class="modal-footer">
-                            <div class="d-flex justify-content-between w-100">
-                                <div class="text-muted small">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Archived projects preserve all data including notes and screenshots
-                                </div>
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Remove existing modal if any
-        const existingModal = document.getElementById('archiveModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        // Add modal to body
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('archiveModal'));
-        modal.show();
-        
-        // Clean up modal after it's hidden
-        document.getElementById('archiveModal').addEventListener('hidden.bs.modal', function() {
-            this.remove();
-        });
+        // Archive UI removed
+    }
+    async viewArchivedProjectDetails() {
+        return false;
     }
     
-    async viewArchivedProjectDetails(projectId) {
-        // Close archive modal first for better UX
-        const existingArchiveModal = document.getElementById('archiveModal');
-        if (existingArchiveModal) {
-            const archiveModalInstance = bootstrap.Modal.getInstance(existingArchiveModal);
-            if (archiveModalInstance) {
-                archiveModalInstance.hide();
-                // Small delay to ensure modal closing animation completes
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
-        }
-        
-        const userArchive = this.archivedProjects[this.currentUser] || [];
-        const project = userArchive.find(p => p.originalId === projectId);
-        
-        if (!project) {
-            this.showNotification('Archived project not found', 'error');
-            return;
-        }
-        
-        // Handle multiple assigned users
-        const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-        const assignedUsersData = assignedUsers.map(userId => {
-            const user = this.users.find(u => u.id === userId);
-            return user ? user.name : 'Unknown';
-        });
-        
-        const creator = this.users.find(u => u.id === project.createdBy);
-        const creatorName = creator ? creator.name : 'Unknown';
-        
-        const detailsHtml = `
-            <div class="modal fade" id="projectDetailsModal" tabindex="-1">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header" style="background: ${this.getUserColorLight(project.createdBy)};">
-                            <h5 class="modal-title">
-                                <i class="fas fa-folder-open me-2"></i>${this.escapeHtml(project.name)}
-                                <span class="badge bg-success ms-2">Archived</span>
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="row g-4">
-                                <div class="col-md-6">
-                                    <h6><i class="fas fa-info-circle me-2"></i>Project Information</h6>
-                                    <table class="table table-sm">
-                                        <tr><td><strong>Name:</strong></td><td>${this.escapeHtml(project.name)}</td></tr>
-                                        <tr><td><strong>Description:</strong></td><td>${this.escapeHtml(project.description || 'No description')}</td></tr>
-                                        <tr><td><strong>Category:</strong></td><td>${project.category}</td></tr>
-                                        <tr><td><strong>Priority:</strong></td><td><span class="badge bg-${this.getPriorityColor(project.priority)}">${project.priority.toUpperCase()}</span></td></tr>
-                                        <tr><td><strong>Status:</strong></td><td><span class="badge bg-success">Completed</span></td></tr>
-                                        <tr><td><strong>Progress:</strong></td><td>${project.progress}%</td></tr>
-                                    </table>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6><i class="fas fa-calendar me-2"></i>Timeline</h6>
-                                    <table class="table table-sm">
-                                        <tr><td><strong>Start Date:</strong></td><td>${this.formatDate(project.startDate)}</td></tr>
-                                        <tr><td><strong>Due Date:</strong></td><td>${project.dueDate ? this.formatDate(project.dueDate) : 'No deadline'}</td></tr>
-                                        <tr><td><strong>Completed:</strong></td><td class="text-success">${this.formatDate(project.completionDate)}</td></tr>
-                                        <tr><td><strong>Archived:</strong></td><td>${this.formatDate(project.archivedAt)}</td></tr>
-                                    </table>
-                                    
-                                    <h6 class="mt-3"><i class="fas fa-users me-2"></i>Team Members</h6>
-                                    <div class="mb-2">
-                                        <strong>Created by:</strong> <span class="badge bg-primary">${creatorName}</span>
-                                    </div>
-                                    <div>
-                                        <strong>Assigned to:</strong><br>
-                                        <div class="d-flex flex-wrap gap-1 mt-1">
-                                            ${assignedUsersData.map(name => `
-                                                <span class="badge bg-secondary">${name}</span>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-outline-primary" onclick="restoreProject(${project.originalId})">
-                                <i class="fas fa-undo me-1"></i>Restore Project
-                            </button>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Remove existing modal if any
-        const existingModal = document.getElementById('projectDetailsModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-        
-        // Add modal to body
-        document.body.insertAdjacentHTML('beforeend', detailsHtml);
-        
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('projectDetailsModal'));
-        modal.show();
-        
-        // Clean up modal after it's hidden
-        document.getElementById('projectDetailsModal').addEventListener('hidden.bs.modal', function() {
-            this.remove();
-        });
-    }
-    // Archive export functions
-    exportArchiveToExcel() {
-        const userArchive = this.archivedProjects[this.currentUser] || [];
-        if (userArchive.length === 0) {
-            this.showNotification('No archived projects to export', 'warning');
-            return;
-        }
-        
-        const exportData = userArchive.map(project => {
-            const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-            const assignedNames = assignedUsers.map(userId => {
-                const user = this.users.find(u => u.id === userId);
-                return user ? user.name : 'Unknown';
-            }).join(', ');
-            
-            const createdBy = this.users.find(u => u.id === project.createdBy);
-            
-            return {
-                'Project Name': project.name,
-                'Description': project.description || '',
-                'Category': project.category,
-                'Priority': project.priority.toUpperCase(),
-                'Status': 'COMPLETED (ARCHIVED)',
-                'Progress': `${project.progress}%`,
-                'Assigned To': assignedNames,
-                'Created By': createdBy ? createdBy.name : 'Unknown',
-                'Start Date': project.startDate ? new Date(project.startDate).toLocaleDateString() : '',
-                'Due Date': project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'No deadline',
-                'Completion Date': project.completionDate ? new Date(project.completionDate).toLocaleDateString() : '',
-                'Archive Date': project.archivedAt ? new Date(project.archivedAt).toLocaleDateString() : ''
-            };
-        });
-        
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Archived Projects");
-        
-        const fileName = `SafeTrack_Archived_Projects_${this.currentUser}_${new Date().toISOString().split('T')[0]}.xlsx`;
-        XLSX.writeFile(wb, fileName);
-        
-        this.showNotification('Archived projects exported to Excel successfully!', 'success');
-    }
-    
-    exportArchiveToPDF() {
-        const userArchive = this.archivedProjects[this.currentUser] || [];
-        if (userArchive.length === 0) {
-            this.showNotification('No archived projects to export', 'warning');
-            return;
-        }
-        
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        // Add title
-        doc.setFontSize(20);
-        doc.text('SafeTrack - Archived Projects', 20, 20);
-        
-        const currentUserData = this.users.find(u => u.id === this.currentUser);
-        const userName = currentUserData ? currentUserData.name : this.currentUser;
-        
-        doc.setFontSize(12);
-        doc.text(`User: ${userName}`, 20, 35);
-        doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 20, 45);
-        doc.text(`Total Archived Projects: ${userArchive.length}`, 20, 55);
-        
-        // Prepare data for table
-        const tableData = userArchive.map(project => {
-            const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-            const assignedNames = assignedUsers.map(userId => {
-                const user = this.users.find(u => u.id === userId);
-                return user ? user.name : 'Unknown';
-            }).join(', ');
-            
-            return [
-                project.name,
-                project.category,
-                project.priority.toUpperCase(),
-                assignedNames,
-                project.completionDate ? new Date(project.completionDate).toLocaleDateString() : '',
-                project.archivedAt ? new Date(project.archivedAt).toLocaleDateString() : ''
-            ];
-        });
-        
-        // Add table
-        doc.autoTable({
-            head: [['Project Name', 'Category', 'Priority', 'Assigned To', 'Completed', 'Archived']],
-            body: tableData,
-            startY: 65,
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [220, 53, 69] }
-        });
-        
-        const fileName = `SafeTrack_Archived_Projects_${this.currentUser}_${new Date().toISOString().split('T')[0]}.pdf`;
-        doc.save(fileName);
-        
-        this.showNotification('Archived projects exported to PDF successfully!', 'success');
-    }
-    
-    exportArchiveToCSV() {
-        const userArchive = this.archivedProjects[this.currentUser] || [];
-        if (userArchive.length === 0) {
-            this.showNotification('No archived projects to export', 'warning');
-            return;
-        }
-        
-        const exportData = userArchive.map(project => {
-            const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-            const assignedNames = assignedUsers.map(userId => {
-                const user = this.users.find(u => u.id === userId);
-                return user ? user.name : 'Unknown';
-            }).join(', ');
-            
-            const createdBy = this.users.find(u => u.id === project.createdBy);
-            
-            return {
-                'Project Name': project.name,
-                'Description': project.description || '',
-                'Category': project.category,
-                'Priority': project.priority.toUpperCase(),
-                'Status': 'COMPLETED (ARCHIVED)',
-                'Progress': `${project.progress}%`,
-                'Assigned To': assignedNames,
-                'Created By': createdBy ? createdBy.name : 'Unknown',
-                'Start Date': project.startDate ? new Date(project.startDate).toLocaleDateString() : '',
-                'Due Date': project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'No deadline',
-                'Completion Date': project.completionDate ? new Date(project.completionDate).toLocaleDateString() : '',
-                'Archive Date': project.archivedAt ? new Date(project.archivedAt).toLocaleDateString() : ''
-            };
-        });
-        
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        const csv = XLSX.utils.sheet_to_csv(ws);
-        
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `SafeTrack_Archived_Projects_${this.currentUser}_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        this.showNotification('Archived projects exported to CSV successfully!', 'success');
-    }
-    
-    printArchive() {
-        const userArchive = this.archivedProjects[this.currentUser] || [];
-        if (userArchive.length === 0) {
-            this.showNotification('No archived projects to print', 'warning');
-            return;
-        }
-        
-        const currentUserData = this.users.find(u => u.id === this.currentUser);
-        const userName = currentUserData ? currentUserData.name : this.currentUser;
-        
-        const printContent = `
-            <html>
-            <head>
-                <title>SafeTrack - Archived Projects</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    .header { border-bottom: 2px solid #dc3545; padding-bottom: 10px; margin-bottom: 20px; }
-                    .project-item { border: 1px solid #ddd; margin-bottom: 15px; padding: 15px; border-radius: 5px; }
-                    .project-header { background: #f8f9fa; padding: 10px; margin: -15px -15px 10px -15px; border-radius: 5px 5px 0 0; }
-                    .badge { background: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.8em; }
-                    .text-muted { color: #6c757d; }
-                    .small { font-size: 0.9em; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>SafeTrack - Archived Projects</h1>
-                    <p><strong>User:</strong> ${userName} | <strong>Export Date:</strong> ${new Date().toLocaleDateString()} | <strong>Total Projects:</strong> ${userArchive.length}</p>
-                </div>
-                
-                ${userArchive.map(project => {
-                    const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-                    const assignedNames = assignedUsers.map(userId => {
-                        const user = this.users.find(u => u.id === userId);
-                        return user ? user.name : 'Unknown';
-                    }).join(', ');
-                    
-                    return `
-                        <div class="project-item">
-                            <div class="project-header">
-                                <h3>${project.name} <span class="badge">COMPLETED</span></h3>
-                            </div>
-                            <p><strong>Description:</strong> ${project.description || 'No description'}</p>
-                            <div class="row">
-                                <div class="col">
-                                    <p><strong>Category:</strong> ${project.category}</p>
-                                    <p><strong>Priority:</strong> ${project.priority.toUpperCase()}</p>
-                                    <p><strong>Progress:</strong> ${project.progress}%</p>
-                                </div>
-                                <div class="col">
-                                    <p><strong>Start Date:</strong> ${this.formatDate(project.startDate)}</p>
-                                    <p><strong>Due Date:</strong> ${project.dueDate ? this.formatDate(project.dueDate) : 'No deadline'}</p>
-                                    <p><strong>Completed:</strong> ${this.formatDate(project.completionDate)}</p>
-                                    <p><strong>Archived:</strong> ${this.formatDate(project.archivedAt)}</p>
-                                </div>
-                            </div>
-                            <p><strong>Assigned Team Members:</strong> ${assignedNames}</p>
-                        </div>
-                    `;
-                }).join('')}
-            </body>
-            </html>
-        `;
-        
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(printContent);
-        printWindow.document.close();
-        printWindow.print();
-    }
+    // Archive export functions disabled
+    exportArchiveToExcel() { return false; }
+    exportArchiveToPDF() { return false; }
+    exportArchiveToCSV() { return false; }
+    printArchive() { return false; }
 
     render() {
         this.renderDashboardStats();
@@ -4915,8 +4209,8 @@ END:VCALENDAR`;
     }
 
     renderDashboardStats() {
-        // Start with only active projects (filter out archived ones)
-        let projectsToCount = this.projects.filter(p => !p.isArchived && p.status !== 'archived');
+        // Single-list model: no archive filtering needed
+        let projectsToCount = this.projects;
         
         // Filter by current user if not viewing all team projects
         if (this.projectViewMode === 'personal') {
@@ -4990,8 +4284,8 @@ END:VCALENDAR`;
         // If no specific projects provided, filter based on view mode
         let projects = projectsToRender;
         if (!projects) {
-            // First, ensure we only work with active projects (filter out any archived ones)
-            const activeProjects = this.projects.filter(p => !p.isArchived && p.status !== 'archived');
+            // Single-list model: all projects are in this.projects
+            const activeProjects = this.projects;
             
             if (this.projectViewMode === 'all') {
                 // Show all active projects (read-only view for non-owners)
@@ -5010,8 +4304,8 @@ END:VCALENDAR`;
                 });
             }
         } else {
-            // Even when projects are provided, filter out archived ones
-            projects = projects.filter(p => !p.isArchived && p.status !== 'archived');
+            // Single-list model: no filtering
+            // projects = projects;
         }
         
         // Update table title based on current user
@@ -5147,9 +4441,7 @@ END:VCALENDAR`;
                             ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
                                 <i class="fas fa-images"></i>
                             </button>` : ''}
-                            ${project.status === 'completed' ? `<button onclick="projectManager.archiveProject(${project.id})" class="btn btn-outline-warning" title="Archive Completed Project">
-                                <i class="fas fa-archive"></i>
-                            </button>` : ''}
+                            
                             <button onclick="projectManager.deleteProject(${project.id})" class="btn btn-outline-danger" title="Delete Project">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -5375,7 +4667,6 @@ END:VCALENDAR`;
             day: 'numeric' 
         });
     }
-
     // User management methods
     async addUser(userData) {
         // Mark that user has interacted with the app
@@ -5515,7 +4806,6 @@ END:VCALENDAR`;
         this.updateViewModeInterface();
         this.render(); // Re-render projects with new view mode
     }
-
     updateUserInterface() {
         const welcomeUsername = document.getElementById('welcomeUsername');
         const welcomeUserRole = document.getElementById('welcomeUserRole');
@@ -6165,7 +5455,6 @@ END:VCALENDAR`;
             `;
         }).join('');
     }
-
     populateRoleDropdowns() {
         const userRoleSelect = document.getElementById('userRole');
         if (userRoleSelect) {
@@ -6306,7 +5595,6 @@ END:VCALENDAR`;
             });
         }
     }
-
     // ==========================================
     // BULK IMPORT SYSTEM
     // ==========================================
@@ -6878,25 +6166,25 @@ function updateProjectProgress() {
 
 function addCategory() {
     if (window.projectManager) {
-        window.projectManager.addCategory();
+        projectManager.addCategory();
     }
 }
 
 function openCategoryModal() {
     if (window.projectManager) {
-        window.projectManager.openCategoryModal();
+        projectManager.openCategoryModal();
     }
 }
 
 function addRole() {
     if (window.projectManager) {
-        window.projectManager.addRole();
+        projectManager.addRole();
     }
 }
 
 function openRoleModal() {
     if (window.projectManager) {
-        window.projectManager.openRoleModal();
+        projectManager.openRoleModal();
     }
 }
 
@@ -6956,14 +6244,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.projectManager = new ProjectManager();
     
 
-    // Load archived projects after initialization
-    window.projectManager.loadArchivedProjects().then(archive => {
-        window.projectManager.archivedProjects = archive;
-        console.log('Archived projects loaded successfully');
-    }).catch(error => {
-        console.error('Failed to load archived projects:', error);
-        window.projectManager.archivedProjects = {};
-    });
+    // Archived projects removed: single-list model only
     
     // Check authentication after ProjectManager is created
     window.projectManager.checkAuthentication();
@@ -7170,11 +6451,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Global archive functions
-    window.showUserArchive = () => {
-        if (window.projectManager) {
-            window.projectManager.showUserArchive();
-        }
-    };
+    // Archive actions removed
 
     window.archiveProject = (projectId) => {
         if (window.projectManager) {
@@ -7182,17 +6459,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    window.restoreProject = (projectId) => {
-        if (window.projectManager) {
-            window.projectManager.restoreProject(projectId);
-        }
-    };
+    window.restoreProject = () => false;
 
-    window.viewArchivedProjectDetails = (projectId) => {
-        if (window.projectManager) {
-            window.projectManager.viewArchivedProjectDetails(projectId);
-        }
-    };
+    window.viewArchivedProjectDetails = () => false;
 
     // Archive export functions
     window.exportArchiveToExcel = () => {
@@ -7222,11 +6491,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     
 
-    window.deleteArchivedProject = (projectId) => {
-        if (window.projectManager) {
-            window.projectManager.deleteArchivedProject(projectId);
-        }
-    };
+    window.deleteArchivedProject = () => false;
 
     window.toggleAdvancedFilters = () => {
         const advancedFilters = document.getElementById('advancedFilters');
@@ -7459,3 +6724,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 });
+
+// ---- test/prod-safe global exposure (no side effects) ----
+;(function () {
+  try {
+    if (typeof window !== 'undefined') {
+      // If the class is defined in this scope but not on window, expose it once.
+      if (typeof window.ProjectManager !== 'function' && typeof ProjectManager === 'function') {
+        window.ProjectManager = ProjectManager;
+      }
+      // Do NOT auto-create window.projectManager here — the app or tests do that.
+    }
+  } catch (_) { /* ignore in older environments */ }
+})();

@@ -36,5 +36,15 @@ global.navigator = dom.window.navigator;
   });
 })();
 
-// Prevent "bootstrap is not defined" errors in tests
-window.bootstrap = { Modal: class {}, Tooltip: class {}, Popover: class {} };
+// Stub Bootstrap to prevent ReferenceError in tests
+if (typeof window !== 'undefined' && !window.bootstrap) {
+  window.bootstrap = {
+    Modal: class {
+      constructor() {}
+      show() {}
+      hide() {}
+    },
+    Tooltip: class {},
+    Popover: class {}
+  };
+}
