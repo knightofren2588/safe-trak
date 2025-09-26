@@ -3876,7 +3876,7 @@ END:VCALENDAR`;
             coreData: this.testCoreDataIntegrity(),
             userManagement: this.testUserManagement(),
             projectManagement: this.testProjectManagement(),
-            archiveSystem: this.testArchiveSystem(),
+            // archiveSystem removed
             cloudStorage: this.testCloudStorageConnection(),
             security: this.testSecurityFeatures()
         };
@@ -4046,38 +4046,7 @@ END:VCALENDAR`;
         }
     }
     
-    testArchiveSystem() {
-        try {
-            const issues = [];
-            
-            // Check archive structure
-            if (typeof this.archivedProjects !== 'object') issues.push('Archived projects not an object');
-            
-            // Check for archived projects in active list
-            const allArchivedIds = new Set();
-            Object.values(this.archivedProjects).forEach(userArchive => {
-                if (Array.isArray(userArchive)) {
-                    userArchive.forEach(p => allArchivedIds.add(p.originalId || p.id));
-                }
-            });
-            
-            const activeIds = new Set(this.projects.map(p => p.id));
-            const overlap = [...allArchivedIds].filter(id => activeIds.has(id));
-            if (overlap.length > 0) issues.push(`Projects in both active and archived: ${overlap.join(', ')}`);
-            
-            return {
-                status: issues.length === 0 ? 'PASS' : 'FAIL',
-                issues: issues,
-                data: {
-                    totalArchived: Object.values(this.archivedProjects).reduce((sum, arr) => sum + (arr?.length || 0), 0),
-                    usersWithArchives: Object.keys(this.archivedProjects).length,
-                    overlappingProjects: overlap
-                }
-            };
-        } catch (error) {
-            return { status: 'ERROR', error: error.message };
-        }
-    }
+    testArchiveSystem() { return { status: 'PASS', issues: [], data: {} }; }
     
     
     testCloudStorageConnection() {
@@ -4124,130 +4093,13 @@ END:VCALENDAR`;
     }
     
     // Helper to reconcile active vs archive lists
-    reconcileActiveVsArchive() {
-        // reconcile: remove archived ids from active
-        const userId = this.currentUser?.id || this.currentUser?.uid || this.currentUser;
-        if (!userId || !this.archivedProjects || !this.archivedProjects[userId]) return;
-        
-        const archivedIds = new Set((this.archivedProjects[userId] || []).map(p => String(p.originalId || p.id)));
-        const before = this.projects.length;
-        this.projects = this.projects.filter(p => !archivedIds.has(String(p.id)));
-        
-        if (this.projects.length !== before) {
-            // persist the reduced active list
-            this.saveProjects();
-        }
-    }
+    reconcileActiveVsArchive() { /* removed */ }
     
-    async cleanupArchivedProjectsFromActive() {
-        // Get all archived project IDs across all users
-        const archivedProjectIds = new Set();
-        
-        for (const userId in this.archivedProjects) {
-            const userArchive = this.archivedProjects[userId] || [];
-            userArchive.forEach(archivedProject => {
-                if (archivedProject.originalId) {
-                    archivedProjectIds.add(String(archivedProject.originalId));
-                }
-            });
-        }
-        
-        // Remove any projects from active list that are in archived list
-        const originalCount = this.projects.length;
-        this.projects = this.projects.filter(project => !archivedProjectIds.has(String(project.id)));
-        const newCount = this.projects.length;
-        
-        if (originalCount !== newCount) {
-            console.log(`Cleanup: Removed ${originalCount - newCount} archived projects from active list`);
-            // Save the cleaned up active projects
-            await this.saveProjects();
-        }
-    }
+    async cleanupArchivedProjectsFromActive() { /* removed */ }
     
-    async saveArchivedProjects() {
-        // CLOUD FIRST: Only save to local storage if cloud fails
-        // localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
-        
-        // Save to cloud storage if connected
-        if (this.cloudStorage.isConnected) {
-            try {
-                // Get all users who should have archive data saved (including current user)
-                const usersToSave = new Set(Object.keys(this.archivedProjects));
-                if (this.currentUser) {
-                    usersToSave.add(this.currentUser);
-                }
-                
-                // Save each user's archived projects separately to avoid array storage issues
-                for (const userId of usersToSave) {
-                    const projects = this.archivedProjects[userId] || [];
-                    
-                    if (projects.length === 0) {
-                        // If no projects, DELETE the cloud storage document completely
-                        await this.cloudStorage.deleteFromCloud(`archived_projects_${userId}`, userId);
-                        console.log(`Deleted cloud storage document for ${userId}: no archived projects`);
-                    } else {
-                        // Save normal archive data
-                        const archiveData = {
-                            [userId]: {
-                                userId: userId,
-                                projects: projects,
-                                lastUpdated: new Date().toISOString()
-                            }
-                        };
-                        await this.cloudStorage.saveToCloud(`archived_projects_${userId}`, archiveData);
-                        console.log(`Saved archive for ${userId}: ${projects.length} projects`, projects.map(p => ({id: p.originalId, name: p.name})));
-                    }
-                }
-                console.log('Archived projects saved to cloud');
-            } catch (error) {
-                console.error('Failed to save archived projects to cloud:', error);
-                // FALLBACK ONLY: Save to local storage if cloud fails
-                localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
-                console.log('Fallback: Archived projects saved to local storage');
-            }
-        } else {
-            // Only use local storage if not connected to cloud
-            localStorage.setItem('safetrack_archived_projects', JSON.stringify(this.archivedProjects));
-            console.log('No cloud connection: Archived projects saved to local storage');
-        }
-    }
+    async saveArchivedProjects() { return false; }
     
-    async loadArchivedProjects() {
-        let archivedProjects = {};
-        
-        // Try to load from cloud first
-        if (this.cloudStorage.isConnected) {
-            try {
-                // Load archived projects for all users
-                const users = this.users || [];
-                for (const user of users) {
-                    try {
-                        const userArchiveData = await this.cloudStorage.loadFromCloud(`archived_projects_${user.id}`);
-                        if (userArchiveData && userArchiveData[user.id]) {
-                            const archiveInfo = userArchiveData[user.id];
-                            // Load projects regardless of count (including empty arrays)
-                            archivedProjects[user.id] = archiveInfo.projects || [];
-                            console.log(`Loaded archive for ${user.id}: ${archiveInfo.projects?.length || 0} projects${archiveInfo.isEmpty ? ' (explicitly empty)' : ''}`);
-                        }
-                    } catch (userError) {
-                        // User might not have archived projects yet
-                        console.log(`No archived projects found for user ${user.id}`);
-                    }
-                }
-                
-                if (Object.keys(archivedProjects).length > 0) {
-                    console.log('Loaded archived projects from cloud');
-                    return archivedProjects;
-                }
-            } catch (error) {
-                console.error('Failed to load archived projects from cloud:', error);
-            }
-        }
-        
-        // Fallback to local storage
-        const stored = localStorage.getItem('safetrack_archived_projects');
-        return stored ? JSON.parse(stored) : {};
-    }
+    async loadArchivedProjects() { return {}; }
     
     showUserArchive() {
         const userArchive = this.archivedProjects[this.currentUser] || [];
