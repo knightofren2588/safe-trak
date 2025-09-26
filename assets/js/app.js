@@ -3569,6 +3569,65 @@ END:VCALENDAR`;
         modal.show();
     }
 
+    // Render the selected assigned users as removable chips in the modal
+    renderAssignedUsers() {
+        const container = document.getElementById('assignedUsersContainer');
+        if (!container) return;
+        const items = (this.selectedAssignedUsers || []).map(userId => {
+            const userName = this.getUserName ? this.getUserName(userId) : String(userId);
+            return `
+                <span class="badge bg-light text-dark border me-2 mb-2">
+                    <i class="fas fa-user me-1"></i>${this.escapeHtml ? this.escapeHtml(userName) : userName}
+                    <button type="button" class="btn btn-sm btn-link text-danger ms-2 p-0" onclick="removeAssignedUser('${String(userId)}')" title="Remove">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </span>
+            `;
+        }).join('');
+        container.innerHTML = items || '<span class="text-muted small">No team members selected</span>';
+    }
+
+    // Populate the dropdown of assignable users
+    populateAssignedUsersDropdown() {
+        const select = document.getElementById('projectAssignedTo');
+        if (!select) return;
+        // Rebuild options
+        while (select.firstChild) select.removeChild(select.firstChild);
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select team member...';
+        select.appendChild(placeholder);
+
+        const users = Array.isArray(this.users) ? this.users : [];
+        users.forEach(user => {
+            const opt = document.createElement('option');
+            opt.value = String(user.id);
+            opt.textContent = user.name || String(user.id);
+            select.appendChild(opt);
+        });
+    }
+
+    // Add a user from the dropdown into the selected list
+    addAssignedUser() {
+        const select = document.getElementById('projectAssignedTo');
+        if (!select) return;
+        const value = select.value;
+        if (!value) return;
+        this.selectedAssignedUsers = Array.isArray(this.selectedAssignedUsers) ? this.selectedAssignedUsers : [];
+        if (!this.selectedAssignedUsers.includes(value)) {
+            this.selectedAssignedUsers.push(value);
+        }
+        select.value = '';
+        this.renderAssignedUsers();
+    }
+
+    // Remove a user from the selected list
+    removeAssignedUser(userId) {
+        const idStr = String(userId);
+        this.selectedAssignedUsers = (this.selectedAssignedUsers || []).filter(id => String(id) !== idStr);
+        this.renderAssignedUsers();
+    }
+
     closeModal() {
         const modal = bootstrap.Modal.getInstance(document.getElementById('projectModal'));
         if (modal) {
