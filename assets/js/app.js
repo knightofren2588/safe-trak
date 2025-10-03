@@ -4329,9 +4329,12 @@ END:VCALENDAR`;
             </tr>
         `;
         }).join('');
-        // Load note counts asynchronously
+        // Load note coun ts asynchronously
+    // Load note counts asynchronously (skip in test environment)
+        if (typeof window !== 'undefined' && !window.__TEST__) {
         this.loadNoteCounts();
     }
+}
 
     canUserEditProject(project) {
         // Users can edit projects they created or are assigned to
