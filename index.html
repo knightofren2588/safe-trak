@@ -1679,7 +1679,63 @@
             </div>
         </div>
     </div>
+</div>
+<!-- END OF Admin Password Verification Modal -->
 
+<!-- Project Notes Modal -->
+<div class="modal fade" id="projectNotesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-sticky-note me-2"></i>
+                    Notes: <span id="notesProjectTitle"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- User Notes Section -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary">
+                        <i class="fas fa-user me-1"></i>User Notes
+                    </h6>
+                    <div id="userNotesList" class="mb-3"></div>
+                    <form onsubmit="event.preventDefault(); projectManager.addProjectNote(projectManager.currentNotesProjectId, document.getElementById('userNoteText').value, 'user');">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="userNoteText" 
+                                   placeholder="Add a user note..." required>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <hr>
+
+                <!-- Developer Notes Section -->
+                <div>
+                    <h6 class="fw-bold text-success">
+                        <i class="fas fa-code me-1"></i>Developer Notes
+                    </h6>
+                    <div id="developerNotesList" class="mb-3"></div>
+                    <form onsubmit="event.preventDefault(); projectManager.addProjectNote(projectManager.currentNotesProjectId, document.getElementById('developerNoteText').value, 'developer');">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="developerNoteText" 
+                                   placeholder="Add a developer note..." required>
+                            <button class="btn btn-success" type="submit">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     

@@ -282,7 +282,116 @@ class CloudStorageService {
         const stored = localStorage.getItem('safetrack_current_user');
         return stored ? JSON.parse(stored) : 'admin';
     }
+    // ========================================
+// PROJECT NOTES SYSTEM
+// ========================================
 
+async fetchNotes(projectId) {
+    if (!this.isConnected) {
+        console.warn('Not connected to cloud storage, loading from local');
+        return this.loadNotesLocal(projectId);
+    }
+
+    try {
+        const collectionRef = this.functions.collection(this.db, 'project_notes');
+        const snapshot = await this.functions.getDocs(collectionRef);
+        const allNotes = {};
+        
+        snapshot.forEach(doc => {
+            allNotes[doc.id] = doc.data();
+        });
+        
+        // Filter notes for this specific project
+        const projectNotes = Object.entries(allNotes)
+            .filter(([id, note]) => id.startsWith(`${projectId}_`))
+            .map(([id, note]) => ({ id, ...note }));
+        
+        console.log(`Loaded ${projectNotes.length} notes for project ${projectId}`);
+        return projectNotes;
+    } catch (error) {
+        console.error('Error fetching notes:', error);
+        return this.loadNotesLocal(projectId);
+    }
+}
+
+async addNote(projectId, noteData) {
+    const noteId = Date.now();
+    const category = noteData.category || 'user';
+    const fullNoteId = `${projectId}_${category}_${noteId}`;
+    
+    const note = {
+        text: noteData.text,
+        category: category,
+        createdAt: new Date().toISOString(),
+        createdBy: noteData.createdBy
+    };
+
+    if (!this.isConnected) {
+        console.warn('Not connected to cloud storage, saving locally');
+        return this.saveNoteLocal(projectId, fullNoteId, note);
+    }
+
+    try {
+        const collectionRef = this.functions.collection(this.db, 'project_notes');
+        const docRef = this.functions.doc(collectionRef, fullNoteId);
+        await this.functions.setDoc(docRef, note);
+        
+        console.log(`Note added to cloud: ${fullNoteId}`);
+        return { id: fullNoteId, ...note };
+    } catch (error) {
+        console.error('Error adding note:', error);
+        return this.saveNoteLocal(projectId, fullNoteId, note);
+    }
+}
+
+async deleteNote(noteId) {
+    if (!this.isConnected) {
+        console.warn('Not connected to cloud storage, deleting locally');
+        return this.deleteNoteLocal(noteId);
+    }
+
+    try {
+        const collectionRef = this.functions.collection(this.db, 'project_notes');
+        const docRef = this.functions.doc(collectionRef, noteId);
+        await this.functions.deleteDoc(docRef);
+        
+        console.log(`Note deleted from cloud: ${noteId}`);
+        return true;
+    } catch (error) {
+        console.error('Error deleting note:', error);
+        return this.deleteNoteLocal(noteId);
+    }
+}
+
+// Local storage fallback methods
+loadNotesLocal(projectId) {
+    const stored = localStorage.getItem('safetrack_project_notes');
+    const allNotes = stored ? JSON.parse(stored) : {};
+    
+    return Object.entries(allNotes)
+        .filter(([id, note]) => id.startsWith(`${projectId}_`))
+        .map(([id, note]) => ({ id, ...note }));
+}
+
+saveNoteLocal(projectId, noteId, noteData) {
+    const stored = localStorage.getItem('safetrack_project_notes');
+    const allNotes = stored ? JSON.parse(stored) : {};
+    
+    allNotes[noteId] = noteData;
+    localStorage.setItem('safetrack_project_notes', JSON.stringify(allNotes));
+    
+    return { id: noteId, ...noteData };
+}
+
+deleteNoteLocal(noteId) {
+    const stored = localStorage.getItem('safetrack_project_notes');
+    const allNotes = stored ? JSON.parse(stored) : {};
+    
+    delete allNotes[noteId];
+    localStorage.setItem('safetrack_project_notes', JSON.stringify(allNotes));
+    
+    return true;
+}
     // Connection status
     getConnectionStatus() {
         return {

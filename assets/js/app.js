@@ -297,7 +297,137 @@ class ProjectManager {
     // ========================================
     // PROJECT NOTES SYSTEM
     // ========================================
+    // ========================================
+// PROJECT NOTES SYSTEM
+// ========================================
+
+currentNotesProjectId = null;
+
+async openProjectNotes(projectId) {
+    const project = this.projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    this.currentNotesProjectId = projectId;
     
+    // Set project title in modal
+    document.getElementById('notesProjectTitle').textContent = project.name;
+    
+    // Load and render notes
+    await this.loadAndRenderNotes(projectId);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('projectNotesModal'));
+    modal.show();
+}
+
+async loadAndRenderNotes(projectId) {
+    try {
+        const notes = await this.cloudStorage.fetchNotes(projectId);
+        
+        // Separate by category
+        const userNotes = notes.filter(note => note.category === 'user');
+        const developerNotes = notes.filter(note => note.category === 'developer');
+        
+        // Render both lists
+        this.renderNotesList('userNotesList', userNotes);
+        this.renderNotesList('developerNotesList', developerNotes);
+        
+    } catch (error) {
+        console.error('Error loading notes:', error);
+        this.showNotification('Failed to load notes', 'error');
+    }
+}
+
+renderNotesList(containerId, notes) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    if (notes.length === 0) {
+        container.innerHTML = '<p class="text-muted small">No notes yet</p>';
+        return;
+    }
+    
+    // Sort by newest first
+    const sortedNotes = notes.sort((a, b) => 
+        new Date(b.createdAt) - new Date(a.createdAt)
+    );
+    
+    container.innerHTML = sortedNotes.map(note => {
+        const user = this.users.find(u => u.id === note.createdBy);
+        const userName = user ? user.name : 'Unknown';
+        const date = new Date(note.createdAt).toLocaleString();
+        
+        return `
+            <div class="note-item mb-2 p-2 border rounded">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <p class="mb-1">${this.escapeHtml(note.text)}</p>
+                        <small class="text-muted">
+                            ${userName} • ${date}
+                        </small>
+                    </div>
+                    <button onclick="deleteProjectNote('${note.id}')" 
+                            class="btn btn-sm btn-outline-danger"
+                            title="Delete note">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async addProjectNote(projectId, noteText, category = 'user') {
+    if (!noteText || !noteText.trim()) {
+        this.showNotification('Please enter note text', 'warning');
+        return;
+    }
+    
+    try {
+        const noteData = {
+            text: noteText.trim(),
+            category: category,
+            createdBy: this.currentUser
+        };
+        
+        await this.cloudStorage.addNote(projectId, noteData);
+        
+        // Reload and render notes
+        await this.loadAndRenderNotes(projectId);
+        
+        // Clear input
+        if (category === 'user') {
+            document.getElementById('userNoteText').value = '';
+        } else {
+            document.getElementById('developerNoteText').value = '';
+        }
+        
+        this.showNotification('Note added successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error adding note:', error);
+        this.showNotification('Failed to add note', 'error');
+    }
+}
+
+async deleteProjectNote(noteId) {
+    if (!confirm('Delete this note?')) return;
+    
+    try {
+        await this.cloudStorage.deleteNote(noteId);
+        
+        // Reload notes
+        if (this.currentNotesProjectId) {
+            await this.loadAndRenderNotes(this.currentNotesProjectId);
+        }
+        
+        this.showNotification('Note deleted', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting note:', error);
+        this.showNotification('Failed to delete note', 'error');
+    }
+}
 
     // ========================================
     // USER NOTIFICATIONS SYSTEM
@@ -4120,9 +4250,12 @@ END:VCALENDAR`;
                             <button onclick="projectManager.openProgressModal(${project.id})" class="btn btn-action btn-outline-success" title="Update Progress">
                                 <i class="fas fa-chart-line"></i>
                             </button>
+                        <button onclick="projectManager.openProjectNotes(${project.id})" class="btn btn-outline-info" title="View Notes">
+                            <i class="fas fa-sticky-note"></i>
+                            </button>
                             ${screenshotCount > 0 ? `<button onclick="projectManager.showScreenshots(${project.id})" class="btn btn-outline-info" title="View Screenshots">
                                 <i class="fas fa-images"></i>
-                            </button>` : ''}
+                        </button>` : ''}
                             
                             <button onclick="projectManager.deleteProject(${project.id})" class="btn btn-outline-danger" title="Delete Project">
                             <i class="fas fa-trash"></i>
