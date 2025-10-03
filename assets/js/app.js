@@ -401,7 +401,13 @@ async addProjectNote(projectId, noteText, category = 'user') {
         } else {
             document.getElementById('developerNoteText').value = '';
         }
-        
+        // Update the badge count
+        const count = await this.getProjectNoteCount(projectId);
+        const badge = document.getElementById(`noteCount-${projectId}`);
+        if (badge) {
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'inline' : 'none';
+        }
         this.showNotification('Note added successfully', 'success');
         
     } catch (error) {
@@ -420,7 +426,13 @@ async deleteProjectNote(noteId) {
         if (this.currentNotesProjectId) {
             await this.loadAndRenderNotes(this.currentNotesProjectId);
         }
-        
+        // Update the badge count
+        const count = await this.getProjectNoteCount(this.currentNotesProjectId);
+        const badge = document.getElementById(`noteCount-${this.currentNotesProjectId}`);
+        if (badge) {
+            badge.textContent = count;
+            badge.style.display = count > 0 ? 'inline' : 'none';
+        }
         this.showNotification('Note deleted', 'success');
         
     } catch (error) {
@@ -428,7 +440,31 @@ async deleteProjectNote(noteId) {
         this.showNotification('Failed to delete note', 'error');
     }
 }
-
+async getProjectNoteCount(projectId) {
+    try {
+        const notes = await this.cloudStorage.fetchNotes(projectId);
+        return notes.length;
+    } catch (error) {
+        console.error('Error fetching note count:', error);
+        return 0;
+    }
+}
+async loadNoteCounts() {
+    const projects = this.projects;
+    
+    for (const project of projects) {
+        const count = await this.getProjectNoteCount(project.id);
+        const badge = document.getElementById(`noteCount-${project.id}`);
+        
+        if (badge) {
+            badge.textContent = count;
+            // Hide badge if no notes
+            if (count === 0) {
+                badge.style.display = 'none';
+            }
+        }
+    }
+}
     // ========================================
     // USER NOTIFICATIONS SYSTEM
     // ========================================
@@ -4210,13 +4246,33 @@ END:VCALENDAR`;
                     </div>
                 </td>
                 <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
-                    ${screenshotCount > 0 ? `
-                        <div class="screenshot-gallery">
-                            ${screenshotThumbnails}
-                            ${screenshotCount > 3 ? `<span class="badge bg-secondary ms-1">+${screenshotCount - 3}</span>` : ''}
-                        </div>
-                    ` : '<span class="text-muted small">No screenshots</span>'}
-                </td>
+    <div class="d-flex align-items-center gap-2">
+        ${screenshotCount > 0 ? `
+            <div class="position-relative">
+                <button onclick="projectManager.showScreenshots(${project.id})" 
+                        class="btn btn-sm btn-outline-info" 
+                        title="View Screenshots">
+                    <i class="fas fa-images"></i>
+                </button>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info">
+                    ${screenshotCount}
+                </span>
+            </div>
+        ` : ''}
+        <div class="position-relative">
+            <button onclick="projectManager.openProjectNotes(${project.id})" 
+                    class="btn btn-sm btn-outline-warning" 
+                    title="View Notes"
+                    id="notesBtn-${project.id}">
+                <i class="fas fa-sticky-note"></i>
+            </button>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" 
+                  id="noteCount-${project.id}">
+                0
+            </span>
+        </div>
+    </div>
+</td>
                 <td style="background: ${this.getUserColorMedium(project.createdBy)} !important;">
                     ${this.canUserEditProject(project) ? `
                         <div class="d-flex flex-wrap gap-1">
@@ -4273,6 +4329,8 @@ END:VCALENDAR`;
             </tr>
         `;
         }).join('');
+        // Load note counts asynchronously
+        this.loadNoteCounts();
     }
 
     canUserEditProject(project) {
