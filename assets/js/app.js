@@ -3091,6 +3091,18 @@ END:VCALENDAR`;
     }
 
     setupEventListeners() {
+        // Initialize project view dropdown
+        const viewToggle = document.getElementById('viewToggle');
+        if (viewToggle) {
+            // Manually initialize Bootstrap dropdown if needed
+            if (window.bootstrap && window.bootstrap.Dropdown) {
+                new window.bootstrap.Dropdown(viewToggle);
+            } else {
+                // Fallback: implement custom dropdown toggle
+                this.setupCustomDropdownToggle(viewToggle);
+            }
+        }
+
         document.getElementById('projectForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleFormSubmit();
@@ -3155,6 +3167,52 @@ END:VCALENDAR`;
         document.getElementById('complianceForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleComplianceFormSubmit();
+        });
+    }
+
+    setupCustomDropdownToggle(button) {
+        const dropdownMenu = button.nextElementSibling;
+        if (!dropdownMenu || !dropdownMenu.classList.contains('dropdown-menu')) {
+            return;
+        }
+
+        let isOpen = false;
+
+        // Toggle dropdown on button click
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            isOpen = !isOpen;
+            if (isOpen) {
+                dropdownMenu.style.display = 'block';
+                dropdownMenu.classList.add('show');
+                button.setAttribute('aria-expanded', 'true');
+            } else {
+                dropdownMenu.style.display = 'none';
+                dropdownMenu.classList.remove('show');
+                button.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (isOpen && !button.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                isOpen = false;
+                dropdownMenu.style.display = 'none';
+                dropdownMenu.classList.remove('show');
+                button.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Close dropdown when pressing Escape
+        document.addEventListener('keydown', (e) => {
+            if (isOpen && e.key === 'Escape') {
+                isOpen = false;
+                dropdownMenu.style.display = 'none';
+                dropdownMenu.classList.remove('show');
+                button.setAttribute('aria-expanded', 'false');
+            }
         });
     }
 
