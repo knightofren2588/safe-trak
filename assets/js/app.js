@@ -797,6 +797,10 @@ async loadNoteCounts() {
         const user = this.users.find(u => u.id === userId);
         const userName = user ? user.name : 'User';
         this.showNotification(`Welcome to SafeTrack, ${userName}!`, 'success');
+        
+        // ✅ LOAD NOTIFICATIONS FOR THIS USER
+        console.log('[NOTIFICATIONS] Loading notifications for user:', userId);
+        await loadNotifications();
     }
     
     hideUserSelectionModal() {
@@ -3420,19 +3424,23 @@ END:VCALENDAR`;
         }
     }
 
-    addProject(projectData) {
+    async addProject(projectData) {
+        console.log('[PROJECT] addProject called with data:', projectData);
+        
         // Mark that user has interacted with the app
         this.hasUserInteracted = true;
         localStorage.setItem('safetrack_user_interacted', 'true');
         
         // If current user is not set or is 'all', default to admin for project creation
         const creatorId = (!this.currentUser || this.currentUser === 'all') ? 'admin' : this.currentUser;
+        console.log('[PROJECT] Creator ID:', creatorId);
         
         // Handle multiple assigned users
         let assignedUsers = projectData.assignedTo;
         if (!Array.isArray(assignedUsers)) {
             assignedUsers = assignedUsers ? [assignedUsers] : [creatorId];
         }
+        console.log('[PROJECT] Assigned users:', assignedUsers);
         
         const project = {
             id: this.generateId(),
@@ -3443,8 +3451,32 @@ END:VCALENDAR`;
             assignedTo: assignedUsers,
             createdAt: new Date().toISOString()
         };
+        
+        console.log('[PROJECT] Created project object:', project);
+        
         this.projects.unshift(project);
-        this.saveProjects();
+        await this.saveProjects();
+        
+        console.log('[PROJECT] Project saved, now creating notifications...');
+        
+        // ✅ CREATE NOTIFICATIONS FOR ASSIGNED USERS
+        for (const userId of assignedUsers) {
+            console.log('[PROJECT] Checking user:', userId, 'vs creator:', creatorId);
+            if (userId !== creatorId) { // Don't notify if assigning to yourself
+                console.log('[PROJECT] ✅ Creating notification for user:', userId);
+                try {
+                    await createAssignmentNotification(project.id, project.name, userId, creatorId);
+                    console.log('[PROJECT] ✅ Notification created successfully for:', userId);
+                } catch (error) {
+                    console.error('[PROJECT] ❌ Error creating notification:', error);
+                }
+            } else {
+                console.log('[PROJECT] ⏭️ Skipping notification (user assigned to themselves)');
+            }
+        }
+        
+        console.log('[PROJECT] All notifications created, rendering...');
+        
         this.render();
         
         // Refresh note counts after render completes
@@ -3458,15 +3490,30 @@ END:VCALENDAR`;
         this.showNotification(`Safety project "${project.name}" created successfully!`, 'success');
     }
 
-    editProject(id, projectData) {
+    async editProject(id, projectData) {
         const index = this.projects.findIndex(p => p.id === id);
         if (index !== -1) {
+            const oldProject = this.projects[index];
+            const oldAssignedUsers = Array.isArray(oldProject.assignedTo) ? oldProject.assignedTo : [oldProject.assignedTo].filter(Boolean);
+            const newAssignedUsers = Array.isArray(projectData.assignedTo) ? projectData.assignedTo : [projectData.assignedTo].filter(Boolean);
+            
             this.projects[index] = { 
                 ...this.projects[index], 
                 ...projectData,
                 screenshots: projectData.screenshots && projectData.screenshots.length > 0 ? projectData.screenshots : this.projects[index].screenshots
             };
-            this.saveProjects();
+            
+            await this.saveProjects();
+            
+            // ✅ CREATE NOTIFICATIONS FOR NEWLY ASSIGNED USERS
+            console.log('[NOTIFICATIONS] Checking for new assignments...');
+            for (const userId of newAssignedUsers) {
+                if (!oldAssignedUsers.includes(userId) && userId !== this.currentUser) {
+                    console.log('[NOTIFICATIONS] Creating notification for newly assigned user:', userId);
+                    await createAssignmentNotification(id, projectData.name, userId, this.currentUser);
+                }
+            }
+            
             this.render();
             this.closeModal();
             this.showNotification(`Safety project "${projectData.name}" updated successfully!`, 'success');
@@ -3549,20 +3596,17 @@ END:VCALENDAR`;
         document.getElementById('modalTitle').textContent = 'New Safety Project';
         document.getElementById('submitText').textContent = 'Create Safety Project';
         this.currentEditId = null;
-        // ✅ NEW: Hide creator display for new projects
+        
         const creatorDisplay = document.getElementById('projectCreatorDisplay');
         if (creatorDisplay) {
             creatorDisplay.style.display = 'none';
         }
 
-        // ✅ NEW: Hide admin owner change section for new projects
         const adminSection = document.getElementById('adminOwnerChangeSection');
         if (adminSection) {
             adminSection.style.display = 'none';
         }
 
-// Explicitly ensure completion date field is enabled and interactive
-        // Explicitly ensure completion date field is enabled and interactive
         const completionDateField = document.getElementById('projectCompletionDate');
         if (completionDateField) {
             completionDateField.removeAttribute('readonly');
@@ -3570,8 +3614,10 @@ END:VCALENDAR`;
             completionDateField.style.pointerEvents = 'auto';
         }
         
-        // Reset assigned users
+        // ✅ RESET ASSIGNED USERS ARRAY
         this.selectedAssignedUsers = [];
+        console.log('[MODAL] Reset selectedAssignedUsers to empty array');
+        
         this.renderAssignedUsers();
         this.populateAssignedUsersDropdown();
         
@@ -7898,3 +7944,641 @@ function renderMyBugList(filter) {
         `;
     }).join('');
 }
+
+// ==========================================
+// PROJECT ASSIGNMENT NOTIFICATION SYSTEM
+// ==========================================
+
+let userNotifications = [];
+
+// Load notifications from cloud with local backup
+async function loadNotifications() {
+    if (!window.projectManager) return;
+    
+    const currentUser = window.projectManager.currentUser;
+    if (!currentUser) return;
+    
+    // Try cloud storage first
+    if (window.projectManager.cloudStorage) {
+        try {
+            const cloudNotifications = await window.projectManager.cloudStorage.getNotifications(currentUser);
+            if (cloudNotifications && cloudNotifications.length >= 0) {
+                userNotifications = cloudNotifications;
+                console.log('[NOTIFICATIONS] Loaded from cloud:', userNotifications.length);
+                // Backup to local storage
+                localStorage.setItem(`safetrack_notifications_${currentUser}`, JSON.stringify(userNotifications));
+            } else {
+                // Cloud is empty, try local backup
+                const localNotifications = localStorage.getItem(`safetrack_notifications_${currentUser}`);
+                if (localNotifications) {
+                    userNotifications = JSON.parse(localNotifications);
+                    console.log('[NOTIFICATIONS] Loaded from local backup:', userNotifications.length);
+                } else {
+                    userNotifications = [];
+                }
+            }
+        } catch (error) {
+            console.error('[NOTIFICATIONS] Error loading from cloud, trying local backup:', error);
+            const localNotifications = localStorage.getItem(`safetrack_notifications_${currentUser}`);
+            if (localNotifications) {
+                userNotifications = JSON.parse(localNotifications);
+                console.log('[NOTIFICATIONS] Loaded from local backup after cloud error:', userNotifications.length);
+            } else {
+                userNotifications = [];
+            }
+        }
+    } else {
+        // No cloud storage available, use local storage
+        const localNotifications = localStorage.getItem(`safetrack_notifications_${currentUser}`);
+        if (localNotifications) {
+            userNotifications = JSON.parse(localNotifications);
+            console.log('[NOTIFICATIONS] Loaded from local storage (no cloud):', userNotifications.length);
+        } else {
+            userNotifications = [];
+        }
+    }
+    
+    updateNotificationBadges();
+    renderNotificationDropdown();
+}
+
+// Save notifications to cloud with local backup
+async function saveNotifications() {
+    if (!window.projectManager) return;
+    
+    const currentUser = window.projectManager.currentUser;
+    if (!currentUser) return;
+    
+    // Always save to local storage as backup first
+    try {
+        localStorage.setItem(`safetrack_notifications_${currentUser}`, JSON.stringify(userNotifications));
+        console.log('[NOTIFICATIONS] Saved to local backup');
+    } catch (error) {
+        console.error('[NOTIFICATIONS] Error saving to local backup:', error);
+    }
+    
+    // Try to save to cloud storage
+    if (window.projectManager.cloudStorage) {
+        try {
+            await window.projectManager.cloudStorage.saveNotifications(currentUser, userNotifications);
+            console.log('[NOTIFICATIONS] Saved to cloud');
+        } catch (error) {
+            console.error('[NOTIFICATIONS] Error saving to cloud (local backup available):', error);
+        }
+    }
+    
+    updateNotificationBadges();
+    renderNotificationDropdown();
+}
+
+// Create notification when user is assigned to a project
+async function createAssignmentNotification(projectId, projectName, assignedToUserId, assignedByUserId) {
+    console.log('[NOTIFICATIONS] createAssignmentNotification called', {
+        projectId,
+        projectName,
+        assignedToUserId,
+        assignedByUserId
+    });
+    
+    if (!window.projectManager) {
+        console.error('[NOTIFICATIONS] ProjectManager not available');
+        return;
+    }
+    
+    // Don't create notification if assigning to yourself
+    if (assignedToUserId === assignedByUserId) {
+        console.log('[NOTIFICATIONS] Skipping - user assigning to themselves');
+        return;
+    }
+    
+    const assignedByUser = window.projectManager.users.find(u => u.id === assignedByUserId);
+    const assignedByName = assignedByUser ? assignedByUser.name : 'Unknown';
+    
+    console.log('[NOTIFICATIONS] Assigned by:', assignedByName);
+    
+    // Load the user's notifications
+    const assignedUserNotifications = await loadUserNotifications(assignedToUserId);
+    console.log('[NOTIFICATIONS] Current notifications for user:', assignedUserNotifications.length);
+    
+    // Check if notification already exists for this project
+    const existingNotification = assignedUserNotifications.find(n => 
+        n.projectId === projectId && 
+        n.assignedTo === assignedToUserId && 
+        n.type === 'project_assignment' &&
+        n.status === 'pending'
+    );
+    
+    if (existingNotification) {
+        console.log('[NOTIFICATIONS] Assignment notification already exists for this project');
+        return;
+    }
+    
+    const notification = {
+        id: Date.now(),
+        type: 'project_assignment',
+        projectId: projectId,
+        projectName: projectName,
+        assignedTo: assignedToUserId,
+        assignedBy: assignedByUserId,
+        assignedByName: assignedByName,
+        createdAt: new Date().toISOString(),
+        status: 'pending', // pending, accepted, declined
+        read: false,
+        response: null,
+        responseAt: null
+    };
+    
+    assignedUserNotifications.unshift(notification);
+    await saveUserNotifications(assignedToUserId, assignedUserNotifications);
+    
+    console.log('[NOTIFICATIONS] ✅ Created assignment notification for user:', assignedToUserId);
+    console.log('[NOTIFICATIONS] Total notifications now:', assignedUserNotifications.length);
+}
+
+// Create response notification for project creator
+async function createResponseNotification(projectId, projectName, respondedByUserId, creatorId, response) {
+    if (!window.projectManager) return;
+    
+    const respondedByUser = window.projectManager.users.find(u => u.id === respondedByUserId);
+    const respondedByName = respondedByUser ? respondedByUser.name : 'Unknown';
+    
+    // Load creator's notifications
+    const creatorNotifications = await loadUserNotifications(creatorId);
+    
+    const notification = {
+        id: Date.now(),
+        type: 'assignment_response',
+        projectId: projectId,
+        projectName: projectName,
+        respondedBy: respondedByUserId,
+        respondedByName: respondedByName,
+        response: response, // 'accepted' or 'declined'
+        createdAt: new Date().toISOString(),
+        read: false
+    };
+    
+    creatorNotifications.unshift(notification);
+    await saveUserNotifications(creatorId, creatorNotifications);
+    
+    console.log('[NOTIFICATIONS] Created response notification for creator:', creatorId);
+}
+
+// Load notifications for a specific user
+async function loadUserNotifications(userId) {
+    if (!window.projectManager) return [];
+    
+    if (window.projectManager.cloudStorage) {
+        try {
+            const cloudNotifications = await window.projectManager.cloudStorage.getNotifications(userId);
+            return cloudNotifications || [];
+        } catch (error) {
+            console.error('[NOTIFICATIONS] Error loading user notifications from cloud:', error);
+            // Fallback to local storage
+            const localNotifications = localStorage.getItem(`safetrack_notifications_${userId}`);
+            return localNotifications ? JSON.parse(localNotifications) : [];
+        }
+    } else {
+        // No cloud storage, use local
+        const localNotifications = localStorage.getItem(`safetrack_notifications_${userId}`);
+        return localNotifications ? JSON.parse(localNotifications) : [];
+    }
+}
+
+// Save notifications for a specific user
+async function saveUserNotifications(userId, notifications) {
+    if (!window.projectManager) return;
+    
+    // Always save to local storage as backup
+    try {
+        localStorage.setItem(`safetrack_notifications_${userId}`, JSON.stringify(notifications));
+    } catch (error) {
+        console.error('[NOTIFICATIONS] Error saving to local backup:', error);
+    }
+    
+    // Try to save to cloud
+    if (window.projectManager.cloudStorage) {
+        try {
+            await window.projectManager.cloudStorage.saveNotifications(userId, notifications);
+        } catch (error) {
+            console.error('[NOTIFICATIONS] Error saving to cloud (local backup available):', error);
+        }
+    }
+}
+
+// Update notification count badges
+function updateNotificationBadges() {
+    const pendingCount = userNotifications.filter(n => n.status === 'pending' && n.type === 'project_assignment').length;
+    const unreadResponseCount = userNotifications.filter(n => !n.read && n.type === 'assignment_response').length;
+    const totalUnread = pendingCount + unreadResponseCount;
+    
+    const badge = document.getElementById('notificationCountBadge');
+    if (badge) {
+        if (totalUnread > 0) {
+            badge.textContent = totalUnread;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    
+    // Update modal counts
+    updateModalCounts();
+}
+
+// Update modal notification counts
+function updateModalCounts() {
+    const allCount = userNotifications.length;
+    const pendingCount = userNotifications.filter(n => n.status === 'pending').length;
+    const acceptedCount = userNotifications.filter(n => n.status === 'accepted').length;
+    const declinedCount = userNotifications.filter(n => n.status === 'declined').length;
+    
+    const allCountElement = document.getElementById('allNotificationsCount');
+    const pendingCountElement = document.getElementById('pendingNotificationsCount');
+    const acceptedCountElement = document.getElementById('acceptedNotificationsCount');
+    const declinedCountElement = document.getElementById('declinedNotificationsCount');
+    
+    if (allCountElement) allCountElement.textContent = allCount;
+    if (pendingCountElement) pendingCountElement.textContent = pendingCount;
+    if (acceptedCountElement) acceptedCountElement.textContent = acceptedCount;
+    if (declinedCountElement) declinedCountElement.textContent = declinedCount;
+}
+
+// Render notification dropdown (only pending)
+function renderNotificationDropdown() {
+    const container = document.getElementById('notificationsList');
+    if (!container) return;
+    
+    const pendingNotifications = userNotifications.filter(n => 
+        n.type === 'project_assignment' && n.status === 'pending'
+    ).slice(0, 5); // Show max 5 in dropdown
+    
+    const unreadResponses = userNotifications.filter(n => 
+        n.type === 'assignment_response' && !n.read
+    ).slice(0, 3); // Show max 3 responses
+    
+    const allNotifications = [...pendingNotifications, ...unreadResponses];
+    
+    if (allNotifications.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
+                <small>No new notifications</small>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = allNotifications.map(notification => {
+        if (notification.type === 'project_assignment') {
+            return `
+                <li>
+                    <div class="dropdown-item-text border-start border-warning border-4" style="background-color: #fff9e6;">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-tasks text-warning me-2 fs-5"></i>
+                                <strong class="text-warning">New Assignment</strong>
+                            </div>
+                            <small class="text-muted">${formatNotificationTime(notification.createdAt)}</small>
+                        </div>
+                        <p class="mb-1 fw-bold text-dark">${notification.projectName}</p>
+                        <p class="mb-3 small text-muted">
+                            <i class="fas fa-user me-1"></i>Assigned by ${notification.assignedByName}
+                        </p>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success btn-sm" onclick="respondToAssignment(${notification.id}, 'accepted')">
+                                <i class="fas fa-check me-1"></i>Accept Assignment
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="respondToAssignment(${notification.id}, 'declined')">
+                                <i class="fas fa-times me-1"></i>Decline
+                            </button>
+                        </div>
+                    </div>
+                </li>
+                <li><hr class="dropdown-divider my-0"></li>
+            `;
+        } else {
+            // assignment_response
+            const isAccepted = notification.response === 'accepted';
+            const icon = isAccepted ? 'fa-check-circle text-success' : 'fa-times-circle text-danger';
+            const bgColor = isAccepted ? '#e8f5e9' : '#ffebee';
+            const borderColor = isAccepted ? 'success' : 'danger';
+            
+            return `
+                <li>
+                    <div class="dropdown-item-text border-start border-${borderColor} border-4" style="background-color: ${bgColor};">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-reply text-${borderColor} me-2 fs-5"></i>
+                                <strong class="text-${borderColor}">Response Received</strong>
+                            </div>
+                            <small class="text-muted">${formatNotificationTime(notification.createdAt)}</small>
+                        </div>
+                        <p class="mb-1 small">
+                            <strong>${notification.respondedByName}</strong> ${notification.response} the assignment
+                        </p>
+                        <p class="mb-2 small text-muted fw-bold">${notification.projectName}</p>
+                        <button class="btn btn-outline-${borderColor} btn-sm w-100" onclick="markResponseAsRead(${notification.id})">
+                            <i class="fas fa-check me-1"></i>Mark as Read
+                        </button>
+                    </div>
+                </li>
+                <li><hr class="dropdown-divider my-0"></li>
+            `;
+        }
+    }).join('');
+}
+
+// Format notification time (relative)
+function formatNotificationTime(timestamp) {
+    const now = new Date();
+    const notificationDate = new Date(timestamp);
+    const diffMs = now - notificationDate;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return notificationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Respond to assignment notification
+window.respondToAssignment = async (notificationId, response) => {
+    const notification = userNotifications.find(n => n.id === notificationId);
+    if (!notification) return;
+    
+    console.log('[NOTIFICATIONS] User responding to assignment:', response, 'for project:', notification.projectId);
+    
+    // Update notification status
+    notification.status = response;
+    notification.response = response;
+    notification.responseAt = new Date().toISOString();
+    notification.read = true;
+    
+    await saveNotifications();
+    
+    // ✅ IF DECLINED, REMOVE USER FROM PROJECT ASSIGNMENT
+    if (response === 'declined' && window.projectManager) {
+        const project = window.projectManager.projects.find(p => p.id === notification.projectId);
+        
+        if (project) {
+            console.log('[NOTIFICATIONS] User declined - removing from project assignment');
+            
+            // Get current assigned users
+            let assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+            
+            // Remove current user from assigned users
+            assignedUsers = assignedUsers.filter(userId => userId !== window.projectManager.currentUser);
+            
+            // Update project
+            project.assignedTo = assignedUsers;
+            
+            // Save project changes
+            await window.projectManager.saveProjects();
+            
+            // Re-render to update the project list
+            window.projectManager.render();
+            
+            console.log('[NOTIFICATIONS] User removed from project. Remaining assigned users:', assignedUsers);
+        }
+    }
+    
+    // Create response notification for project creator
+    await createResponseNotification(
+        notification.projectId,
+        notification.projectName,
+        window.projectManager.currentUser,
+        notification.assignedBy,
+        response
+    );
+    
+    // Show success message
+    const message = response === 'accepted' ? 
+        `You accepted the assignment for "${notification.projectName}"` :
+        `You declined the assignment for "${notification.projectName}" and have been removed from the project`;
+    
+    if (window.projectManager) {
+        window.projectManager.showNotification(message, response === 'accepted' ? 'success' : 'info');
+    }
+    
+    renderNotificationDropdown();
+    renderNotificationsModal('all');
+};
+
+// Mark response as read
+window.markResponseAsRead = async (notificationId) => {
+    const notification = userNotifications.find(n => n.id === notificationId);
+    if (!notification) return;
+    
+    notification.read = true;
+    await saveNotifications();
+    
+    if (window.projectManager) {
+        window.projectManager.showNotification('Notification marked as read', 'info');
+    }
+    
+    renderNotificationDropdown();
+    renderNotificationsModal('all');
+};
+
+// Open notifications modal
+window.openNotificationsModal = () => {
+    const modal = new bootstrap.Modal(document.getElementById('notificationsModal'));
+    modal.show();
+    
+    renderNotificationsModal('all');
+};
+
+// Filter notifications in modal
+window.filterNotifications = (filter) => {
+    renderNotificationsModal(filter);
+};
+
+// Render notifications modal
+function renderNotificationsModal(filter) {
+    const container = document.getElementById('notificationsContainer');
+    if (!container) return;
+    
+    let filteredNotifications = userNotifications;
+    
+    if (filter !== 'all') {
+        filteredNotifications = userNotifications.filter(n => n.status === filter || (filter === 'pending' && n.type === 'assignment_response' && !n.read));
+    }
+    
+    if (filteredNotifications.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-inbox fa-3x mb-3 d-block opacity-50"></i>
+                <p class="fs-5">No ${filter === 'all' ? '' : filter} notifications.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = filteredNotifications.map(notification => {
+        if (notification.type === 'project_assignment') {
+            const statusInfo = {
+                pending: { badge: 'warning', icon: 'fa-clock', text: 'Pending Response' },
+                accepted: { badge: 'success', icon: 'fa-check', text: 'Accepted' },
+                declined: { badge: 'danger', icon: 'fa-times', text: 'Declined' }
+            };
+            const status = statusInfo[notification.status];
+            
+            return `
+                <div class="card mb-3 shadow-sm border-${status.badge} border-2 ${notification.status === 'pending' ? 'notification-card-unread' : ''}">
+                    <div class="card-header bg-${status.badge} bg-opacity-10 border-bottom border-${status.badge}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-tasks text-${status.badge} me-2 fs-5"></i>
+                                    <h6 class="mb-0 fw-bold">Project Assignment</h6>
+                                </div>
+                                <p class="mb-1 fs-5 text-dark fw-bold">${notification.projectName}</p>
+                                <p class="mb-0 small text-muted">
+                                    <i class="fas fa-user me-1"></i>Assigned by <strong>${notification.assignedByName}</strong>
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-${status.badge} mb-1">
+                                    <i class="fas ${status.icon} me-1"></i>${status.text}
+                                </span>
+                                <br>
+                                <small class="text-muted">${formatNotificationTime(notification.createdAt)}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        ${notification.status === 'pending' ? `
+                            <div class="alert alert-warning border-warning" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Action Required:</strong> You have been assigned to work on this project. Please accept or decline this assignment.
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-success flex-grow-1" onclick="respondToAssignment(${notification.id}, 'accepted')">
+                                    <i class="fas fa-check me-1"></i>Accept Assignment
+                                </button>
+                                <button class="btn btn-danger flex-grow-1" onclick="respondToAssignment(${notification.id}, 'declined')">
+                                    <i class="fas fa-times me-1"></i>Decline Assignment
+                                </button>
+                            </div>
+                        ` : `
+                            <div class="alert alert-${status.badge}" role="alert">
+                                <i class="fas ${status.icon} me-2"></i>
+                                You <strong>${notification.status}</strong> this assignment
+                                ${notification.responseAt ? ' on ' + new Date(notification.responseAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        } else {
+            // assignment_response
+            const isAccepted = notification.response === 'accepted';
+            const icon = isAccepted ? 'fa-check-circle' : 'fa-times-circle';
+            const bgColor = isAccepted ? 'success' : 'danger';
+            
+            return `
+                <div class="card mb-3 shadow-sm border-info ${!notification.read ? 'border-3 notification-card-unread' : 'border-2'}">
+                    <div class="card-header bg-info bg-opacity-10 border-bottom border-info">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-reply text-info me-2 fs-5"></i>
+                                    <h6 class="mb-0 fw-bold">Assignment Response</h6>
+                                    ${!notification.read ? '<span class="badge bg-info ms-2">New</span>' : ''}
+                                </div>
+                                <p class="mb-1 fs-5 text-dark fw-bold">${notification.projectName}</p>
+                                <p class="mb-0 small text-muted">
+                                    <i class="fas fa-user me-1"></i>Response from <strong>${notification.respondedByName}</strong>
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">${formatNotificationTime(notification.createdAt)}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-${bgColor} border-${bgColor}" role="alert">
+                            <i class="fas ${icon} me-2"></i>
+                            <strong>${notification.respondedByName}</strong> has <strong>${notification.response}</strong> the assignment for <strong>${notification.projectName}</strong>
+                        </div>
+                        ${!notification.read ? `
+                            <button class="btn btn-info w-100" onclick="markResponseAsRead(${notification.id})">
+                                <i class="fas fa-check me-1"></i>Mark as Read
+                            </button>
+                        ` : `
+                            <p class="text-muted text-center mb-0 small">
+                                <i class="fas fa-check-double me-1"></i>Read
+                            </p>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+    }).join('');
+}
+
+// Clear all notifications
+window.clearAllNotifications = async () => {
+    if (!confirm('Are you sure you want to clear all notifications?')) return;
+    
+    userNotifications = [];
+    await saveNotifications();
+    
+    if (window.projectManager) {
+        window.projectManager.showNotification('All notifications cleared', 'success');
+    }
+    
+    renderNotificationsModal('all');
+};
+
+// Load notifications when user logs in
+document.addEventListener('DOMContentLoaded', () => {
+    // Delay notification loading until ProjectManager is ready
+    setTimeout(async () => {
+        if (window.projectManager && window.projectManager.currentUser) {
+            await loadNotifications();
+        }
+    }, 1000);
+});
+
+// Auto-refresh notifications every 30 seconds to catch new assignments
+setInterval(async () => {
+    if (window.projectManager && window.projectManager.currentUser) {
+        console.log('[NOTIFICATIONS] Auto-refreshing notifications...');
+        await loadNotifications();
+    }
+}, 30000); // 30 seconds
+
+// Manual refresh for testing
+window.refreshNotifications = async () => {
+    console.log('[NOTIFICATIONS] Manual refresh triggered');
+    if (window.projectManager && window.projectManager.currentUser) {
+        await loadNotifications();
+        console.log('[NOTIFICATIONS] Notifications refreshed. Count:', userNotifications.length);
+        alert(`Notifications refreshed! You have ${userNotifications.length} total notifications.`);
+    } else {
+        alert('No user logged in');
+    }
+};
+
+// Test notification system
+window.testNotification = async () => {
+    console.log('🧪 Testing notification system...');
+    console.log('Current user:', window.projectManager.currentUser);
+    console.log('Users:', window.projectManager.users.map(u => u.id));
+    
+    // Create a test notification for Marcena
+    await createAssignmentNotification(
+        999, // test project ID
+        'TEST PROJECT - Notification Test',
+        'marcenacud', // Marcena's user ID (from your console log)
+        window.projectManager.currentUser // Mike's ID
+    );
+    
+    console.log('✅ Test notification created!');
+    console.log('Now logout and login as Marcena to see it');
+};

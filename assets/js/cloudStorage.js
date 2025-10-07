@@ -628,23 +628,178 @@ deleteNoteLocal(noteId) {
     // Bug Reports methods
     async getBugReports() {
         console.log('[CloudStorage] Getting bug reports');
+        if (!this.isConnected) {
+            console.warn('Not connected to cloud storage, loading from local');
+            const localData = localStorage.getItem('safetrack_bug_reports_backup');
+            return localData ? JSON.parse(localData) : [];
+        }
+
         try {
-            const bugsData = await this.getFromStorage('bug_reports');
-            return bugsData || [];
+            const collectionRef = this.functions.collection(this.db, 'bug_reports');
+            const snapshot = await this.functions.getDocs(collectionRef);
+            const bugs = [];
+            
+            snapshot.forEach(doc => {
+                bugs.push({ id: doc.id, ...doc.data() });
+            });
+            
+            console.log('[CloudStorage] Loaded', bugs.length, 'bug reports from Firebase');
+            // Backup to localStorage
+            localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugs));
+            return bugs;
         } catch (error) {
             console.error('[CloudStorage] Error getting bug reports:', error);
-            return [];
+            const localData = localStorage.getItem('safetrack_bug_reports_backup');
+            return localData ? JSON.parse(localData) : [];
         }
     }
 
     async saveBugReports(bugs) {
         console.log('[CloudStorage] Saving bug reports:', bugs.length);
+        if (!this.isConnected) {
+            console.warn('Not connected to cloud storage, saving locally only');
+            localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugs));
+            return;
+        }
+
         try {
-            await this.saveToStorage('bug_reports', bugs);
-            console.log('[CloudStorage] Bug reports saved successfully');
+            const collectionRef = this.functions.collection(this.db, 'bug_reports');
+            
+            // Get all existing bug reports
+            const snapshot = await this.functions.getDocs(collectionRef);
+            
+            // Delete all existing bugs
+            const deletePromises = [];
+            snapshot.forEach((doc) => {
+                deletePromises.push(this.functions.deleteDoc(doc.ref));
+            });
+            
+            if (deletePromises.length > 0) {
+                await Promise.all(deletePromises);
+                console.log('[CloudStorage] Deleted', deletePromises.length, 'old bug reports');
+            }
+            
+            // Add new bugs
+            if (bugs.length > 0) {
+                const addPromises = bugs.map(bug => {
+                    return this.functions.addDoc(collectionRef, bug);
+                });
+                
+                await Promise.all(addPromises);
+                console.log('[CloudStorage] Added', bugs.length, 'bug reports to Firebase');
+            }
+            
+            // Also save to localStorage as backup
+            localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugs));
         } catch (error) {
             console.error('[CloudStorage] Error saving bug reports:', error);
-            throw error;
+            localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugs));
+            console.log('[CloudStorage] Saved bug reports to localStorage as fallback');
+        }
+    }
+
+    // Notification methods (Firebase Firestore - Simple version)
+    async getNotifications(userId) {
+        console.log('[CloudStorage] Getting notifications for user from Firebase:', userId);
+        try {
+            if (!this.isConnected) {
+                console.log('[CloudStorage] Not connected to Firebase, using localStorage');
+                const localData = localStorage.getItem(`safetrack_notifications_${userId}`);
+                return localData ? JSON.parse(localData) : [];
+            }
+
+            // Get ALL notifications from Firebase (we'll filter client-side)
+            const collectionRef = this.functions.collection(this.db, 'notifications');
+            const snapshot = await this.functions.getDocs(collectionRef);
+            const allNotifications = [];
+            
+            snapshot.forEach((doc) => {
+                allNotifications.push({
+                    firebaseDocId: doc.id,
+                    ...doc.data()
+                });
+            });
+            
+            // Filter for this specific user
+            const userNotifications = allNotifications.filter(n => n.userId === userId);
+            
+            // Sort by createdAt (newest first)
+            userNotifications.sort((a, b) => {
+                const dateA = new Date(a.createdAt || 0);
+                const dateB = new Date(b.createdAt || 0);
+                return dateB - dateA;
+            });
+            
+            console.log('[CloudStorage] Loaded', userNotifications.length, 'notifications from Firebase for user:', userId);
+            
+            // Backup to localStorage
+            localStorage.setItem(`safetrack_notifications_${userId}`, JSON.stringify(userNotifications));
+            return userNotifications;
+        } catch (error) {
+            console.error('[CloudStorage] Error getting notifications from Firebase:', error);
+            // Fallback to localStorage
+            const localData = localStorage.getItem(`safetrack_notifications_${userId}`);
+            return localData ? JSON.parse(localData) : [];
+        }
+    }
+
+    async saveNotifications(userId, notifications) {
+        console.log('[CloudStorage] Saving', notifications.length, 'notifications for user to Firebase:', userId);
+        try {
+            if (!this.isConnected) {
+                console.log('[CloudStorage] Not connected to Firebase, using localStorage only');
+                localStorage.setItem(`safetrack_notifications_${userId}`, JSON.stringify(notifications));
+                return;
+            }
+
+            const collectionRef = this.functions.collection(this.db, 'notifications');
+            
+            // Get ALL existing notifications
+            const snapshot = await this.functions.getDocs(collectionRef);
+            
+            // Delete only THIS user's notifications
+            const deletePromises = [];
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.userId === userId) {
+                    deletePromises.push(this.functions.deleteDoc(doc.ref));
+                }
+            });
+            
+            if (deletePromises.length > 0) {
+                await Promise.all(deletePromises);
+                console.log('[CloudStorage] Deleted', deletePromises.length, 'old notifications for user:', userId);
+            }
+            
+            // Add new notifications using setDoc (not addDoc)
+            if (notifications.length > 0) {
+                const setPromises = notifications.map(notification => {
+                    // Create a unique document ID for each notification
+                    const docId = `${userId}_${notification.id || Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const docRef = this.functions.doc(collectionRef, docId);
+                    
+                    const notificationData = {
+                        ...notification,
+                        userId: userId,
+                        createdAt: notification.createdAt || new Date().toISOString()
+                    };
+                    // Remove firebaseDocId before saving (it's auto-generated)
+                    delete notificationData.firebaseDocId;
+                    
+                    return this.functions.setDoc(docRef, notificationData);
+                });
+                
+                await Promise.all(setPromises);
+                console.log('[CloudStorage] Added', notifications.length, 'new notifications to Firebase for user:', userId);
+            }
+            
+            // Also save to localStorage as backup
+            localStorage.setItem(`safetrack_notifications_${userId}`, JSON.stringify(notifications));
+        } catch (error) {
+            console.error('[CloudStorage] Error saving notifications to Firebase:', error);
+            // Fallback to localStorage only
+            localStorage.setItem(`safetrack_notifications_${userId}`, JSON.stringify(notifications));
+            console.log('[CloudStorage] Saved notifications to localStorage as fallback');
         }
     }
 }

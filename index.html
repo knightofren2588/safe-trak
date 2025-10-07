@@ -203,8 +203,37 @@
                     <!-- Release Notes Button -->
                     <button class="btn btn-outline-info btn-sm" onclick="openReleaseNotes()" title="View Release Notes">
                         <i class="fas fa-rocket me-1"></i>
-                        <span class="badge bg-info">v1.2.2</span>
+                        <span class="badge bg-info">v1.2.3</span>
                     </button>
+                    
+                    <!-- Notifications Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary btn-sm dropdown-toggle position-relative" 
+                                type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-bell me-1"></i>Notifications
+                            <span class="badge bg-danger position-absolute top-0 start-100 translate-middle rounded-pill" 
+                                  id="notificationCountBadge" style="display: none; font-size: 0.6rem;">
+                                0
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="min-width: 420px; max-height: 500px; overflow-y: auto;">
+                            <li><h6 class="dropdown-header bg-light border-bottom">
+                                <i class="fas fa-bell me-2 text-primary"></i>Project Notifications
+                            </h6></li>
+                            <li id="notificationsList">
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
+                                    <small>No new notifications</small>
+                                </div>
+                            </li>
+                            <li><hr class="dropdown-divider my-0"></li>
+                            <li>
+                                <a class="dropdown-item text-center small text-primary py-2" href="#" onclick="openNotificationsModal()">
+                                    <i class="fas fa-history me-1"></i>View All Notifications
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     
                     <!-- Report Bug Button with Dropdown -->
                     <div class="dropdown">
@@ -1845,7 +1874,7 @@
                     <h5 class="modal-title">
                         <i class="fas fa-rocket me-2"></i>SafeTrack Release Notes
                     </h5>
-                    <p class="mb-0 small">Current Version: <span class="badge bg-light text-dark">v1.2.2</span></p>
+                    <p class="mb-0 small">Current Version: <span class="badge bg-light text-dark">v1.2.3</span></p>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -1864,6 +1893,90 @@
                 </div>
                 
                 <div id="releaseNotesContainer">
+                    <!-- Version 1.2.3 -->
+                    <div class="release-version">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-primary fs-6">v1.2.3</span>
+                                <span class="text-muted ms-2">October 7, 2025</span>
+                            </div>
+                            <span class="badge bg-success">Current</span>
+                        </div>
+                        
+                        <!-- New Features -->
+                        <div class="release-category">
+                            <h6 class="text-success">
+                                <i class="fas fa-star me-2"></i>New Features
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Advanced Project Notification System:</strong> Real-time notifications for project assignments with accept/decline functionality, automatic project management, and cross-device synchronization</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.3', 'feature', 'Advanced Project Notification System', 'Real-time notifications for project assignments with accept/decline functionality, automatic project management, and cross-device synchronization')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Smart Assignment Management:</strong> Users can accept or decline project assignments. Declined assignments automatically remove users from projects</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.3', 'feature', 'Smart Assignment Management', 'Users can accept or decline project assignments. Declined assignments automatically remove users from projects')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Real-time Notification Updates:</strong> Auto-refresh every 30 seconds, manual refresh capability, and comprehensive debugging tools</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.3', 'feature', 'Real-time Notification Updates', 'Auto-refresh every 30 seconds, manual refresh capability, and comprehensive debugging tools')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Improvements -->
+                        <div class="release-category">
+                            <h6 class="text-info">
+                                <i class="fas fa-cog me-2"></i>Improvements
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Enhanced Cloud Storage:</strong> Improved Firebase Firestore integration with better error handling and offline support</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.3', 'improvement', 'Enhanced Cloud Storage', 'Improved Firebase Firestore integration with better error handling and offline support')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Better User Experience:</strong> Professional notification UI with Tailwind CSS styling, improved dropdowns, and enhanced modal interfaces</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.3', 'improvement', 'Better User Experience', 'Professional notification UI with Tailwind CSS styling, improved dropdowns, and enhanced modal interfaces')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
                     <!-- Version 1.2.2 -->
                     <div class="release-version">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1871,7 +1984,6 @@
                                 <span class="badge bg-primary fs-6">v1.2.2</span>
                                 <span class="text-muted ms-2">October 7, 2025</span>
                             </div>
-                            <span class="badge bg-success">Current</span>
                         </div>
                         
                         <!-- Bug Fixes -->
@@ -2644,6 +2756,55 @@
     
     <!-- Custom JS -->
     <script src="assets/js/app.js"></script>
+
+<!-- Notifications Modal -->
+<div class="modal fade" id="notificationsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div>
+                    <h5 class="modal-title">
+                        <i class="fas fa-bell me-2"></i>Project Assignment Notifications
+                    </h5>
+                    <p class="mb-0 small">Manage your project assignments and responses</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Filter Tabs -->
+                <div class="d-flex gap-2 p-3 bg-light border-bottom">
+                    <button class="btn btn-sm btn-primary" onclick="filterNotifications('all')">
+                        All (<span id="allNotificationsCount">0</span>)
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning" onclick="filterNotifications('pending')">
+                        Pending (<span id="pendingNotificationsCount">0</span>)
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="filterNotifications('accepted')">
+                        Accepted (<span id="acceptedNotificationsCount">0</span>)
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="filterNotifications('declined')">
+                        Declined (<span id="declinedNotificationsCount">0</span>)
+                    </button>
+                </div>
+                
+                <!-- Notifications List -->
+                <div id="notificationsContainer" class="p-3">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                        <p>No notifications yet.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-danger" onclick="clearAllNotifications()">
+                    <i class="fas fa-trash me-1"></i>Clear All
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
 

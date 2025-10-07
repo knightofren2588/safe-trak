@@ -2732,3 +2732,28 @@ pre {
     color: #000000 !important;
     font-weight: 600 !important;
 }
+
+/* Notification Styling - Minimal Custom CSS */
+.dropdown-item-text {
+    white-space: normal;
+    padding: 0.75rem 1rem;
+    cursor: default;
+}
+
+.dropdown-item-text:hover {
+    background-color: #f8f9fa !important;
+}
+
+.notification-badge-animate {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Make notification cards stand out */
+.notification-card-unread {
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+}
