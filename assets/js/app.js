@@ -2956,28 +2956,44 @@ END:VCALENDAR`;
     }
 
     async initializeDefaultCategories() {
-        // Check if categories array is empty
-        if (this.categories.length === 0) {
-            console.log('Initializing default categories...');
+        console.log('Ensuring required categories exist...');
+        
+        const requiredCategories = [
+            {
+                id: 'equipment-supplies',
+                name: 'Equipment - Supplies',
+                createdAt: new Date().toISOString(),
+                createdBy: this.currentUser || 'admin'
+            },
+            {
+                id: 'other-undefined',
+                name: 'Other-Undefined',
+                createdAt: new Date().toISOString(),
+                createdBy: this.currentUser || 'admin'
+            }
+        ];
+        
+        let categoriesUpdated = false;
+        
+        // Add each required category if it doesn't already exist
+        for (const requiredCategory of requiredCategories) {
+            const exists = this.categories.some(cat => 
+                cat.name === requiredCategory.name || cat.id === requiredCategory.id
+            );
             
-            const defaultCategories = [
-                {
-                    id: 'equipment-supplies',
-                    name: 'Equipment - Supplies',
-                    createdAt: new Date().toISOString(),
-                    createdBy: this.currentUser || 'admin'
-                },
-                {
-                    id: 'other-undefined',
-                    name: 'Other-Undefined',
-                    createdAt: new Date().toISOString(),
-                    createdBy: this.currentUser || 'admin'
-                }
-            ];
-            
-            this.categories = defaultCategories;
+            if (!exists) {
+                this.categories.push(requiredCategory);
+                categoriesUpdated = true;
+                console.log(`Added category: ${requiredCategory.name}`);
+            }
+        }
+        
+        // Save categories if any were added
+        if (categoriesUpdated) {
             await this.saveCategories();
-            console.log('Default categories initialized:', this.categories.length);
+            console.log('Categories updated, total count:', this.categories.length);
+        } else {
+            console.log('All required categories already exist');
         }
     }
 
