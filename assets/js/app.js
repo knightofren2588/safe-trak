@@ -3669,10 +3669,10 @@ END:VCALENDAR`;
                 return project.createdBy === this.currentUser || assignedUsers.includes(this.currentUser);
             });
         } else if (this.projectViewMode !== 'all') {
-            // Individual user view
+            // Individual user view - only show projects where user is assigned
             filteredProjects = filteredProjects.filter(project => {
                 const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-                return project.createdBy === this.projectViewMode || assignedUsers.includes(this.projectViewMode);
+                return assignedUsers.includes(this.projectViewMode);
             });
         }
         
@@ -4283,10 +4283,10 @@ END:VCALENDAR`;
                     return project.createdBy === this.currentUser || assignedUsers.includes(this.currentUser);
                 });
             } else {
-                // Individual user view - show active projects created by or assigned to specific user
+                // Individual user view - show active projects where user is assigned
                 projects = activeProjects.filter(project => {
                     const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-                    return project.createdBy === this.projectViewMode || assignedUsers.includes(this.projectViewMode);
+                    return assignedUsers.includes(this.projectViewMode);
                 });
             }
         } else {

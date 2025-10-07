@@ -203,7 +203,7 @@
                     <!-- Release Notes Button -->
                     <button class="btn btn-outline-info btn-sm" onclick="openReleaseNotes()" title="View Release Notes">
                         <i class="fas fa-rocket me-1"></i>
-                        <span class="badge bg-info">v1.2.1</span>
+                        <span class="badge bg-info">v1.2.2</span>
                     </button>
                     
                     <!-- Report Bug Button with Dropdown -->
@@ -1845,7 +1845,7 @@
                     <h5 class="modal-title">
                         <i class="fas fa-rocket me-2"></i>SafeTrack Release Notes
                     </h5>
-                    <p class="mb-0 small">Current Version: <span class="badge bg-light text-dark">v1.2.1</span></p>
+                    <p class="mb-0 small">Current Version: <span class="badge bg-light text-dark">v1.2.2</span></p>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -1864,14 +1864,44 @@
                 </div>
                 
                 <div id="releaseNotesContainer">
+                    <!-- Version 1.2.2 -->
+                    <div class="release-version">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-primary fs-6">v1.2.2</span>
+                                <span class="text-muted ms-2">October 7, 2025</span>
+                            </div>
+                            <span class="badge bg-success">Current</span>
+                        </div>
+                        
+                        <!-- Bug Fixes -->
+                        <div class="release-category">
+                            <h6 class="text-warning">
+                                <i class="fas fa-bug me-2"></i>Bug Fixes
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Fixed Project View Filtering:</strong> Individual user views now only show projects where the user is actually assigned to, not just projects they created and delegated away</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.2', 'bugfix', 'Fixed Project View Filtering', 'Individual user views now only show projects where the user is actually assigned to, not just projects they created and delegated away')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
                     <!-- Version 1.2.1 -->
                     <div class="release-version">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
-                                <span class="badge bg-primary fs-6">v1.2.1</span>
+                                <span class="badge bg-secondary fs-6">v1.2.1</span>
                                 <span class="text-muted ms-2">October 7, 2025</span>
                             </div>
-                            <span class="badge bg-success">Current</span>
                         </div>
                         
                         <!-- New Features -->
