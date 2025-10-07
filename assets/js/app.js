@@ -2849,6 +2849,8 @@ END:VCALENDAR`;
             this.departments = departments;
             this.currentUser = currentUser;
             
+            // Initialize default categories if none exist
+            await this.initializeDefaultCategories();
             
             console.log('🔍 DIAGNOSTIC: Final data counts:', {
                 projects: this.projects.length,
@@ -2879,6 +2881,9 @@ END:VCALENDAR`;
         this.roles = this.loadRolesLocal();
         this.departments = this.loadDepartmentsLocal();
         this.currentUser = this.loadCurrentUserLocal();
+        
+        // Initialize default categories if none exist
+        await this.initializeDefaultCategories();
         
         console.log('🔍 FALLBACK DIAGNOSTIC: Local storage data counts:', {
             projects: this.projects.length,
@@ -2948,6 +2953,32 @@ END:VCALENDAR`;
 
     async saveCategories() {
         await this.cloudStorage.saveCategories(this.categories);
+    }
+
+    async initializeDefaultCategories() {
+        // Check if categories array is empty
+        if (this.categories.length === 0) {
+            console.log('Initializing default categories...');
+            
+            const defaultCategories = [
+                {
+                    id: 'equipment-supplies',
+                    name: 'Equipment - Supplies',
+                    createdAt: new Date().toISOString(),
+                    createdBy: this.currentUser || 'admin'
+                },
+                {
+                    id: 'other-undefined',
+                    name: 'Other-Undefined',
+                    createdAt: new Date().toISOString(),
+                    createdBy: this.currentUser || 'admin'
+                }
+            ];
+            
+            this.categories = defaultCategories;
+            await this.saveCategories();
+            console.log('Default categories initialized:', this.categories.length);
+        }
     }
 
     loadRoles() {
@@ -4141,6 +4172,7 @@ END:VCALENDAR`;
         this.renderRecentProjects();
         this.renderProjectTable();
         this.populateUserDropdowns(); // Update user dropdowns when rendering
+        this.populateCategoryDropdowns(); // Update category dropdowns when rendering
     }
 
     renderDashboardStats() {
