@@ -203,8 +203,35 @@
                     <!-- Release Notes Button -->
                     <button class="btn btn-outline-info btn-sm" onclick="openReleaseNotes()" title="View Release Notes">
                         <i class="fas fa-rocket me-1"></i>
-                        <span class="badge bg-info">v1.2.0</span>
+                        <span class="badge bg-info">v1.2.1</span>
                     </button>
+                    
+                    <!-- Report Bug Button with Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-danger btn-sm dropdown-toggle position-relative" 
+                                type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-bug me-1"></i>Bugs
+                            <span class="badge bg-danger position-absolute top-0 start-100 translate-middle rounded-pill" 
+                                  id="myBugUpdatesBadge" style="display: none; font-size: 0.6rem;">
+                                0
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><h6 class="dropdown-header">Bug Reports</h6></li>
+                            <li><a class="dropdown-item" href="#" onclick="openBugReportModal()">
+                                <i class="fas fa-plus-circle me-2"></i>Report New Bug
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="openMyBugReports()">
+                                <i class="fas fa-list me-2"></i>My Bug Reports
+                                <span class="badge bg-info ms-2" id="myBugsCountBadge">0</span>
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-muted small" href="#" onclick="openMyBugReports()">
+                                <i class="fas fa-bell me-2"></i>
+                                <span id="myBugUpdatesText">No new updates</span>
+                            </a></li>
+                        </ul>
+                    </div>
                     <!-- User switching removed for security - users locked to selected profile -->
                     
                     <!-- Project View Toggle -->
@@ -261,6 +288,10 @@
                 </button>
                 <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" data-tab="dashboard">
                     <i class="fas fa-shield-alt mr-2"></i>Safety Dashboard
+                </button>
+                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600 admin-only-nav" onclick="openBugDashboard()" style="display: none;">
+                    <i class="fas fa-bug mr-2"></i>Bug Reports
+                    <span class="badge bg-danger ms-2" id="navBugCountBadge" style="display: none;">0</span>
                 </button>
                 <!-- TEMPORARILY HIDDEN: Compliance and Certifications tabs -->
                 <!-- 
@@ -1814,7 +1845,7 @@
                     <h5 class="modal-title">
                         <i class="fas fa-rocket me-2"></i>SafeTrack Release Notes
                     </h5>
-                    <p class="mb-0 small">Current Version: <span class="badge bg-light text-dark">v1.2.0</span></p>
+                    <p class="mb-0 small">Current Version: <span class="badge bg-light text-dark">v1.2.1</span></p>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -1833,14 +1864,97 @@
                 </div>
                 
                 <div id="releaseNotesContainer">
+                    <!-- Version 1.2.1 -->
+                    <div class="release-version">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-primary fs-6">v1.2.1</span>
+                                <span class="text-muted ms-2">October 7, 2025</span>
+                            </div>
+                            <span class="badge bg-success">Current</span>
+                        </div>
+                        
+                        <!-- New Features -->
+                        <div class="release-category">
+                            <h6 class="text-success">
+                                <i class="fas fa-star me-2"></i>New Features
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Bug Reporting System:</strong> Complete bug tracking system with user reports, admin dashboard, and cloud storage integration</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.1', 'feature', 'Bug Reporting System', 'Complete bug tracking system with user reports, admin dashboard, and cloud storage integration')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>User Bug Tracking:</strong> Users can track their submitted bugs, see admin responses, and mark replies as read</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.1', 'feature', 'User Bug Tracking', 'Users can track their submitted bugs, see admin responses, and mark replies as read')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Admin Bug Dashboard:</strong> Admin can view, filter, reply to, and delete bug reports with status management</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.1', 'feature', 'Admin Bug Dashboard', 'Admin can view, filter, reply to, and delete bug reports with status management')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Improvements -->
+                        <div class="release-category">
+                            <h6 class="text-info">
+                                <i class="fas fa-arrow-up me-2"></i>Improvements
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Tailwind CSS Integration:</strong> Converted bug reporting UI from Bootstrap to Tailwind for better visibility and consistency</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.1', 'improvement', 'Tailwind CSS Integration', 'Converted bug reporting UI from Bootstrap to Tailwind for better visibility and consistency')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Cloud Storage Integration:</strong> Bug reports now sync with cloud storage with local fallback for offline functionality</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.1', 'improvement', 'Cloud Storage Integration', 'Bug reports now sync with cloud storage with local fallback for offline functionality')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
                     <!-- Version 1.2.0 -->
                     <div class="release-version">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
-                                <span class="badge bg-primary fs-6">v1.2.0</span>
+                                <span class="badge bg-secondary fs-6">v1.2.0</span>
                                 <span class="text-muted ms-2">October 7, 2025</span>
                             </div>
-                            <span class="badge bg-success">Current</span>
                         </div>
                         
                         <!-- New Features -->
@@ -2255,6 +2369,243 @@
         </div>
     </div>
 </div>
+
+<!-- Bug Report Modal -->
+<div class="modal fade" id="bugReportModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-bug me-2"></i>Report a Bug
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="bugReportForm">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Found an issue? Report it here and our team will address it ASAP!
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="bugTitle" class="form-label">Bug Title *</label>
+                            <input type="text" class="form-control" id="bugTitle" 
+                                   placeholder="Brief description of the issue" required>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="bugPriority" class="form-label">Priority *</label>
+                            <select class="form-select" id="bugPriority" required>
+                                <option value="low">Low - Minor issue</option>
+                                <option value="medium" selected>Medium - Affects functionality</option>
+                                <option value="high">High - Major issue</option>
+                                <option value="critical">Critical - App breaking</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="bugCategory" class="form-label">Category *</label>
+                            <select class="form-select" id="bugCategory" required>
+                                <option value="ui">User Interface</option>
+                                <option value="functionality">Functionality</option>
+                                <option value="performance">Performance</option>
+                                <option value="data">Data/Storage</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="bugDescription" class="form-label">Description *</label>
+                            <textarea class="form-control" id="bugDescription" rows="4" 
+                                      placeholder="Describe what happened and what you expected to happen..." required></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="bugSteps" class="form-label">Steps to Reproduce</label>
+                            <textarea class="form-control" id="bugSteps" rows="3" 
+                                      placeholder="1. Go to...&#10;2. Click on...&#10;3. Notice that..."></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="bugScreenshot" class="form-label">Screenshot (Optional)</label>
+                            <input type="file" class="form-control" id="bugScreenshot" accept="image/*">
+                            <small class="text-muted">Upload a screenshot to help us understand the issue</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-paper-plane me-1"></i>Submit Bug Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bug Dashboard Modal (Admin Only) -->
+<div class="modal fade" id="bugDashboardModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">
+                <div>
+                    <h5 class="modal-title">
+                        <i class="fas fa-bug me-2"></i>Bug Reports Dashboard
+                    </h5>
+                    <p class="mb-0 small">Manage and respond to user-reported bugs</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Filter Tabs -->
+                <div class="flex gap-2 p-3 bg-gray-100 border-b">
+                    <button class="px-3 py-1 text-sm font-semibold text-white bg-red-600 border border-red-600 rounded hover:bg-red-700" onclick="filterBugs('all')">
+                        All (<span id="allBugsCount">0</span>)
+                    </button>
+                    <button class="px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-200 border border-yellow-400 rounded hover:bg-yellow-300" onclick="filterBugs('pending')">
+                        Pending (<span id="pendingBugsCount">0</span>)
+                    </button>
+                    <button class="px-3 py-1 text-sm font-semibold text-green-800 bg-green-200 border border-green-400 rounded hover:bg-green-300" onclick="filterBugs('resolved')">
+                        Resolved (<span id="resolvedBugsCount">0</span>)
+                    </button>
+                    <button class="px-3 py-1 text-sm font-semibold text-gray-800 bg-gray-200 border border-gray-400 rounded hover:bg-gray-300" onclick="filterBugs('closed')">
+                        Closed (<span id="closedBugsCount">0</span>)
+                    </button>
+                </div>
+                
+                <!-- Bug List -->
+                <div id="bugListContainer" class="p-3">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-bug fa-3x mb-3 d-block"></i>
+                        <p>No bug reports yet. Great work!</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-gray-100">
+                <button type="button" class="px-4 py-2 text-sm font-semibold text-white bg-gray-600 border border-gray-600 rounded hover:bg-gray-700" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- My Bug Reports Modal (All Users) -->
+<div class="modal fade" id="myBugReportsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);">
+                <div>
+                    <h5 class="modal-title">
+                        <i class="fas fa-list-alt me-2"></i>My Bug Reports
+                    </h5>
+                    <p class="mb-0 small">Track your submitted bugs and see admin responses</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Stats Summary -->
+                <div class="p-3 bg-light border-bottom">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="fs-4 fw-bold text-primary" id="myTotalBugs">0</div>
+                                <small class="text-muted">Total Reported</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="fs-4 fw-bold text-warning" id="myPendingBugs">0</div>
+                                <small class="text-muted">Pending</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="fs-4 fw-bold text-success" id="myResolvedBugs">0</div>
+                                <small class="text-muted">Resolved</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="fs-4 fw-bold text-info" id="myUnreadReplies">0</div>
+                                <small class="text-muted">Unread Replies</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Filter Tabs -->
+                <div class="flex gap-2 p-3 border-b">
+                    <button class="px-3 py-1 text-sm font-semibold text-white bg-red-600 border border-red-600 rounded hover:bg-red-700" onclick="filterMyBugs('all')">All</button>
+                    <button class="px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-200 border border-yellow-400 rounded hover:bg-yellow-300" onclick="filterMyBugs('pending')">Pending</button>
+                    <button class="px-3 py-1 text-sm font-semibold text-blue-800 bg-blue-200 border border-blue-400 rounded hover:bg-blue-300" onclick="filterMyBugs('in-progress')">In Progress</button>
+                    <button class="px-3 py-1 text-sm font-semibold text-green-800 bg-green-200 border border-green-400 rounded hover:bg-green-300" onclick="filterMyBugs('resolved')">Resolved</button>
+                    <button class="px-3 py-1 text-sm font-semibold text-gray-800 bg-gray-200 border border-gray-400 rounded hover:bg-gray-300" onclick="filterMyBugs('closed')">Closed</button>
+                </div>
+                
+                <!-- My Bug List -->
+                <div id="myBugListContainer" class="p-3">
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-bug fa-3x mb-3 d-block"></i>
+                        <p>You haven't reported any bugs yet.</p>
+                        <button class="btn btn-danger" onclick="openBugReportModal(); bootstrap.Modal.getInstance(document.getElementById('myBugReportsModal')).hide();">
+                            <i class="fas fa-plus me-1"></i>Report Your First Bug
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-gray-100">
+                <button type="button" class="px-4 py-2 text-sm font-semibold text-white bg-red-600 border border-red-600 rounded hover:bg-red-700" onclick="openBugReportModal(); bootstrap.Modal.getInstance(document.getElementById('myBugReportsModal')).hide();">
+                    <i class="fas fa-plus mr-1"></i>Report New Bug
+                </button>
+                <button type="button" class="px-4 py-2 text-sm font-semibold text-white bg-gray-600 border border-gray-600 rounded hover:bg-gray-700" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bug Reply Modal -->
+<div class="modal fade" id="bugReplyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-reply me-2"></i>Reply to Bug Report
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="bugReplyForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Bug Title</label>
+                        <input type="text" class="form-control" id="replyBugTitle" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bugReplyText" class="form-label">Your Reply *</label>
+                        <textarea class="form-control" id="bugReplyText" rows="4" 
+                                  placeholder="Provide an update or ask for more information..." required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bugStatus" class="form-label">Update Status</label>
+                        <select class="form-select" id="bugStatus">
+                            <option value="pending">Pending - Investigating</option>
+                            <option value="in-progress">In Progress - Working on fix</option>
+                            <option value="resolved">Resolved - Fixed</option>
+                            <option value="closed">Closed - Won't fix / Not a bug</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-1"></i>Send Reply
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     

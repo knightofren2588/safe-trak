@@ -1590,6 +1590,9 @@ END:VCALENDAR`;
         // Show connection status
         this.showConnectionStatus();
 
+        // Load bugs
+        await loadBugs();
+
         // Call this once after initial load finishes
         this.__signalReady?.();
     }
@@ -5000,6 +5003,16 @@ END:VCALENDAR`;
             }
         }
         
+        // Show/hide admin-only navigation button
+        const adminNavButton = document.querySelector('.admin-only-nav');
+        if (adminNavButton) {
+            if (this.currentUser === 'admin') {
+                adminNavButton.style.display = 'block';
+            } else {
+                adminNavButton.style.display = 'none';
+            }
+        }
+        
         // Populate individual user views in dropdown
         this.populateIndividualUserViews();
         
@@ -7205,3 +7218,683 @@ window.deleteReleaseNote = (button) => {
     }
   } catch (_) { /* ignore in older environments */ }
 })();
+
+// Bug Reporting System - Cloud Storage Version
+let bugReports = [];
+let currentBugId = null;
+let userSeenReplies = {};
+
+// Load bugs from cloud storage with local fallback
+async function loadBugs() {
+    // Try cloud storage first
+    if (window.projectManager && window.projectManager.cloudStorage) {
+        try {
+            const cloudBugs = await window.projectManager.cloudStorage.getBugReports();
+            if (cloudBugs && cloudBugs.length > 0) {
+                bugReports = cloudBugs;
+                console.log('[BUGS] Loaded bugs from cloud:', bugReports.length);
+                // Save to local storage as backup
+                localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugReports));
+            } else {
+                // Cloud is empty, try local backup
+                const localBugs = localStorage.getItem('safetrack_bug_reports_backup');
+                if (localBugs) {
+                    bugReports = JSON.parse(localBugs);
+                    console.log('[BUGS] Loaded bugs from local backup:', bugReports.length);
+                } else {
+                    bugReports = [];
+                    console.log('[BUGS] No bugs found in cloud or local storage');
+                }
+            }
+        } catch (error) {
+            console.error('[BUGS] Error loading from cloud, trying local backup:', error);
+            // Fallback to local storage
+            const localBugs = localStorage.getItem('safetrack_bug_reports_backup');
+            if (localBugs) {
+                bugReports = JSON.parse(localBugs);
+                console.log('[BUGS] Loaded bugs from local backup after cloud error:', bugReports.length);
+            } else {
+                bugReports = [];
+                console.log('[BUGS] No local backup available');
+            }
+        }
+    } else {
+        // No cloud storage available, use local storage
+        const localBugs = localStorage.getItem('safetrack_bug_reports_backup');
+        if (localBugs) {
+            bugReports = JSON.parse(localBugs);
+            console.log('[BUGS] Loaded bugs from local storage (no cloud):', bugReports.length);
+        } else {
+            bugReports = [];
+            console.log('[BUGS] No bugs found in local storage');
+        }
+    }
+    
+    loadSeenReplies();
+    updateBugCounts();
+    updateMyBugCounts();
+}
+
+// Save bugs to cloud storage with local backup
+async function saveBugs() {
+    // Always save to local storage as backup first
+    try {
+        localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugReports));
+        console.log('[BUGS] Saved bugs to local backup');
+    } catch (error) {
+        console.error('[BUGS] Error saving to local backup:', error);
+    }
+    
+    // Try to save to cloud storage
+    if (window.projectManager && window.projectManager.cloudStorage) {
+        try {
+            await window.projectManager.cloudStorage.saveBugReports(bugReports);
+            console.log('[BUGS] Saved bugs to cloud');
+        } catch (error) {
+            console.error('[BUGS] Error saving to cloud (local backup available):', error);
+        }
+    } else {
+        console.log('[BUGS] Cloud storage not available, saved locally only');
+    }
+    
+    updateBugCounts();
+    updateMyBugCounts();
+}
+
+// Update bug count badges
+function updateBugCounts() {
+    const pendingBugs = bugReports.filter(b => b.status === 'pending').length;
+    const allBugs = bugReports.length;
+    const resolvedBugs = bugReports.filter(b => b.status === 'resolved').length;
+    const closedBugs = bugReports.filter(b => b.status === 'closed').length;
+    
+    // Update main bug count badge
+    const bugCountBadge = document.getElementById('bugCountBadge');
+    if (bugCountBadge) {
+        if (pendingBugs > 0) {
+            bugCountBadge.textContent = pendingBugs;
+            bugCountBadge.style.display = 'inline-block';
+        } else {
+            bugCountBadge.style.display = 'none';
+        }
+    }
+    
+    // Update navigation bug count badge
+    const navBugCountBadge = document.getElementById('navBugCountBadge');
+    if (navBugCountBadge) {
+        if (pendingBugs > 0) {
+            navBugCountBadge.textContent = pendingBugs;
+            navBugCountBadge.style.display = 'inline-block';
+        } else {
+            navBugCountBadge.style.display = 'none';
+        }
+    }
+    
+    // Update dashboard counts
+    if (document.getElementById('allBugsCount')) {
+        document.getElementById('allBugsCount').textContent = allBugs;
+    }
+    if (document.getElementById('pendingBugsCount')) {
+        document.getElementById('pendingBugsCount').textContent = pendingBugs;
+    }
+    if (document.getElementById('resolvedBugsCount')) {
+        document.getElementById('resolvedBugsCount').textContent = resolvedBugs;
+    }
+    if (document.getElementById('closedBugsCount')) {
+        document.getElementById('closedBugsCount').textContent = closedBugs;
+    }
+}
+
+// Open bug report modal
+window.openBugReportModal = () => {
+    const modal = new bootstrap.Modal(document.getElementById('bugReportModal'));
+    modal.show();
+};
+
+// Handle bug report submission
+document.addEventListener('DOMContentLoaded', () => {
+    // Load bugs on page load
+    loadBugs();
+    
+    // Bug report form
+    const bugForm = document.getElementById('bugReportForm');
+    if (bugForm) {
+        bugForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('bugTitle').value.trim();
+            const priority = document.getElementById('bugPriority').value;
+            const category = document.getElementById('bugCategory').value;
+            const description = document.getElementById('bugDescription').value.trim();
+            const steps = document.getElementById('bugSteps').value.trim();
+            const screenshotFile = document.getElementById('bugScreenshot').files[0];
+            
+            let screenshot = null;
+            if (screenshotFile) {
+                screenshot = await fileToBase64(screenshotFile);
+            }
+            
+            const bug = {
+                id: Date.now(),
+                title,
+                priority,
+                category,
+                description,
+                steps,
+                screenshot,
+                reportedBy: window.projectManager ? window.projectManager.currentUser : 'Unknown',
+                reportedByName: window.projectManager ? (window.projectManager.users.find(u => u.id === window.projectManager.currentUser)?.name || 'Unknown') : 'Unknown',
+                reportedAt: new Date().toISOString(),
+                status: 'pending',
+                replies: []
+            };
+            
+            bugReports.unshift(bug);
+            await saveBugs();
+            
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('bugReportModal'));
+            modal.hide();
+            bugForm.reset();
+            
+            // Show success message
+            if (window.projectManager) {
+                window.projectManager.showNotification('Bug report submitted successfully! Our team will review it soon.', 'success');
+            } else {
+                alert('Bug report submitted successfully!');
+            }
+        });
+    }
+    
+    // Bug reply form
+    const replyForm = document.getElementById('bugReplyForm');
+    if (replyForm) {
+        replyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const replyText = document.getElementById('bugReplyText').value.trim();
+            const status = document.getElementById('bugStatus').value;
+            
+            const bug = bugReports.find(b => b.id === currentBugId);
+            if (bug) {
+                bug.replies.push({
+                    text: replyText,
+                    repliedBy: window.projectManager ? window.projectManager.currentUser : 'Admin',
+                    repliedByName: window.projectManager ? (window.projectManager.users.find(u => u.id === window.projectManager.currentUser)?.name || 'Admin') : 'Admin',
+                    repliedAt: new Date().toISOString()
+                });
+                bug.status = status;
+                await saveBugs();
+                
+                // Refresh bug list
+                renderBugList('all');
+                
+                // Close modal and reset form
+                const modal = bootstrap.Modal.getInstance(document.getElementById('bugReplyModal'));
+                modal.hide();
+                replyForm.reset();
+                
+                // Show success message
+                if (window.projectManager) {
+                    window.projectManager.showNotification('Reply sent successfully!', 'success');
+                }
+            }
+        });
+    }
+});
+
+// Convert file to base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// Open bug dashboard (admin only)
+window.openBugDashboard = () => {
+    if (window.projectManager && window.projectManager.currentUser !== 'admin') {
+        alert('Access denied. Admin only.');
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('bugDashboardModal'));
+    modal.show();
+    
+    renderBugList('all');
+};
+
+// Filter bugs
+window.filterBugs = (filter) => {
+    renderBugList(filter);
+};
+
+// Render bug list
+function renderBugList(filter) {
+    const container = document.getElementById('bugListContainer');
+    if (!container) return;
+    
+    let filteredBugs = bugReports;
+    
+    if (filter !== 'all') {
+        filteredBugs = bugReports.filter(b => b.status === filter);
+    }
+    
+    if (filteredBugs.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-bug fa-3x mb-3 d-block"></i>
+                <p>No ${filter === 'all' ? '' : filter} bug reports found.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const priorityColors = {
+        low: 'secondary',
+        medium: 'warning',
+        high: 'orange',
+        critical: 'danger'
+    };
+    
+    const statusColors = {
+        pending: 'warning',
+        'in-progress': 'info',
+        resolved: 'success',
+        closed: 'secondary'
+    };
+    
+    const categoryIcons = {
+        ui: 'fa-paint-brush',
+        functionality: 'fa-cog',
+        performance: 'fa-tachometer-alt',
+        data: 'fa-database',
+        other: 'fa-question-circle'
+    };
+    
+    container.innerHTML = filteredBugs.map(bug => {
+        const reportedDate = new Date(bug.reportedAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        return `
+            <div class="bg-white border-2 rounded-lg shadow-md mb-4 ${priorityColors[bug.priority] === 'warning' ? 'border-yellow-400' : priorityColors[bug.priority] === 'info' ? 'border-blue-400' : priorityColors[bug.priority] === 'success' ? 'border-green-400' : priorityColors[bug.priority] === 'secondary' ? 'border-gray-400' : 'border-orange-400'}">
+                <div class="p-4 ${priorityColors[bug.priority] === 'warning' ? 'bg-yellow-50' : priorityColors[bug.priority] === 'info' ? 'bg-blue-50' : priorityColors[bug.priority] === 'success' ? 'bg-green-50' : priorityColors[bug.priority] === 'secondary' ? 'bg-gray-50' : 'bg-orange-50'}">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h6 class="text-lg font-semibold text-gray-900 mb-2">
+                                <i class="fas ${categoryIcons[bug.category]} mr-2 text-gray-700"></i>
+                                ${bug.title}
+                            </h6>
+                            <div class="flex gap-2 flex-wrap">
+                                <span class="px-2 py-1 text-xs font-semibold rounded ${priorityColors[bug.priority] === 'warning' ? 'text-yellow-800 bg-yellow-200 border border-yellow-400' : priorityColors[bug.priority] === 'info' ? 'text-blue-800 bg-blue-200 border border-blue-400' : priorityColors[bug.priority] === 'success' ? 'text-green-800 bg-green-200 border border-green-400' : priorityColors[bug.priority] === 'secondary' ? 'text-gray-800 bg-gray-200 border border-gray-400' : 'text-orange-800 bg-orange-200 border border-orange-400'}">${bug.priority.toUpperCase()}</span>
+                                <span class="px-2 py-1 text-xs font-semibold rounded ${statusColors[bug.status] === 'warning' ? 'text-yellow-800 bg-yellow-200 border border-yellow-400' : statusColors[bug.status] === 'info' ? 'text-blue-800 bg-blue-200 border border-blue-400' : statusColors[bug.status] === 'success' ? 'text-green-800 bg-green-200 border border-green-400' : 'text-gray-800 bg-gray-200 border border-gray-400'}">${bug.status.replace('-', ' ').toUpperCase()}</span>
+                                <small class="text-gray-600 text-sm font-medium">
+                                    <i class="fas fa-user mr-1"></i>${bug.reportedBy}
+                                </small>
+                                <small class="text-gray-600 text-sm font-medium">
+                                    <i class="fas fa-clock mr-1"></i>${reportedDate}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="flex gap-1">
+                            <button class="px-3 py-1 text-sm font-semibold text-white bg-blue-600 border border-blue-600 rounded hover:bg-blue-700" onclick="openBugReplyModal(${bug.id})">
+                                <i class="fas fa-reply mr-1"></i>Reply
+                            </button>
+                            <button class="px-3 py-1 text-sm font-semibold text-white bg-red-600 border border-red-600 rounded hover:bg-red-700" onclick="deleteBug(${bug.id})" title="Delete Bug Report">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <p class="mb-2 text-gray-900 font-semibold">Description:</p>
+                    <p class="mb-3 text-gray-800">${bug.description}</p>
+                    
+                    ${bug.steps ? `
+                        <p class="mb-2 text-gray-900 font-semibold">Steps to Reproduce:</p>
+                        <pre class="bg-gray-100 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">${bug.steps}</pre>
+                    ` : ''}
+                    
+                    ${bug.screenshot ? `
+                        <p class="mb-2 text-gray-900 font-semibold">Screenshot:</p>
+                        <img src="${bug.screenshot}" alt="Bug screenshot" class="w-full max-h-80 rounded border">
+                    ` : ''}
+                    
+                    ${bug.replies.length > 0 ? `
+                        <hr class="my-4 border-gray-300">
+                        <p class="mb-2 text-gray-900 font-semibold">Replies (${bug.replies.length}):</p>
+                        ${bug.replies.map(reply => {
+                            const replyDate = new Date(reply.repliedAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                            return `
+                                <div class="p-3 mb-2 bg-blue-50 border border-blue-300 rounded">
+                                    <div class="flex justify-between">
+                                        <strong class="text-gray-900">${reply.repliedBy}</strong>
+                                        <small class="text-gray-600">${replyDate}</small>
+                                    </div>
+                                    <p class="mt-2 text-gray-800">${reply.text}</p>
+                                </div>
+                            `;
+                        }).join('')}
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Open bug reply modal
+window.openBugReplyModal = (bugId) => {
+    currentBugId = bugId;
+    const bug = bugReports.find(b => b.id === bugId);
+    
+    if (bug) {
+        document.getElementById('replyBugTitle').value = bug.title;
+        document.getElementById('bugStatus').value = bug.status;
+        
+        const modal = new bootstrap.Modal(document.getElementById('bugReplyModal'));
+        modal.show();
+    }
+};
+
+// Delete bug (admin only)
+window.deleteBug = async (bugId) => {
+    if (!confirm('Are you sure you want to delete this bug report?')) return;
+    
+    bugReports = bugReports.filter(b => b.id !== bugId);
+    await saveBugs();
+    renderBugList('all');
+    
+    if (window.projectManager) {
+        window.projectManager.showNotification('Bug report deleted', 'success');
+    }
+};
+
+// Load seen replies from storage (this can stay localStorage since it's per-user preference)
+function loadSeenReplies() {
+    const currentUser = window.projectManager ? window.projectManager.currentUser : null;
+    if (!currentUser) return;
+    
+    const saved = localStorage.getItem(`safetrack_seen_bug_replies_${currentUser}`);
+    if (saved) {
+        userSeenReplies = JSON.parse(saved);
+    }
+}
+
+// Save seen replies to storage
+function saveSeenReplies() {
+    const currentUser = window.projectManager ? window.projectManager.currentUser : null;
+    if (!currentUser) return;
+    
+    localStorage.setItem(`safetrack_seen_bug_replies_${currentUser}`, JSON.stringify(userSeenReplies));
+}
+
+// Mark bug replies as read
+function markBugRepliesAsRead(bugId) {
+    if (!userSeenReplies[bugId]) {
+        userSeenReplies[bugId] = [];
+    }
+    
+    const bug = bugReports.find(b => b.id === bugId);
+    if (bug) {
+        userSeenReplies[bugId] = bug.replies.map(r => r.repliedAt);
+        saveSeenReplies();
+        updateMyBugCounts();
+    }
+}
+
+// Get unread replies count for a bug
+function getUnreadRepliesCount(bug) {
+    if (!userSeenReplies[bug.id]) {
+        return bug.replies.length;
+    }
+    
+    const seenDates = userSeenReplies[bug.id];
+    return bug.replies.filter(r => !seenDates.includes(r.repliedAt)).length;
+}
+
+// Update user's bug counts
+function updateMyBugCounts() {
+    if (!window.projectManager) return;
+    
+    const currentUser = window.projectManager.currentUser;
+    const myBugs = bugReports.filter(b => b.reportedBy === currentUser);
+    
+    const totalBugs = myBugs.length;
+    const pendingBugs = myBugs.filter(b => b.status === 'pending').length;
+    const resolvedBugs = myBugs.filter(b => b.status === 'resolved').length;
+    
+    // Count total unread replies
+    let unreadReplies = 0;
+    myBugs.forEach(bug => {
+        unreadReplies += getUnreadRepliesCount(bug);
+    });
+    
+    // Update my bugs count badge
+    const myBugsCountBadge = document.getElementById('myBugsCountBadge');
+    if (myBugsCountBadge) {
+        myBugsCountBadge.textContent = totalBugs;
+    }
+    
+    // Update unread badge
+    const myBugUpdatesBadge = document.getElementById('myBugUpdatesBadge');
+    if (myBugUpdatesBadge) {
+        if (unreadReplies > 0) {
+            myBugUpdatesBadge.textContent = unreadReplies;
+            myBugUpdatesBadge.style.display = 'inline-block';
+        } else {
+            myBugUpdatesBadge.style.display = 'none';
+        }
+    }
+    
+    // Update text
+    const myBugUpdatesText = document.getElementById('myBugUpdatesText');
+    if (myBugUpdatesText) {
+        if (unreadReplies > 0) {
+            myBugUpdatesText.textContent = `${unreadReplies} new ${unreadReplies === 1 ? 'reply' : 'replies'}!`;
+            myBugUpdatesText.classList.add('text-danger', 'fw-bold');
+            myBugUpdatesText.classList.remove('text-muted');
+        } else {
+            myBugUpdatesText.textContent = 'No new updates';
+            myBugUpdatesText.classList.remove('text-danger', 'fw-bold');
+            myBugUpdatesText.classList.add('text-muted');
+        }
+    }
+    
+    // Update modal stats
+    if (document.getElementById('myTotalBugs')) {
+        document.getElementById('myTotalBugs').textContent = totalBugs;
+    }
+    if (document.getElementById('myPendingBugs')) {
+        document.getElementById('myPendingBugs').textContent = pendingBugs;
+    }
+    if (document.getElementById('myResolvedBugs')) {
+        document.getElementById('myResolvedBugs').textContent = resolvedBugs;
+    }
+    if (document.getElementById('myUnreadReplies')) {
+        document.getElementById('myUnreadReplies').textContent = unreadReplies;
+    }
+}
+
+// Open my bug reports modal
+window.openMyBugReports = () => {
+    if (!window.projectManager) {
+        alert('Please log in to view your bug reports.');
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('myBugReportsModal'));
+    modal.show();
+    
+    renderMyBugList('all');
+};
+
+// Filter my bugs
+window.filterMyBugs = (filter) => {
+    renderMyBugList(filter);
+};
+
+// Render my bug list
+function renderMyBugList(filter) {
+    const container = document.getElementById('myBugListContainer');
+    if (!container || !window.projectManager) return;
+    
+    const currentUser = window.projectManager.currentUser;
+    let myBugs = bugReports.filter(b => b.reportedBy === currentUser);
+    
+    if (filter !== 'all') {
+        myBugs = myBugs.filter(b => b.status === filter);
+    }
+    
+    if (myBugs.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-bug fa-3x mb-3 d-block"></i>
+                <p>No ${filter === 'all' ? '' : filter} bug reports found.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const priorityColors = {
+        low: 'secondary',
+        medium: 'warning',
+        high: 'orange',
+        critical: 'danger'
+    };
+    
+    const statusColors = {
+        pending: 'warning',
+        'in-progress': 'info',
+        resolved: 'success',
+        closed: 'secondary'
+    };
+    
+    const statusIcons = {
+        pending: 'fa-clock',
+        'in-progress': 'fa-spinner',
+        resolved: 'fa-check-circle',
+        closed: 'fa-times-circle'
+    };
+    
+    const categoryIcons = {
+        ui: 'fa-paint-brush',
+        functionality: 'fa-cog',
+        performance: 'fa-tachometer-alt',
+        data: 'fa-database',
+        other: 'fa-question-circle'
+    };
+    
+    container.innerHTML = myBugs.map(bug => {
+        const reportedDate = new Date(bug.reportedAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const unreadCount = getUnreadRepliesCount(bug);
+        const hasUnread = unreadCount > 0;
+        
+        return `
+            <div class="bg-white border-2 rounded-lg shadow-md mb-4 ${priorityColors[bug.priority] === 'warning' ? 'border-yellow-400' : priorityColors[bug.priority] === 'info' ? 'border-blue-400' : priorityColors[bug.priority] === 'success' ? 'border-green-400' : priorityColors[bug.priority] === 'secondary' ? 'border-gray-400' : 'border-orange-400'} ${hasUnread ? 'border-4' : ''}">
+                <div class="p-4 ${priorityColors[bug.priority] === 'warning' ? 'bg-yellow-50' : priorityColors[bug.priority] === 'info' ? 'bg-blue-50' : priorityColors[bug.priority] === 'success' ? 'bg-green-50' : priorityColors[bug.priority] === 'secondary' ? 'bg-gray-50' : 'bg-orange-50'}">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h6 class="text-lg font-semibold text-gray-900 mb-2">
+                                <i class="fas ${categoryIcons[bug.category]} mr-2 text-gray-700"></i>
+                                ${bug.title}
+                                ${hasUnread ? `<span class="px-2 py-1 text-xs font-semibold text-white bg-red-600 border border-red-600 rounded ml-2">${unreadCount} new ${unreadCount === 1 ? 'reply' : 'replies'}</span>` : ''}
+                            </h6>
+                            <div class="flex gap-2 flex-wrap items-center">
+                                <span class="px-2 py-1 text-xs font-semibold rounded ${priorityColors[bug.priority] === 'warning' ? 'text-yellow-800 bg-yellow-200 border border-yellow-400' : priorityColors[bug.priority] === 'info' ? 'text-blue-800 bg-blue-200 border border-blue-400' : priorityColors[bug.priority] === 'success' ? 'text-green-800 bg-green-200 border border-green-400' : priorityColors[bug.priority] === 'secondary' ? 'text-gray-800 bg-gray-200 border border-gray-400' : 'text-orange-800 bg-orange-200 border border-orange-400'}">${bug.priority.toUpperCase()}</span>
+                                <span class="px-2 py-1 text-xs font-semibold rounded ${statusColors[bug.status] === 'warning' ? 'text-yellow-800 bg-yellow-200 border border-yellow-400' : statusColors[bug.status] === 'info' ? 'text-blue-800 bg-blue-200 border border-blue-400' : statusColors[bug.status] === 'success' ? 'text-green-800 bg-green-200 border border-green-400' : 'text-gray-800 bg-gray-200 border border-gray-400'}">
+                                    <i class="fas ${statusIcons[bug.status]} mr-1"></i>
+                                    ${bug.status.replace('-', ' ').toUpperCase()}
+                                </span>
+                                <small class="text-gray-700 text-sm font-medium">
+                                    <i class="fas fa-clock mr-1"></i>${reportedDate}
+                                </small>
+                                ${bug.replies.length > 0 ? `
+                                    <small class="text-green-700 text-sm font-medium">
+                                        <i class="fas fa-comment-dots mr-1"></i>${bug.replies.length} ${bug.replies.length === 1 ? 'reply' : 'replies'}
+                                    </small>
+                                ` : `
+                                    <small class="text-gray-700 text-sm font-medium">
+                                        <i class="fas fa-hourglass-half mr-1"></i>Awaiting response
+                                    </small>
+                                `}
+                            </div>
+                        </div>
+                        ${hasUnread ? `
+                            <button class="px-3 py-1 text-sm font-semibold text-white bg-green-600 border border-green-600 rounded hover:bg-green-700" onclick="markBugRepliesAsRead(${bug.id}); renderMyBugList('${filter}');">
+                                <i class="fas fa-check mr-1"></i>Mark as Read
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="p-4">
+                    <p class="mb-2 text-gray-900 font-semibold">Description:</p>
+                    <p class="mb-3 text-gray-800">${bug.description}</p>
+                    
+                    ${bug.steps ? `
+                        <p class="mb-2 text-gray-900 font-semibold">Steps to Reproduce:</p>
+                        <pre class="bg-gray-100 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">${bug.steps}</pre>
+                    ` : ''}
+                    
+                    ${bug.screenshot ? `
+                        <p class="mb-2 text-gray-900 font-semibold">Screenshot:</p>
+                        <img src="${bug.screenshot}" alt="Bug screenshot" class="w-full max-h-80 rounded border cursor-pointer" onclick="window.open(this.src)">
+                    ` : ''}
+                    
+                    ${bug.replies.length > 0 ? `
+                        <hr class="my-4 border-gray-300">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-gray-900 font-semibold">Admin Responses (${bug.replies.length}):</p>
+                            ${hasUnread ? '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-600 border border-red-600 rounded">New</span>' : ''}
+                        </div>
+                        ${bug.replies.map((reply, index) => {
+                            const replyDate = new Date(reply.repliedAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                            const isUnread = !userSeenReplies[bug.id] || !userSeenReplies[bug.id].includes(reply.repliedAt);
+                            return `
+                                <div class="p-3 mb-2 rounded border-2 ${isUnread ? 'bg-green-50 border-green-300' : 'bg-blue-50 border-blue-300'}">
+                                    <div class="flex justify-between items-center">
+                                        <div class="flex items-center gap-2">
+                                            <i class="fas fa-user-shield text-gray-700"></i>
+                                            <strong class="text-gray-900">${reply.repliedBy}</strong>
+                                            ${isUnread ? '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-600 border border-green-600 rounded">NEW</span>' : ''}
+                                        </div>
+                                        <small class="text-gray-600">${replyDate}</small>
+                                    </div>
+                                    <p class="mt-2 text-gray-800">${reply.text}</p>
+                                </div>
+                            `;
+                        }).join('')}
+                    ` : `
+                        <div class="p-3 bg-yellow-50 border border-yellow-300 rounded">
+                            <i class="fas fa-hourglass-half mr-2 text-yellow-700"></i>
+                            <span class="text-yellow-800 font-medium">No admin response yet. We'll notify you when there's an update!</span>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join('');
+}

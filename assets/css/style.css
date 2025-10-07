@@ -2311,3 +2311,424 @@ div.hover-lift:hover {
 .release-category h6 i {
     width: 24px;
 }
+
+/* Bug Report Styling */
+.card.border-secondary { border-width: 2px !important; }
+.card.border-warning { border-width: 2px !important; }
+.card.border-orange { border-width: 2px !important; border-color: #f97316 !important; }
+.card.border-danger { border-width: 2px !important; }
+
+.bg-orange { background-color: #f97316 !important; }
+.bg-opacity-10 { opacity: 0.1; }
+
+pre {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+/* Enhanced Bug Report UI Visibility - Override Tailwind */
+/* Filter tabs - improve contrast for both modals */
+#myBugReportsModal .btn-outline-warning,
+#bugDashboardModal .btn-outline-warning,
+#myBugReportsModal button.btn-outline-warning,
+#bugDashboardModal button.btn-outline-warning {
+    color: #856404 !important;
+    border-color: #ffc107 !important;
+    background-color: #fff3cd !important;
+    font-weight: 600 !important;
+}
+
+#myBugReportsModal .btn-outline-info,
+#bugDashboardModal .btn-outline-info,
+#myBugReportsModal button.btn-outline-info,
+#bugDashboardModal button.btn-outline-info {
+    color: #0c5460 !important;
+    border-color: #17a2b8 !important;
+    background-color: #d1ecf1 !important;
+    font-weight: 600 !important;
+}
+
+#myBugReportsModal .btn-outline-success,
+#bugDashboardModal .btn-outline-success,
+#myBugReportsModal button.btn-outline-success,
+#bugDashboardModal button.btn-outline-success {
+    color: #155724 !important;
+    border-color: #28a745 !important;
+    background-color: #d4edda !important;
+    font-weight: 600 !important;
+}
+
+#myBugReportsModal .btn-outline-secondary,
+#bugDashboardModal .btn-outline-secondary,
+#myBugReportsModal button.btn-outline-secondary,
+#bugDashboardModal button.btn-outline-secondary {
+    color: #383d41 !important;
+    border-color: #6c757d !important;
+    background-color: #e2e3e5 !important;
+    font-weight: 600 !important;
+}
+
+/* Bug badges - improve contrast - Override Tailwind */
+.badge.bg-warning,
+#myBugReportsModal .badge.bg-warning,
+#bugDashboardModal .badge.bg-warning,
+#myBugReportsModal span.badge.bg-warning,
+#bugDashboardModal span.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+    font-weight: 600 !important;
+    border: 1px solid #e0a800 !important;
+}
+
+.badge.bg-info,
+#myBugReportsModal .badge.bg-info,
+#bugDashboardModal .badge.bg-info,
+#myBugReportsModal span.badge.bg-info,
+#bugDashboardModal span.badge.bg-info {
+    background-color: #17a2b8 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border: 1px solid #138496 !important;
+}
+
+.badge.bg-success,
+#myBugReportsModal .badge.bg-success,
+#bugDashboardModal .badge.bg-success,
+#myBugReportsModal span.badge.bg-success,
+#bugDashboardModal span.badge.bg-success {
+    background-color: #28a745 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border: 1px solid #1e7e34 !important;
+}
+
+.badge.bg-secondary,
+#myBugReportsModal .badge.bg-secondary,
+#bugDashboardModal .badge.bg-secondary,
+#myBugReportsModal span.badge.bg-secondary,
+#bugDashboardModal span.badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border: 1px solid #545b62 !important;
+}
+
+.badge.bg-orange,
+#myBugReportsModal .badge.bg-orange,
+#bugDashboardModal .badge.bg-orange,
+#myBugReportsModal span.badge.bg-orange,
+#bugDashboardModal span.badge.bg-orange {
+    background-color: #f97316 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border: 1px solid #ea580c !important;
+}
+
+/* Override Tailwind text colors specifically */
+#myBugReportsModal .text-muted,
+#bugDashboardModal .text-muted,
+#myBugReportsModal small.text-muted,
+#bugDashboardModal small.text-muted {
+    color: #6c757d !important;
+    font-weight: 500 !important;
+}
+
+/* Override Tailwind button colors */
+#myBugReportsModal .btn-primary,
+#bugDashboardModal .btn-primary,
+#myBugReportsModal .btn-danger,
+#bugDashboardModal .btn-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+#myBugReportsModal .btn-success,
+#bugDashboardModal .btn-success {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* Bug card headers - improve visibility */
+.card-header.bg-warning.bg-opacity-10 {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+    border-bottom: 1px solid rgba(255, 193, 7, 0.3) !important;
+}
+
+.card-header.bg-orange.bg-opacity-10 {
+    background-color: rgba(249, 115, 22, 0.15) !important;
+    border-bottom: 1px solid rgba(249, 115, 22, 0.3) !important;
+}
+
+.card-header.bg-danger.bg-opacity-10 {
+    background-color: rgba(220, 53, 69, 0.15) !important;
+    border-bottom: 1px solid rgba(220, 53, 69, 0.3) !important;
+}
+
+.card-header.bg-secondary.bg-opacity-10 {
+    background-color: rgba(108, 117, 125, 0.15) !important;
+    border-bottom: 1px solid rgba(108, 117, 125, 0.3) !important;
+}
+
+/* Status icons - improve visibility */
+.fa-clock, .fa-spinner, .fa-check-circle, .fa-times-circle {
+    color: #495057 !important;
+}
+
+/* Text improvements */
+.text-muted {
+    color: #6c757d !important;
+}
+
+/* Bug report specific text improvements - Override Tailwind */
+#myBugReportsModal .text-muted,
+#bugDashboardModal .text-muted,
+#myBugReportsModal .text-gray-600,
+#bugDashboardModal .text-gray-600,
+#myBugReportsModal .text-gray-500,
+#bugDashboardModal .text-gray-500 {
+    color: #6c757d !important;
+    font-weight: 500 !important;
+}
+
+#myBugReportsModal small.text-muted,
+#bugDashboardModal small.text-muted,
+#myBugReportsModal small.text-gray-600,
+#bugDashboardModal small.text-gray-600 {
+    color: #6c757d !important;
+    font-weight: 500 !important;
+}
+
+/* Ensure bug card text is visible - Override Tailwind */
+#myBugReportsModal .card-body,
+#bugDashboardModal .card-body,
+#myBugReportsModal .card-body *,
+#bugDashboardModal .card-body * {
+    color: #212529 !important;
+}
+
+#myBugReportsModal .card-body strong,
+#bugDashboardModal .card-body strong,
+#myBugReportsModal .card-body .font-bold,
+#bugDashboardModal .card-body .font-bold {
+    color: #000000 !important;
+    font-weight: 600 !important;
+}
+
+/* Override Tailwind's low contrast colors */
+#myBugReportsModal .text-gray-400,
+#bugDashboardModal .text-gray-400,
+#myBugReportsModal .text-gray-300,
+#bugDashboardModal .text-gray-300 {
+    color: #6c757d !important;
+}
+
+/* Force visibility on all text elements in bug modals */
+#myBugReportsModal *,
+#bugDashboardModal * {
+    color: inherit !important;
+}
+
+#myBugReportsModal .text-gray-600,
+#bugDashboardModal .text-gray-600 {
+    color: #6c757d !important;
+}
+
+#myBugReportsModal .text-gray-500,
+#bugDashboardModal .text-gray-500 {
+    color: #6c757d !important;
+}
+
+/* Alert improvements */
+.alert-warning {
+    background-color: #fff3cd !important;
+    border-color: #ffeaa7 !important;
+    color: #856404 !important;
+}
+
+.alert-info {
+    background-color: #d1ecf1 !important;
+    border-color: #bee5eb !important;
+    color: #0c5460 !important;
+}
+
+.alert-success {
+    background-color: #d4edda !important;
+    border-color: #c3e6cb !important;
+    color: #155724 !important;
+}
+
+/* Button hover effects for both modals */
+#myBugReportsModal .btn-outline-warning:hover,
+#bugDashboardModal .btn-outline-warning:hover {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #212529 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+#myBugReportsModal .btn-outline-info:hover,
+#bugDashboardModal .btn-outline-info:hover {
+    background-color: #17a2b8 !important;
+    border-color: #17a2b8 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+#myBugReportsModal .btn-outline-success:hover,
+#bugDashboardModal .btn-outline-success:hover {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+#myBugReportsModal .btn-outline-secondary:hover,
+#bugDashboardModal .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+/* FORCE OVERRIDE TAILWIND - HIGHEST PRIORITY */
+/* This section must be at the very end to override Tailwind */
+.modal#myBugReportsModal .btn-outline-warning,
+.modal#bugDashboardModal .btn-outline-warning,
+.modal#myBugReportsModal button.btn-outline-warning,
+.modal#bugDashboardModal button.btn-outline-warning {
+    color: #856404 !important;
+    border-color: #ffc107 !important;
+    background-color: #fff3cd !important;
+    font-weight: 600 !important;
+}
+
+.modal#myBugReportsModal .btn-outline-info,
+.modal#bugDashboardModal .btn-outline-info,
+.modal#myBugReportsModal button.btn-outline-info,
+.modal#bugDashboardModal button.btn-outline-info {
+    color: #0c5460 !important;
+    border-color: #17a2b8 !important;
+    background-color: #d1ecf1 !important;
+    font-weight: 600 !important;
+}
+
+.modal#myBugReportsModal .btn-outline-success,
+.modal#bugDashboardModal .btn-outline-success,
+.modal#myBugReportsModal button.btn-outline-success,
+.modal#bugDashboardModal button.btn-outline-success {
+    color: #155724 !important;
+    border-color: #28a745 !important;
+    background-color: #d4edda !important;
+    font-weight: 600 !important;
+}
+
+.modal#myBugReportsModal .btn-outline-secondary,
+.modal#bugDashboardModal .btn-outline-secondary,
+.modal#myBugReportsModal button.btn-outline-secondary,
+.modal#bugDashboardModal button.btn-outline-secondary {
+    color: #383d41 !important;
+    border-color: #6c757d !important;
+    background-color: #e2e3e5 !important;
+    font-weight: 600 !important;
+}
+
+/* FORCE BADGE VISIBILITY */
+.modal#myBugReportsModal .badge.bg-warning,
+.modal#bugDashboardModal .badge.bg-warning,
+.modal#myBugReportsModal span.badge.bg-warning,
+.modal#bugDashboardModal span.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+    font-weight: 600 !important;
+    border: 1px solid #e0a800 !important;
+}
+
+.modal#myBugReportsModal .badge.bg-info,
+.modal#bugDashboardModal .badge.bg-info,
+.modal#myBugReportsModal span.badge.bg-info,
+.modal#bugDashboardModal span.badge.bg-info {
+    background-color: #17a2b8 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border: 1px solid #138496 !important;
+}
+
+.modal#myBugReportsModal .badge.bg-success,
+.modal#bugDashboardModal .badge.bg-success,
+.modal#myBugReportsModal span.badge.bg-success,
+.modal#bugDashboardModal span.badge.bg-success {
+    background-color: #28a745 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border: 1px solid #1e7e34 !important;
+}
+
+.modal#myBugReportsModal .badge.bg-secondary,
+.modal#bugDashboardModal .badge.bg-secondary,
+.modal#myBugReportsModal span.badge.bg-secondary,
+.modal#bugDashboardModal span.badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    border: 1px solid #545b62 !important;
+}
+
+/* FORCE TEXT VISIBILITY */
+.modal#myBugReportsModal .text-muted,
+.modal#bugDashboardModal .text-muted,
+.modal#myBugReportsModal .text-gray-600,
+.modal#bugDashboardModal .text-gray-600,
+.modal#myBugReportsModal .text-gray-500,
+.modal#bugDashboardModal .text-gray-500,
+.modal#myBugReportsModal .text-gray-400,
+.modal#bugDashboardModal .text-gray-400 {
+    color: #6c757d !important;
+    font-weight: 500 !important;
+}
+
+.modal#myBugReportsModal small.text-muted,
+.modal#bugDashboardModal small.text-muted,
+.modal#myBugReportsModal small.text-gray-600,
+.modal#bugDashboardModal small.text-gray-600 {
+    color: #6c757d !important;
+    font-weight: 500 !important;
+}
+
+/* FORCE BUTTON VISIBILITY */
+.modal#myBugReportsModal .btn-primary,
+.modal#bugDashboardModal .btn-primary,
+.modal#myBugReportsModal .btn-danger,
+.modal#bugDashboardModal .btn-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.modal#myBugReportsModal .btn-success,
+.modal#bugDashboardModal .btn-success {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* FORCE CARD TEXT VISIBILITY */
+.modal#myBugReportsModal .card-body,
+.modal#bugDashboardModal .card-body {
+    color: #212529 !important;
+}
+
+.modal#myBugReportsModal .card-body strong,
+.modal#bugDashboardModal .card-body strong {
+    color: #000000 !important;
+    font-weight: 600 !important;
+}

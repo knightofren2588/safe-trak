@@ -624,6 +624,29 @@ deleteNoteLocal(noteId) {
         // Simplified - just call immediately with connection status
         callback(this.isConnected ? { connected: true } : null);
     }
+
+    // Bug Reports methods
+    async getBugReports() {
+        console.log('[CloudStorage] Getting bug reports');
+        try {
+            const bugsData = await this.getFromStorage('bug_reports');
+            return bugsData || [];
+        } catch (error) {
+            console.error('[CloudStorage] Error getting bug reports:', error);
+            return [];
+        }
+    }
+
+    async saveBugReports(bugs) {
+        console.log('[CloudStorage] Saving bug reports:', bugs.length);
+        try {
+            await this.saveToStorage('bug_reports', bugs);
+            console.log('[CloudStorage] Bug reports saved successfully');
+        } catch (error) {
+            console.error('[CloudStorage] Error saving bug reports:', error);
+            throw error;
+        }
+    }
 }
 
 // Make it available globally
