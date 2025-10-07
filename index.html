@@ -923,6 +923,22 @@
                                     <option value="cancelled">Cancelled</option>
                                 </select>
                             </div>
+                            
+                            <!-- Admin Only: Change Project Owner -->
+                            <div class="mb-3" id="adminOwnerChangeSection" style="display: none;">
+                                <hr class="my-3">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    <strong>Admin Function:</strong> Change Project Owner
+                                </div>
+                                <button type="button" class="btn btn-warning w-100" onclick="openChangeOwnerModal()">
+                                    <i class="fas fa-user-shield me-2"></i>Change Project Owner
+                                </button>
+                                <small class="text-muted d-block mt-2">
+                                    <i class="fas fa-info-circle me-1"></i>This will transfer project ownership and update the creator. Admin password required.
+                                </small>
+                            </div>
+                            
                             <div class="col-md-12">
                                 <label for="projectScreenshots" class="form-label">Screenshots</label>
                                 <input type="file" class="form-control" id="projectScreenshots" name="screenshots" multiple accept="image/*">
@@ -1729,6 +1745,58 @@
                         </div>
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Project Owner Modal -->
+<div class="modal fade" id="changeOwnerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">
+                    <i class="fas fa-user-shield me-2"></i>Change Project Owner
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This will change who created and owns this project. This action is logged.
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Current Owner</label>
+                    <input type="text" class="form-control" id="currentOwnerDisplay" readonly>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">New Owner <span class="text-danger">*</span></label>
+                    <select class="form-select" id="newOwnerSelect">
+                        <option value="">Select new owner...</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Reason for Change <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="ownerChangeReason" rows="3" placeholder="Enter reason for ownership change..."></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Admin Password <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control" id="ownerChangeAdminPassword" placeholder="Enter admin password to confirm">
+                </div>
+                
+                <div id="ownerChangeError" class="alert alert-danger d-none">
+                    Invalid admin password
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="confirmOwnerChange()">
+                    <i class="fas fa-user-shield me-2"></i>Change Owner
+                </button>
             </div>
         </div>
     </div>
