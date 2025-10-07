@@ -200,7 +200,11 @@
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
-                    
+                    <!-- Release Notes Button -->
+                    <button class="btn btn-outline-info btn-sm" onclick="openReleaseNotes()" title="View Release Notes">
+                        <i class="fas fa-rocket me-1"></i>
+                        <span class="badge bg-info">v1.2.0</span>
+                    </button>
                     <!-- User switching removed for security - users locked to selected profile -->
                     
                     <!-- Project View Toggle -->
@@ -1801,7 +1805,456 @@
         </div>
     </div>
 </div>
-
+<!-- Release Notes Modal -->
+<div class="modal fade" id="releaseNotesModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div>
+                    <h5 class="modal-title">
+                        <i class="fas fa-rocket me-2"></i>SafeTrack Release Notes
+                    </h5>
+                    <p class="mb-0 small">Current Version: <span class="badge bg-light text-dark">v1.2.0</span></p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Admin Controls -->
+                <div id="adminReleaseControls" class="mb-4" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center p-3 bg-warning bg-opacity-10 rounded border border-warning">
+                        <div>
+                            <i class="fas fa-shield-alt text-warning me-2"></i>
+                            <strong>Admin Controls:</strong> Add new release notes
+                        </div>
+                        <button class="btn btn-warning btn-sm" onclick="openAddReleaseNoteModal()">
+                            <i class="fas fa-plus me-1"></i>Add Release Note
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="releaseNotesContainer">
+                    <!-- Version 1.2.0 -->
+                    <div class="release-version">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-primary fs-6">v1.2.0</span>
+                                <span class="text-muted ms-2">October 7, 2025</span>
+                            </div>
+                            <span class="badge bg-success">Current</span>
+                        </div>
+                        
+                        <!-- New Features -->
+                        <div class="release-category">
+                            <h6 class="text-success">
+                                <i class="fas fa-star me-2"></i>New Features
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Admin Ownership Transfer:</strong> Admin can now change project ownership with password verification</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.0', 'feature', 'Admin Ownership Transfer', 'Admin can now change project ownership with password verification')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Project Creator Display:</strong> Shows who created each project (read-only) in edit modal</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.0', 'feature', 'Project Creator Display', 'Shows who created each project (read-only) in edit modal')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Audit Trail:</strong> All ownership changes are logged with timestamp, reason, and admin info</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.0', 'feature', 'Audit Trail', 'All ownership changes are logged with timestamp, reason, and admin info')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Admin Access Control:</strong> Admin can now edit ALL projects, not just their own</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.0', 'feature', 'Admin Access Control', 'Admin can now edit ALL projects, not just their own')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Improvements -->
+                        <div class="release-category">
+                            <h6 class="text-primary">
+                                <i class="fas fa-arrow-up me-2"></i>Improvements
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Multi-user assignment now properly displays when editing projects</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.0', 'improvement', 'Multi-user Assignment Display', 'Multi-user assignment now properly displays when editing projects')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Enhanced permission system for admin</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.0', 'improvement', 'Enhanced Permission System', 'Enhanced permission system for admin')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Improved user selection interface with removable chips</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.0', 'improvement', 'Improved User Selection Interface', 'Improved user selection interface with removable chips')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Bug Fixes -->
+                        <div class="release-category">
+                            <h6 class="text-warning">
+                                <i class="fas fa-bug me-2"></i>Bug Fixes
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Fixed project counter to only count assigned projects, not created projects</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.0', 'bugfix', 'Project Counter Fix', 'Fixed project counter to only count assigned projects, not created projects')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Fixed JavaScript variable scope issue in error handling</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.0', 'bugfix', 'JavaScript Variable Scope Fix', 'Fixed JavaScript variable scope issue in error handling')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Fixed assigned users not populating correctly in edit modal</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.0', 'bugfix', 'Assigned Users Fix', 'Fixed assigned users not populating correctly in edit modal')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Version 1.1.0 -->
+                    <div class="release-version">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-secondary fs-6">v1.1.0</span>
+                                <span class="text-muted ms-2">October 3, 2025</span>
+                            </div>
+                        </div>
+                        
+                        <!-- New Features -->
+                        <div class="release-category">
+                            <h6 class="text-success">
+                                <i class="fas fa-star me-2"></i>New Features
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Notes System:</strong> Added User Notes and Developer Notes for each project</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.1.0', 'feature', 'Notes System', 'Added User Notes and Developer Notes for each project')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Supabase Integration:</strong> All notes stored in cloud database</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.1.0', 'feature', 'Supabase Integration', 'All notes stored in cloud database')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Real-time Sync:</strong> Notes sync across all users instantly</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.1.0', 'feature', 'Real-time Sync', 'Notes sync across all users instantly')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Bug Fixes -->
+                        <div class="release-category">
+                            <h6 class="text-warning">
+                                <i class="fas fa-bug me-2"></i>Bug Fixes
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Fixed localStorage conflicts with Supabase storage</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.1.0', 'bugfix', 'localStorage Conflicts Fix', 'Fixed localStorage conflicts with Supabase storage')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Resolved note deletion issues</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.1.0', 'bugfix', 'Note Deletion Fix', 'Resolved note deletion issues')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Version 1.0.0 -->
+                    <div class="release-version">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-secondary fs-6">v1.0.0</span>
+                                <span class="text-muted ms-2">September 15, 2025</span>
+                            </div>
+                            <span class="badge bg-info">Initial Release</span>
+                        </div>
+                        
+                        <!-- Initial Features -->
+                        <div class="release-category">
+                            <h6 class="text-success">
+                                <i class="fas fa-star me-2"></i>Initial Features
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Project management with full CRUD operations</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.0.0', 'feature', 'Project Management', 'Project management with full CRUD operations')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>User management and role-based access</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.0.0', 'feature', 'User Management', 'User management and role-based access')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Safety dashboard with real-time statistics</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.0.0', 'feature', 'Safety Dashboard', 'Safety dashboard with real-time statistics')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Multi-user project assignments</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.0.0', 'feature', 'Multi-user Assignments', 'Multi-user project assignments')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Export to Excel, PDF, and CSV</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.0.0', 'feature', 'Export Functionality', 'Export to Excel, PDF, and CSV')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Screenshot attachment support</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.0.0', 'feature', 'Screenshot Support', 'Screenshot attachment support')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Custom categories and departments</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.0.0', 'feature', 'Custom Categories', 'Custom categories and departments')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span>Daily safety quotes</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.0.0', 'feature', 'Daily Safety Quotes', 'Daily safety quotes')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <div class="w-100 d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-code me-1"></i>
+                        Developed for Equitas Health Safety Team
+                    </small>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Add Release Note Modal (Admin Only) -->
+<div class="modal fade" id="addReleaseNoteModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus-circle me-2"></i>Add New Release Note
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addReleaseNoteForm">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Admin Only:</strong> This will add a new entry to the release notes visible to all users.
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="releaseVersion" class="form-label">Version Number *</label>
+                            <input type="text" class="form-control" id="releaseVersion" placeholder="e.g., 1.3.0" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="releaseDate" class="form-label">Release Date *</label>
+                            <input type="date" class="form-control" id="releaseDate" required>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="releaseCategory" class="form-label">Category *</label>
+                            <select class="form-select" id="releaseCategory" required>
+                                <option value="">Select category...</option>
+                                <option value="feature">New Feature</option>
+                                <option value="improvement">Improvement</option>
+                                <option value="bugfix">Bug Fix</option>
+                                <option value="breaking">Breaking Change</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="releaseTitle" class="form-label">Title *</label>
+                            <input type="text" class="form-control" id="releaseTitle" 
+                                   placeholder="e.g., Admin Dashboard Enhancement" required>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="releaseDescription" class="form-label">Description *</label>
+                            <textarea class="form-control" id="releaseDescription" rows="3" 
+                                      placeholder="Describe what was added, fixed, or changed..." required></textarea>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="markAsCurrent">
+                                <label class="form-check-label" for="markAsCurrent">
+                                    Mark this version as "Current"
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-plus me-1"></i>Add Release Note
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     

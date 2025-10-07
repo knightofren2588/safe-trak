@@ -6893,7 +6893,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 await window.projectManager.addDeveloperNote(window.projectManager.currentDeveloperNotesProjectId, noteText, noteType);
             }
         });
-    }
+    };
 
     // Global developer notes functions
     window.deleteDeveloperNote = (noteId) => {
@@ -6908,7 +6908,290 @@ document.addEventListener('DOMContentLoaded', function() {
             window.projectManager.resetUserSelection();
         }
     };
+    window.openReleaseNotes = () => {
+        const modal = new bootstrap.Modal(document.getElementById('releaseNotesModal'));
+        modal.show();
+        
+        // Show admin controls if user is admin
+        const isAdmin = window.projectManager && window.projectManager.currentUser === 'admin';
+        
+        const adminControls = document.getElementById('adminReleaseControls');
+        if (adminControls && isAdmin) {
+            adminControls.style.display = 'block';
+        }
+        
+        // Show individual release note admin controls
+        const individualControls = document.querySelectorAll('.admin-controls');
+        individualControls.forEach(control => {
+            control.style.display = isAdmin ? 'block' : 'none';
+        });
+    };
 });
+
+// Open add release note modal (admin only)
+window.openAddReleaseNoteModal = () => {
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('releaseDate').value = today;
+    
+    const modal = new bootstrap.Modal(document.getElementById('addReleaseNoteModal'));
+    modal.show();
+};
+
+// Handle release note form submission
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('addReleaseNoteForm');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const version = document.getElementById('releaseVersion').value.trim();
+            const date = document.getElementById('releaseDate').value;
+            const category = document.getElementById('releaseCategory').value;
+            const title = document.getElementById('releaseTitle').value.trim();
+            const description = document.getElementById('releaseDescription').value.trim();
+            const isCurrent = document.getElementById('markAsCurrent').checked;
+            
+            const isEditing = window.editingReleaseNote;
+            
+            // Format date
+            const dateObj = new Date(date);
+            const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            // Get category info
+            const categoryInfo = {
+                'feature': { icon: 'fa-star', color: 'success', label: 'New Features' },
+                'improvement': { icon: 'fa-arrow-up', color: 'primary', label: 'Improvements' },
+                'bugfix': { icon: 'fa-bug', color: 'warning', label: 'Bug Fixes' },
+                'breaking': { icon: 'fa-exclamation-triangle', color: 'danger', label: 'Breaking Changes' }
+            };
+            
+            const cat = categoryInfo[category];
+            
+            // If editing, remove the old entry first
+            if (isEditing) {
+                const oldVersion = isEditing.version;
+                const oldCategory = isEditing.category;
+                const oldTitle = isEditing.title;
+                
+                // Find and remove the old entry
+                const container = document.getElementById('releaseNotesContainer');
+                const oldVersionDiv = Array.from(container.querySelectorAll('.release-version')).find(div => {
+                    const badge = div.querySelector('.badge');
+                    return badge && badge.textContent.trim() === oldVersion;
+                });
+                
+                if (oldVersionDiv) {
+                    const oldCategoryDiv = Array.from(oldVersionDiv.querySelectorAll('.release-category')).find(div => {
+                        const h6 = div.querySelector('h6');
+                        const categoryInfo = {
+                            'feature': 'New Features',
+                            'improvement': 'Improvements', 
+                            'bugfix': 'Bug Fixes',
+                            'breaking': 'Breaking Changes'
+                        };
+                        return h6 && h6.textContent.includes(categoryInfo[oldCategory]);
+                    });
+                    
+                    if (oldCategoryDiv) {
+                        const oldLi = Array.from(oldCategoryDiv.querySelectorAll('.release-list li')).find(li => {
+                            const span = li.querySelector('span');
+                            return span && span.textContent.includes(oldTitle);
+                        });
+                        
+                        if (oldLi) {
+                            oldLi.remove();
+                            
+                            // Remove category if empty
+                            const remainingItems = oldCategoryDiv.querySelectorAll('.release-list li');
+                            if (remainingItems.length === 0) {
+                                oldCategoryDiv.remove();
+                            }
+                            
+                            // Remove version if empty
+                            const remainingCategories = oldVersionDiv.querySelectorAll('.release-category');
+                            if (remainingCategories.length === 0) {
+                                oldVersionDiv.remove();
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Create new release note entry
+            const newEntry = `
+                <li class="d-flex justify-content-between align-items-center">
+                    <span><strong>${title}:</strong> ${description}</span>
+                    <div class="admin-controls" style="display: none;">
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('${version}', '${category}', '${title}', '${description}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </li>
+            `;
+            
+            // Get or create version section
+            const container = document.getElementById('releaseNotesContainer');
+            let versionDiv = Array.from(container.querySelectorAll('.release-version')).find(div => {
+                const badge = div.querySelector('.badge');
+                return badge && badge.textContent.trim() === `v${version}`;
+            });
+            
+            if (!versionDiv) {
+                // Create new version section
+                const currentBadge = isCurrent ? '<span class="badge bg-success">Current</span>' : '';
+                
+                versionDiv = document.createElement('div');
+                versionDiv.className = 'release-version';
+                versionDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <span class="badge bg-primary fs-6">v${version}</span>
+                            <span class="text-muted ms-2">${formattedDate}</span>
+                        </div>
+                        ${currentBadge}
+                    </div>
+                `;
+                
+                // Insert at the top
+                container.insertBefore(versionDiv, container.firstChild);
+            }
+            
+            // Find or create category section
+            let categoryDiv = Array.from(versionDiv.querySelectorAll('.release-category')).find(div => {
+                const h6 = div.querySelector('h6');
+                return h6 && h6.textContent.includes(cat.label);
+            });
+            
+            if (!categoryDiv) {
+                categoryDiv = document.createElement('div');
+                categoryDiv.className = 'release-category';
+                categoryDiv.innerHTML = `
+                    <h6 class="text-${cat.color}">
+                        <i class="fas ${cat.icon} me-2"></i>${cat.label}
+                    </h6>
+                    <ul class="release-list">
+                    </ul>
+                `;
+                versionDiv.appendChild(categoryDiv);
+            }
+            
+            // Add the new entry
+            const ul = categoryDiv.querySelector('.release-list');
+            ul.insertAdjacentHTML('beforeend', newEntry);
+            
+            // If marked as current, remove "Current" badge from others
+            if (isCurrent) {
+                container.querySelectorAll('.badge.bg-success').forEach(badge => {
+                    if (badge.textContent === 'Current' && !badge.closest('.release-version').contains(versionDiv)) {
+                        badge.remove();
+                    }
+                });
+            }
+            
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addReleaseNoteModal'));
+            modal.hide();
+            form.reset();
+            
+            // Reset modal title and button
+            document.querySelector('#addReleaseNoteModal .modal-title').innerHTML = '<i class="fas fa-plus-circle me-2"></i>Add New Release Note';
+            document.querySelector('#addReleaseNoteModal .btn-warning').innerHTML = '<i class="fas fa-plus me-1"></i>Add Release Note';
+            
+            // Clear editing context
+            window.editingReleaseNote = null;
+            
+            // Show success message
+            if (window.projectManager) {
+                const message = isEditing ? 'Release note updated successfully!' : 'Release note added successfully!';
+                window.projectManager.showNotification(message, 'success');
+            }
+            
+            // Save to localStorage
+            saveReleaseNotesToStorage();
+        });
+    }
+});
+
+// Save release notes to localStorage
+function saveReleaseNotesToStorage() {
+    const container = document.getElementById('releaseNotesContainer');
+    if (container) {
+        localStorage.setItem('safetrack_release_notes', container.innerHTML);
+    }
+}
+
+// Load release notes from localStorage on page load
+window.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('releaseNotesContainer');
+    const saved = localStorage.getItem('safetrack_release_notes');
+    
+    if (saved && container) {
+        container.innerHTML = saved;
+    }
+});
+
+// Edit release note function
+window.editReleaseNote = (version, category, title, description) => {
+    // Open the add release note modal
+    const modal = new bootstrap.Modal(document.getElementById('addReleaseNoteModal'));
+    modal.show();
+    
+    // Set form values for editing
+    document.getElementById('releaseVersion').value = version;
+    document.getElementById('releaseCategory').value = category;
+    document.getElementById('releaseTitle').value = title;
+    document.getElementById('releaseDescription').value = description;
+    
+    // Store editing context
+    window.editingReleaseNote = {
+        version: version,
+        category: category,
+        title: title,
+        description: description
+    };
+    
+    // Update modal title and button
+    document.querySelector('#addReleaseNoteModal .modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Release Note';
+    document.querySelector('#addReleaseNoteModal .btn-warning').innerHTML = '<i class="fas fa-save me-1"></i>Save Changes';
+};
+
+// Delete release note function
+window.deleteReleaseNote = (button) => {
+    if (confirm('Are you sure you want to delete this release note?')) {
+        const li = button.closest('li');
+        li.remove();
+        
+        // Check if this was the last item in the category
+        const categoryDiv = li.closest('.release-category');
+        const remainingItems = categoryDiv.querySelectorAll('.release-list li');
+        if (remainingItems.length === 0) {
+            categoryDiv.remove();
+        }
+        
+        // Check if this was the last category in the version
+        const versionDiv = li.closest('.release-version');
+        const remainingCategories = versionDiv.querySelectorAll('.release-category');
+        if (remainingCategories.length === 0) {
+            versionDiv.remove();
+        }
+        
+        // Save changes
+        saveReleaseNotesToStorage();
+        
+        // Show success message
+        if (window.projectManager) {
+            window.projectManager.showNotification('Release note deleted successfully!', 'success');
+        }
+    }
+};
 
 // ---- test/prod-safe global exposure (no side effects) ----
 ;(function () {
