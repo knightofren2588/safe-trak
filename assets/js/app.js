@@ -560,7 +560,10 @@ async loadNoteCounts() {
             const user = this.users.find(u => u.id === userId);
             const userName = user ? user.name : userId;
             const userColor = this.getUserColor(userId);
-            const projectCount = this.projects.filter(p => p.createdBy === userId).length;
+            const projectCount = this.projects.filter(p => {
+                const assignedUsers = Array.isArray(p.assignedTo) ? p.assignedTo : [p.assignedTo].filter(Boolean);
+                return assignedUsers.includes(userId);
+            }).length;
             
             return `
                 <div class="legend-item d-flex align-items-center me-4 mb-2">
@@ -592,7 +595,10 @@ async loadNoteCounts() {
         const otherUsers = this.users.filter(user => user.id !== this.currentUser);
         
         container.innerHTML = otherUsers.map(user => {
-            const projectCount = this.projects.filter(p => p.createdBy === user.id || p.assignedTo === user.id).length;
+            const projectCount = this.projects.filter(p => {
+                const assignedUsers = Array.isArray(p.assignedTo) ? p.assignedTo : [p.assignedTo].filter(Boolean);
+                return assignedUsers.includes(user.id);
+            }).length;
             const userInitial = user.avatar || user.name.charAt(0).toUpperCase();
             
             return `
@@ -743,7 +749,10 @@ async loadNoteCounts() {
         const sortedUsers = this.sortUsersByRoleHierarchy(this.users);
         
         grid.innerHTML = sortedUsers.map(user => {
-            const projectCount = this.projects.filter(p => p.createdBy === user.id || p.assignedTo === user.id).length;
+            const projectCount = this.projects.filter(p => {
+                const assignedUsers = Array.isArray(p.assignedTo) ? p.assignedTo : [p.assignedTo].filter(Boolean);
+                return assignedUsers.includes(user.id);  // ✅ CORRECT - user.id is the right variable
+            }).length;
             const certCount = this.certifications.filter(c => c.userId === user.id).length;
             
             return `
@@ -3387,6 +3396,14 @@ END:VCALENDAR`;
         this.projects.unshift(project);
         this.saveProjects();
         this.render();
+        
+        // Refresh note counts after render completes
+        setTimeout(() => {
+            if (typeof window !== 'undefined' && !window.__TEST__) {
+                this.loadNoteCounts();
+            }
+        }, 200);
+        
         this.closeModal();
         this.showNotification(`Safety project "${project.name}" created successfully!`, 'success');
     }
@@ -4389,9 +4406,13 @@ END:VCALENDAR`;
         }).join('');
         // Load note coun ts asynchronously
     // Load note counts asynchronously (skip in test environment)
-        if (typeof window !== 'undefined' && !window.__TEST__) {
+    // Load note counts asynchronously (skip in test environment)
+    if (typeof window !== 'undefined' && !window.__TEST__) {
+    // Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
         this.loadNoteCounts();
-    }
+    }, 100);
+}
 }
 
     canUserEditProject(project) {
