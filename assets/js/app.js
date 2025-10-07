@@ -3505,6 +3505,12 @@ END:VCALENDAR`;
             creatorDisplay.style.display = 'none';
         }
 
+        // ✅ NEW: Hide admin owner change section for new projects
+        const adminSection = document.getElementById('adminOwnerChangeSection');
+        if (adminSection) {
+            adminSection.style.display = 'none';
+        }
+
 // Explicitly ensure completion date field is enabled and interactive
         // Explicitly ensure completion date field is enabled and interactive
         const completionDateField = document.getElementById('projectCompletionDate');
@@ -4423,7 +4429,7 @@ END:VCALENDAR`;
 
     canUserEditProject(project) {
         // Users can edit projects they created or are assigned to
-        if (project.createdBy === this.currentUser) {
+        if (project.createdBy === this.currentUser || this.currentUser === 'admin') {
             return true;
         }
         
@@ -4466,6 +4472,16 @@ END:VCALENDAR`;
         // ✅ NEW: Show creator info (read-only display)
         this.displayProjectCreator(project.createdBy);
         
+        // ✅ NEW: Show/hide admin owner change section
+        const adminSection = document.getElementById('adminOwnerChangeSection');
+        if (adminSection) {
+            if (this.currentUser === 'admin') {
+                adminSection.style.display = 'block';
+            } else {
+                adminSection.style.display = 'none';
+            }
+        }
+        
         // Update modal title
         document.getElementById('modalTitle').textContent = 'Edit Safety Project';
         document.getElementById('submitText').textContent = 'Update Safety Project';
@@ -4475,39 +4491,141 @@ END:VCALENDAR`;
         modal.show();
     }
 
-displayProjectCreator(creatorId) {
-    // Find or create a container to show the creator
-    let creatorDisplay = document.getElementById('projectCreatorDisplay');
-    
-    if (!creatorDisplay) {
-        // Create the display element if it doesn't exist
-        const assignedContainer = document.getElementById('assignedUsersContainer');
-        if (assignedContainer && assignedContainer.parentElement) {
-            creatorDisplay = document.createElement('div');
-            creatorDisplay.id = 'projectCreatorDisplay';
-            creatorDisplay.className = 'mb-2 p-2 bg-light rounded border';
-            // Insert before the assigned users container
-            assignedContainer.parentElement.insertBefore(creatorDisplay, assignedContainer.parentElement.firstChild);
+    displayProjectCreator(creatorId) {
+        // Find or create a container to show the creator
+        let creatorDisplay = document.getElementById('projectCreatorDisplay');
+        
+        if (!creatorDisplay) {
+            // Create the display element if it doesn't exist
+            const assignedContainer = document.getElementById('assignedUsersContainer');
+            if (assignedContainer && assignedContainer.parentElement) {
+                creatorDisplay = document.createElement('div');
+                creatorDisplay.id = 'projectCreatorDisplay';
+                creatorDisplay.className = 'mb-2 p-2 bg-light rounded border';
+                // Insert before the assigned users container
+                assignedContainer.parentElement.insertBefore(creatorDisplay, assignedContainer.parentElement.firstChild);
+            }
+        }
+        
+        if (creatorDisplay) {
+            const creator = this.users.find(u => u.id === creatorId);
+            const creatorName = creator ? creator.name : 'Unknown';
+            
+            creatorDisplay.innerHTML = `
+                <small class="text-muted d-block mb-1"><i class="fas fa-info-circle me-1"></i>Project Creator (cannot be changed):</small>
+                <div class="d-flex align-items-center">
+                    <div class="user-avatar-small me-2" style="background: ${this.getUserColor(creatorId)};" title="${creatorName}">
+                        ${creator ? creator.avatar : '?'}
+                    </div>
+                    <strong>${this.escapeHtml(creatorName)}</strong>
+                </div>
+            `;
         }
     }
-    
-    if (creatorDisplay) {
-        const creator = this.users.find(u => u.id === creatorId);
-        const creatorName = creator ? creator.name : 'Unknown';
-        
-        creatorDisplay.innerHTML = `
-            <small class="text-muted d-block mb-1"><i class="fas fa-info-circle me-1"></i>Project Creator (cannot be changed):</small>
-            <div class="d-flex align-items-center">
-                <div class="user-avatar-small me-2" style="background: ${this.getUserColor(creatorId)};" title="${creatorName}">
-                    ${creator ? creator.avatar : '?'}
-                </div>
-                <strong>${this.escapeHtml(creatorName)}</strong>
-            </div>
-        `;
-    }
-}
 
-// Helper methods
+    openChangeOwnerModal() {
+        if (!this.currentEditId) return;
+        
+        const project = this.projects.find(p => p.id === this.currentEditId);
+        if (!project) return;
+        
+        // Get current owner info
+        const currentOwner = this.users.find(u => u.id === project.createdBy);
+        const currentOwnerName = currentOwner ? currentOwner.name : 'Unknown';
+        
+        // Display current owner
+        document.getElementById('currentOwnerDisplay').value = currentOwnerName;
+        
+        // Populate new owner dropdown (exclude current owner)
+        const newOwnerSelect = document.getElementById('newOwnerSelect');
+        newOwnerSelect.innerHTML = '<option value="">Select new owner...</option>' +
+            this.users
+                .filter(u => u.id !== project.createdBy)
+                .map(user => `<option value="${user.id}">${user.name}</option>`)
+                .join('');
+        
+        // Clear form
+        document.getElementById('ownerChangeReason').value = '';
+        document.getElementById('ownerChangeAdminPassword').value = '';
+        document.getElementById('ownerChangeError').classList.add('d-none');
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('changeOwnerModal'));
+        modal.show();
+    }
+    
+    async confirmOwnerChange() {
+        const newOwnerId = document.getElementById('newOwnerSelect').value;
+        const reason = document.getElementById('ownerChangeReason').value.trim();
+        const adminPassword = document.getElementById('ownerChangeAdminPassword').value;
+        
+        // Validate inputs
+        if (!newOwnerId) {
+            alert('Please select a new owner');
+            return;
+        }
+        
+        if (!reason) {
+            alert('Please provide a reason for the ownership change');
+            return;
+        }
+        
+        if (!adminPassword) {
+            alert('Please enter the admin password');
+            return;
+        }
+        
+        // Verify admin password
+        const correctAdminPassword = 'AdminSafe2025!';
+        if (adminPassword !== correctAdminPassword) {
+            document.getElementById('ownerChangeError').classList.remove('d-none');
+            document.getElementById('ownerChangeAdminPassword').value = '';
+            return;
+        }
+        
+        // Change the owner
+        if (!this.currentEditId) return;
+        
+        const project = this.projects.find(p => p.id === this.currentEditId);
+        if (!project) return;
+        
+        const oldOwner = this.users.find(u => u.id === project.createdBy);
+        const newOwner = this.users.find(u => u.id === newOwnerId);
+        const oldOwnerName = oldOwner ? oldOwner.name : 'Unknown';
+        const newOwnerName = newOwner ? newOwner.name : 'Unknown';
+        
+        // Update project
+        project.createdBy = newOwnerId;
+        
+        // Add audit log entry
+        if (!project.ownershipHistory) {
+            project.ownershipHistory = [];
+        }
+        
+        project.ownershipHistory.push({
+            timestamp: new Date().toISOString(),
+            changedBy: this.currentUser,
+            oldOwner: oldOwnerName,
+            newOwner: newOwnerName,
+            reason: reason
+        });
+        
+        // Save changes
+        await this.saveProjects();
+        
+        // Close modals and refresh
+        const changeOwnerModal = bootstrap.Modal.getInstance(document.getElementById('changeOwnerModal'));
+        if (changeOwnerModal) changeOwnerModal.hide();
+        
+        const projectModal = bootstrap.Modal.getInstance(document.getElementById('projectModal'));
+        if (projectModal) projectModal.hide();
+        
+        this.render();
+        
+        this.showNotification(`Project ownership transferred from ${oldOwnerName} to ${newOwnerName}`, 'success');
+    }
+
+    // Helper methods
     getCategoryColor(category) {
         const colors = {
             safety: 'danger',
@@ -6243,6 +6361,20 @@ window.openProjectModal = () => {
         modal.show();
     }
 };
+
+// Global owner change functions
+window.openChangeOwnerModal = () => {
+    if (window.projectManager) {
+        window.projectManager.openChangeOwnerModal();
+    }
+};
+
+window.confirmOwnerChange = () => {
+    if (window.projectManager) {
+        window.projectManager.confirmOwnerChange();
+    }
+};
+
 // User management is now handled by the dropdown
 // Initialize the project manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
