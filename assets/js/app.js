@@ -3499,7 +3499,13 @@ END:VCALENDAR`;
         document.getElementById('modalTitle').textContent = 'New Safety Project';
         document.getElementById('submitText').textContent = 'Create Safety Project';
         this.currentEditId = null;
-        
+        // ✅ NEW: Hide creator display for new projects
+        const creatorDisplay = document.getElementById('projectCreatorDisplay');
+        if (creatorDisplay) {
+            creatorDisplay.style.display = 'none';
+        }
+
+// Explicitly ensure completion date field is enabled and interactive
         // Explicitly ensure completion date field is enabled and interactive
         const completionDateField = document.getElementById('projectCompletionDate');
         if (completionDateField) {
@@ -4445,8 +4451,20 @@ END:VCALENDAR`;
         completionDateField.removeAttribute('readonly');
         completionDateField.removeAttribute('disabled');
         completionDateField.style.pointerEvents = 'auto';
-        document.getElementById('projectAssignedTo').value = project.assignedTo || '';
         document.getElementById('projectStatus').value = project.status || 'active';
+
+        // ✅ NEW: Populate assigned users (handles both array and single value)
+        const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+        this.selectedAssignedUsers = [...assignedUsers];
+
+        // ✅ NEW: Render the assigned user chips
+        this.renderAssignedUsers();
+
+        // ✅ NEW: Populate the dropdown
+        this.populateAssignedUsersDropdown();
+
+        // ✅ NEW: Show creator info (read-only display)
+        this.displayProjectCreator(project.createdBy);
         
         // Update modal title
         document.getElementById('modalTitle').textContent = 'Edit Safety Project';
@@ -4457,7 +4475,39 @@ END:VCALENDAR`;
         modal.show();
     }
 
-    // Helper methods
+displayProjectCreator(creatorId) {
+    // Find or create a container to show the creator
+    let creatorDisplay = document.getElementById('projectCreatorDisplay');
+    
+    if (!creatorDisplay) {
+        // Create the display element if it doesn't exist
+        const assignedContainer = document.getElementById('assignedUsersContainer');
+        if (assignedContainer && assignedContainer.parentElement) {
+            creatorDisplay = document.createElement('div');
+            creatorDisplay.id = 'projectCreatorDisplay';
+            creatorDisplay.className = 'mb-2 p-2 bg-light rounded border';
+            // Insert before the assigned users container
+            assignedContainer.parentElement.insertBefore(creatorDisplay, assignedContainer.parentElement.firstChild);
+        }
+    }
+    
+    if (creatorDisplay) {
+        const creator = this.users.find(u => u.id === creatorId);
+        const creatorName = creator ? creator.name : 'Unknown';
+        
+        creatorDisplay.innerHTML = `
+            <small class="text-muted d-block mb-1"><i class="fas fa-info-circle me-1"></i>Project Creator (cannot be changed):</small>
+            <div class="d-flex align-items-center">
+                <div class="user-avatar-small me-2" style="background: ${this.getUserColor(creatorId)};" title="${creatorName}">
+                    ${creator ? creator.avatar : '?'}
+                </div>
+                <strong>${this.escapeHtml(creatorName)}</strong>
+            </div>
+        `;
+    }
+}
+
+// Helper methods
     getCategoryColor(category) {
         const colors = {
             safety: 'danger',
