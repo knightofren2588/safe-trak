@@ -2326,8 +2326,14 @@ pre {
     font-size: 0.9rem;
 }
 
-/* Enhanced Bug Report UI Visibility - Override Tailwind */
-/* Filter tabs - improve contrast for both modals */
+/* ========================================
+   🐛 TAILWIND OVERRIDES - COMMENTED OUT
+   These were conflicting with Tailwind CSS
+   ======================================== */
+
+/*
+Enhanced Bug Report UI Visibility - Override Tailwind
+Filter tabs - improve contrast for both modals
 #myBugReportsModal .btn-outline-warning,
 #bugDashboardModal .btn-outline-warning,
 #myBugReportsModal button.btn-outline-warning,
@@ -2368,7 +2374,7 @@ pre {
     font-weight: 600 !important;
 }
 
-/* Bug badges - improve contrast - Override Tailwind */
+Bug badges - improve contrast - Override Tailwind
 .badge.bg-warning,
 #myBugReportsModal .badge.bg-warning,
 #bugDashboardModal .badge.bg-warning,
@@ -2424,7 +2430,7 @@ pre {
     border: 1px solid #ea580c !important;
 }
 
-/* Override Tailwind text colors specifically */
+Override Tailwind text colors specifically
 #myBugReportsModal .text-muted,
 #bugDashboardModal .text-muted,
 #myBugReportsModal small.text-muted,
@@ -2433,7 +2439,7 @@ pre {
     font-weight: 500 !important;
 }
 
-/* Override Tailwind button colors */
+Override Tailwind button colors
 #myBugReportsModal .btn-primary,
 #bugDashboardModal .btn-primary,
 #myBugReportsModal .btn-danger,
@@ -2452,7 +2458,7 @@ pre {
     font-weight: 600 !important;
 }
 
-/* Bug card headers - improve visibility */
+Bug card headers - improve visibility
 .card-header.bg-warning.bg-opacity-10 {
     background-color: rgba(255, 193, 7, 0.15) !important;
     border-bottom: 1px solid rgba(255, 193, 7, 0.3) !important;
@@ -2473,17 +2479,17 @@ pre {
     border-bottom: 1px solid rgba(108, 117, 125, 0.3) !important;
 }
 
-/* Status icons - improve visibility */
+Status icons - improve visibility
 .fa-clock, .fa-spinner, .fa-check-circle, .fa-times-circle {
     color: #495057 !important;
 }
 
-/* Text improvements */
+Text improvements
 .text-muted {
     color: #6c757d !important;
 }
 
-/* Bug report specific text improvements - Override Tailwind */
+Bug report specific text improvements - Override Tailwind
 #myBugReportsModal .text-muted,
 #bugDashboardModal .text-muted,
 #myBugReportsModal .text-gray-600,
@@ -2502,7 +2508,7 @@ pre {
     font-weight: 500 !important;
 }
 
-/* Ensure bug card text is visible - Override Tailwind */
+Ensure bug card text is visible - Override Tailwind
 #myBugReportsModal .card-body,
 #bugDashboardModal .card-body,
 #myBugReportsModal .card-body *,
@@ -2518,7 +2524,7 @@ pre {
     font-weight: 600 !important;
 }
 
-/* Override Tailwind's low contrast colors */
+Override Tailwind's low contrast colors
 #myBugReportsModal .text-gray-400,
 #bugDashboardModal .text-gray-400,
 #myBugReportsModal .text-gray-300,
@@ -2526,7 +2532,7 @@ pre {
     color: #6c757d !important;
 }
 
-/* Force visibility on all text elements in bug modals */
+Force visibility on all text elements in bug modals
 #myBugReportsModal *,
 #bugDashboardModal * {
     color: inherit !important;
@@ -2542,7 +2548,7 @@ pre {
     color: #6c757d !important;
 }
 
-/* Alert improvements */
+Alert improvements
 .alert-warning {
     background-color: #fff3cd !important;
     border-color: #ffeaa7 !important;
@@ -2561,7 +2567,7 @@ pre {
     color: #155724 !important;
 }
 
-/* Button hover effects for both modals */
+Button hover effects for both modals
 #myBugReportsModal .btn-outline-warning:hover,
 #bugDashboardModal .btn-outline-warning:hover {
     background-color: #ffc107 !important;
@@ -2598,8 +2604,8 @@ pre {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
 }
 
-/* FORCE OVERRIDE TAILWIND - HIGHEST PRIORITY */
-/* This section must be at the very end to override Tailwind */
+FORCE OVERRIDE TAILWIND - HIGHEST PRIORITY
+This section must be at the very end to override Tailwind
 .modal#myBugReportsModal .btn-outline-warning,
 .modal#bugDashboardModal .btn-outline-warning,
 .modal#myBugReportsModal button.btn-outline-warning,
@@ -2640,7 +2646,7 @@ pre {
     font-weight: 600 !important;
 }
 
-/* FORCE BADGE VISIBILITY */
+FORCE BADGE VISIBILITY
 .modal#myBugReportsModal .badge.bg-warning,
 .modal#bugDashboardModal .badge.bg-warning,
 .modal#myBugReportsModal span.badge.bg-warning,
@@ -2681,7 +2687,7 @@ pre {
     border: 1px solid #545b62 !important;
 }
 
-/* FORCE TEXT VISIBILITY */
+FORCE TEXT VISIBILITY
 .modal#myBugReportsModal .text-muted,
 .modal#bugDashboardModal .text-muted,
 .modal#myBugReportsModal .text-gray-600,
@@ -2702,7 +2708,7 @@ pre {
     font-weight: 500 !important;
 }
 
-/* FORCE BUTTON VISIBILITY */
+FORCE BUTTON VISIBILITY
 .modal#myBugReportsModal .btn-primary,
 .modal#bugDashboardModal .btn-primary,
 .modal#myBugReportsModal .btn-danger,
@@ -2721,7 +2727,7 @@ pre {
     font-weight: 600 !important;
 }
 
-/* FORCE CARD TEXT VISIBILITY */
+FORCE CARD TEXT VISIBILITY
 .modal#myBugReportsModal .card-body,
 .modal#bugDashboardModal .card-body {
     color: #212529 !important;
@@ -2732,6 +2738,7 @@ pre {
     color: #000000 !important;
     font-weight: 600 !important;
 }
+*/
 
 /* Notification Styling - Minimal Custom CSS */
 .dropdown-item-text {
@@ -2756,4 +2763,227 @@ pre {
 /* Make notification cards stand out */
 .notification-card-unread {
     box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+}
+
+/* ========================================
+   SAFETY-THEMED HEADER STYLES
+   ======================================== */
+
+.safety-header {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background: white;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Logo Shield */
+.logo-shield {
+    width: 50px;
+    height: 50px;
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.logo-shield i {
+    font-size: 1.8rem;
+    color: #dc3545;
+}
+
+/* User Avatar */
+.user-avatar-large {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    border: 3px solid white;
+}
+
+/* Button Enhancements */
+.safety-header .btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-width: 2px;
+}
+
+.safety-header .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.safety-header .btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border: none;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.safety-header .btn-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+    box-shadow: 0 4px 16px rgba(220, 53, 69, 0.4);
+}
+
+.safety-header .btn-outline-primary {
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+
+.safety-header .btn-outline-primary:hover {
+    background: #0d6efd;
+    color: white;
+}
+
+.safety-header .btn-outline-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.safety-header .btn-outline-danger:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.safety-header .btn-outline-secondary {
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+.safety-header .btn-outline-secondary:hover {
+    background: #6c757d;
+    color: white;
+}
+
+/* Badge Enhancements */
+.safety-header .badge {
+    font-weight: 500;
+    padding: 0.4em 0.8em;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+/* Dropdown Enhancements */
+.safety-header .dropdown-menu {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    margin-top: 8px;
+}
+
+.safety-header .dropdown-item {
+    padding: 0.6rem 1.2rem;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    margin: 2px 6px;
+}
+
+.safety-header .dropdown-item:hover {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding-left: 1.5rem;
+    transform: translateX(4px);
+}
+
+.safety-header .dropdown-header {
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    padding: 0.75rem 1.2rem;
+}
+
+/* Quote Styling */
+.safety-quote-compact {
+    padding: 0.75rem 1.5rem;
+    background: white;
+    border-left: 4px solid #dc3545;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .safety-header .btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .user-avatar-large {
+        width: 48px;
+        height: 48px;
+        font-size: 1.2rem;
+    }
+    
+    .logo-shield {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .logo-shield i {
+        font-size: 1.4rem;
+    }
+}
+
+/* Smooth animations */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.safety-header {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* ========================================
+   🐛 BUG BADGE STYLING
+======================================== */
+
+/* Bug count badges - ensure visibility */
+#bugCountBadge,
+#myBugUpdatesBadge,
+#myBugsCountBadge,
+#navBugCountBadge {
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    padding: 2px 6px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Hide empty badges */
+#bugCountBadge:empty,
+#myBugUpdatesBadge:empty,
+#myBugsCountBadge:empty,
+#navBugCountBadge:empty {
+    display: none !important;
+}
+
+/* Position badge on dropdown button */
+.btn-outline-danger .position-absolute {
+    font-size: 0.65rem !important;
+    padding: 2px 5px !important;
+}
+
+/* Badge visibility when count > 0 */
+.badge[style*="inline-block"],
+.badge[style*="inline-flex"] {
+    display: inline-flex !important;
 }

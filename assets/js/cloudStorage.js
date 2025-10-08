@@ -625,76 +625,121 @@ deleteNoteLocal(noteId) {
         callback(this.isConnected ? { connected: true } : null);
     }
 
-    // Bug Reports methods
-    async getBugReports() {
-        console.log('[CloudStorage] Getting bug reports');
-        if (!this.isConnected) {
-            console.warn('Not connected to cloud storage, loading from local');
-            const localData = localStorage.getItem('safetrack_bug_reports_backup');
-            return localData ? JSON.parse(localData) : [];
-        }
+    // ==========================================
+    // BUG REPORTS - Hybrid Approach (Cloud + Local)
+    // ==========================================
 
+    async getBugReports() {
         try {
-            const collectionRef = this.functions.collection(this.db, 'bug_reports');
-            const snapshot = await this.functions.getDocs(collectionRef);
-            const bugs = [];
+            console.log('[CloudStorage] Getting bug reports');
             
+            if (!this.isConnected || !this.firestore) {
+                console.log('[CloudStorage] Not connected, loading bugs from localStorage');
+                return this.loadBugReportsLocal();
+            }
+            
+            // Try to load from Firebase
+            const bugsRef = this.firestore.collection('bugs');
+            const snapshot = await bugsRef.orderBy('reportedAt', 'desc').get();
+            
+            const bugs = [];
             snapshot.forEach(doc => {
-                bugs.push({ id: doc.id, ...doc.data() });
+                bugs.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
             });
             
             console.log('[CloudStorage] Loaded', bugs.length, 'bug reports from Firebase');
+            
             // Backup to localStorage
-            localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugs));
+            localStorage.setItem('safetrack_bug_reports', JSON.stringify(bugs));
+            
             return bugs;
+            
         } catch (error) {
-            console.error('[CloudStorage] Error getting bug reports:', error);
-            const localData = localStorage.getItem('safetrack_bug_reports_backup');
-            return localData ? JSON.parse(localData) : [];
+            console.error('[CloudStorage] Error getting bug reports from Firebase, using localStorage:', error);
+            return this.loadBugReportsLocal();
         }
     }
 
-    async saveBugReports(bugs) {
-        console.log('[CloudStorage] Saving bug reports:', bugs.length);
-        if (!this.isConnected) {
-            console.warn('Not connected to cloud storage, saving locally only');
-            localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugs));
-            return;
-        }
-
+    async saveBugReports(bugReports) {
         try {
-            const collectionRef = this.functions.collection(this.db, 'bug_reports');
+            console.log('[CloudStorage] Saving', bugReports.length, 'bug reports');
             
-            // Get all existing bug reports
-            const snapshot = await this.functions.getDocs(collectionRef);
+            // Always save to localStorage first (backup)
+            localStorage.setItem('safetrack_bug_reports', JSON.stringify(bugReports));
+            console.log('[CloudStorage] Bug reports saved to localStorage');
             
-            // Delete all existing bugs
-            const deletePromises = [];
-            snapshot.forEach((doc) => {
-                deletePromises.push(this.functions.deleteDoc(doc.ref));
+            if (!this.isConnected || !this.firestore) {
+                console.log('[CloudStorage] Not connected, saved to localStorage only');
+                return true;
+            }
+            
+            // Save to Firebase
+            const bugsRef = this.firestore.collection('bugs');
+            const batch = this.firestore.batch();
+            
+            // Get existing bugs
+            const existingSnapshot = await bugsRef.get();
+            const existingIds = new Set();
+            existingSnapshot.forEach(doc => {
+                existingIds.add(doc.id.toString());
             });
             
-            if (deletePromises.length > 0) {
-                await Promise.all(deletePromises);
-                console.log('[CloudStorage] Deleted', deletePromises.length, 'old bug reports');
+            // Add or update bugs
+            for (const bug of bugReports) {
+                const bugId = bug.id.toString();
+                const docRef = bugsRef.doc(bugId);
+                batch.set(docRef, bug, { merge: true });
+                existingIds.delete(bugId);
             }
             
-            // Add new bugs
-            if (bugs.length > 0) {
-                const addPromises = bugs.map(bug => {
-                    return this.functions.addDoc(collectionRef, bug);
-                });
-                
-                await Promise.all(addPromises);
-                console.log('[CloudStorage] Added', bugs.length, 'bug reports to Firebase');
-            }
+            // Delete bugs that no longer exist
+            existingIds.forEach(id => {
+                batch.delete(bugsRef.doc(id));
+            });
             
-            // Also save to localStorage as backup
-            localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugs));
+            await batch.commit();
+            console.log('[CloudStorage] Bug reports saved to Firebase');
+            
+            return true;
+            
         } catch (error) {
-            console.error('[CloudStorage] Error saving bug reports:', error);
-            localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugs));
-            console.log('[CloudStorage] Saved bug reports to localStorage as fallback');
+            console.error('[CloudStorage] Error saving bug reports to Firebase (saved locally):', error);
+            return true; // Still return true since we saved locally
+        }
+    }
+
+    async deleteBugReport(bugId) {
+        try {
+            console.log('[CloudStorage] Deleting bug report:', bugId);
+            
+            if (this.isConnected && this.firestore) {
+                await this.firestore.collection('bugs').doc(bugId.toString()).delete();
+                console.log('[CloudStorage] Bug report deleted from Firebase');
+            } else {
+                console.log('[CloudStorage] Not connected, skipping Firebase deletion');
+            }
+            
+            return true;
+            
+        } catch (error) {
+            console.error('[CloudStorage] Error deleting bug report from Firebase:', error);
+            return true; // Don't fail - local deletion will happen in app.js
+        }
+    }
+
+    // Helper method to load from localStorage
+    loadBugReportsLocal() {
+        try {
+            const stored = localStorage.getItem('safetrack_bug_reports');
+            const bugs = stored ? JSON.parse(stored) : [];
+            console.log('[CloudStorage] Loaded', bugs.length, 'bug reports from localStorage');
+            return bugs;
+        } catch (error) {
+            console.error('[CloudStorage] Error loading from localStorage:', error);
+            return [];
         }
     }
 

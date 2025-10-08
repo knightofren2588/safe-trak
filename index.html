@@ -17,6 +17,20 @@
     <!-- Custom CSS -->
     <link href="assets/css/style.css" rel="stylesheet">
     
+    <style>
+    #notificationBadge {
+        font-size: 0.75rem !important;
+        padding: 0.4rem 0.55rem !important;
+        font-weight: bold !important;
+        min-width: 1.25rem !important;
+        box-shadow: 0 0 0 2px white !important;
+        line-height: 1 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    </style>
+    
     <!-- Export Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -129,179 +143,174 @@
         </div>
     </div>
 
-    <!-- Header -->
-    <header class="bg-white shadow-lg" style="border-bottom: 4px solid var(--safety-red);">
-        <div class="pl-4 pr-6 py-6">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <!-- Larger Shield Icon -->
-                    <div class="flex-shrink-0">
-                        <div class="p-4 rounded-xl shadow-lg hover-scale" style="background: linear-gradient(135deg, var(--safety-red) 0%, #b91c1c 100%); color: white;">
-                            <i class="fas fa-shield-alt" style="font-size: 2.5rem;"></i>
+    <!-- Safety-Themed Professional Header -->
+    <header class="safety-header">
+        <div class="container-fluid">
+            <!-- Top Bar -->
+            <div class="row align-items-center py-2 border-bottom" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                <div class="col-auto">
+                    <div class="d-flex align-items-center">
+                        <div class="logo-shield">
+                            <i class="fas fa-shield-alt"></i>
                         </div>
-                    </div>
-                    
-                    <!-- Title and Info -->
-                    <div class="flex-1">
-                        <div class="flex items-center space-x-3 mb-2">
-                            <h1 class="text-3xl font-bold" style="color: var(--safety-red);">SafeTrack</h1>
-                            <div class="px-3 py-1 rounded-full text-xs font-semibold" style="background: var(--safety-yellow); color: #000;">
-                                SAFETY FIRST
-                            </div>
-                        </div>
-                        <p class="text-sm text-gray-600 mb-3">Advanced Safety Project Management System</p>
-                        
-                        <!-- Daily Safety Quote -->
-                        <div class="safety-quote">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <div class="safety-quote-text" id="dailySafetyQuote">
-                                        "Safety is not a gadget but a state of mind."
-                                    </div>
-                                    <div class="safety-quote-author" id="dailySafetyAuthor">
-                                        — Eleanor Everet
-                                    </div>
-                                </div>
-                                <div class="quote-controls">
-                                    <button class="btn btn-sm btn-outline-light" onclick="getNewQuote()" title="Get new random quote" aria-label="Get new quote">
-                                        <i class="fas fa-refresh"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-light" onclick="openQuoteModal()" title="Manage quotes" aria-label="Manage quotes">
-                                        <i class="fas fa-cog"></i>
-                                    </button>
-                                </div>
-                            </div>
+                        <div class="ms-3">
+                            <h3 class="mb-0 text-white fw-bold">SafeTrack</h3>
+                            <small class="text-white-50">Advanced Safety Project Management</small>
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-col items-end space-y-3">
-                    <!-- Welcome Banner -->
-                    <div id="welcomeBanner" class="welcome-banner text-right">
-                        <div class="welcome-message">Welcome,</div>
-                        <div class="welcome-username" id="welcomeUsername">Admin User</div>
-                        <div class="welcome-role" id="welcomeUserRole">Administrator</div>
+                
+                <div class="col text-end">
+                    <span class="badge bg-success me-2" id="connectionIndicator">
+                        <i class="fas fa-cloud me-1"></i>Cloud Connected
+                    </span>
+                    <span class="badge bg-warning text-dark">v1.2.3</span>
+                </div>
+            </div>
+
+            <!-- Welcome Bar -->
+            <div class="row align-items-center py-3" style="background: linear-gradient(to right, #ffffff 0%, #f8f9fa 100%);">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar-large me-3" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                            <span id="userAvatarLetter">M</span>
+                        </div>
+                        <div>
+                            <small class="text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 1px;">Welcome Back</small>
+                            <h5 class="mb-0 fw-bold text-danger" id="welcomeUsername">Marcena Cudzilo</h5>
+                            <span class="badge" style="background: #ffc107; color: #000;" id="welcomeUserRole">Safety Liaison</span>
+                        </div>
                     </div>
-                    
-                    <!-- Controls Row -->
-                    <div class="flex items-center space-x-4">
-                        <!-- Archive -->
-                        <div class="me-3">
-                            <!-- Archive feature removed -->
-                        </div>
+                </div>
 
-                        <!-- Notifications disabled -->
-
-                        <!-- Connection Status Indicator -->
-                    <div id="connectionStatus" class="d-flex align-items-center me-3">
-                        <div id="connectionIndicator" class="badge bg-warning me-2">
-                            <i class="fas fa-cloud-upload-alt me-1"></i>Connecting...
-                        </div>
-                        <button id="syncButton" class="btn btn-sm btn-outline-safety" onclick="syncData()" title="Sync with cloud">
+                <div class="col-md-4 text-center d-none d-md-block">
+                    <div class="safety-quote-compact">
+                        <i class="fas fa-quote-left text-danger me-2"></i>
+                        <span class="fst-italic text-muted" id="dailySafetyQuote" style="font-size: 0.9rem;">"Safety first is safety always."</span>
+                        <button class="btn btn-link btn-sm p-0 ms-2 text-danger" onclick="getNewQuote()" title="Get new quote">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
-                    <!-- Release Notes Button -->
-                    <button class="btn btn-outline-info btn-sm" onclick="openReleaseNotes()" title="View Release Notes">
-                        <i class="fas fa-rocket me-1"></i>
-                        <span class="badge bg-info">v1.2.3</span>
-                    </button>
-                    
-                    <!-- Notifications Dropdown -->
-                    <div class="dropdown">
-                        <button class="btn btn-outline-primary btn-sm dropdown-toggle position-relative" 
-                                type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                </div>
+
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-end gap-2 flex-wrap">
+
+                        <!-- Notifications Button -->
+                        <button class="btn btn-outline-primary position-relative" onclick="projectManager.showNotifications()">
                             <i class="fas fa-bell me-1"></i>Notifications
-                            <span class="badge bg-danger position-absolute top-0 start-100 translate-middle rounded-pill" 
-                                  id="notificationCountBadge" style="display: none; font-size: 0.6rem;">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                                  id="notificationBadge" 
+                                  style="display: none;">
                                 0
                             </span>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="min-width: 420px; max-height: 500px; overflow-y: auto;">
-                            <li><h6 class="dropdown-header bg-light border-bottom">
-                                <i class="fas fa-bell me-2 text-primary"></i>Project Notifications
-                            </h6></li>
-                            <li id="notificationsList">
-                                <div class="text-center text-muted py-4">
-                                    <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
-                                    <small>No new notifications</small>
-                                </div>
-                            </li>
-                            <li><hr class="dropdown-divider my-0"></li>
-                            <li>
-                                <a class="dropdown-item text-center small text-primary py-2" href="#" onclick="openNotificationsModal()">
-                                    <i class="fas fa-history me-1"></i>View All Notifications
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <!-- Report Bug Button with Dropdown -->
-                    <div class="dropdown">
-                        <button class="btn btn-outline-danger btn-sm dropdown-toggle position-relative" 
-                                type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-bug me-1"></i>Bugs
-                            <span class="badge bg-danger position-absolute top-0 start-100 translate-middle rounded-pill" 
-                                  id="myBugUpdatesBadge" style="display: none; font-size: 0.6rem;">
-                                0
-                            </span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><h6 class="dropdown-header">Bug Reports</h6></li>
-                            <li><a class="dropdown-item" href="#" onclick="openBugReportModal()">
-                                <i class="fas fa-plus-circle me-2"></i>Report New Bug
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="openMyBugReports()">
-                                <i class="fas fa-list me-2"></i>My Bug Reports
-                                <span class="badge bg-info ms-2" id="myBugsCountBadge">0</span>
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-muted small" href="#" onclick="openMyBugReports()">
-                                <i class="fas fa-bell me-2"></i>
-                                <span id="myBugUpdatesText">No new updates</span>
-                            </a></li>
-                        </ul>
-                    </div>
-                    <!-- User switching removed for security - users locked to selected profile -->
-                    
-                    <!-- Project View Toggle -->
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="viewToggle" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-eye me-2"></i>
-                            <span id="currentViewMode">My Projects</span>
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="viewToggle">
-                            <li><h6 class="dropdown-header">Project View</h6></li>
-                            <li><a class="dropdown-item" href="#" onclick="toggleProjectView('personal')">
-                                <i class="fas fa-user me-2"></i>My Projects Only
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="toggleProjectView('all')">
-                                <i class="fas fa-users me-2"></i>All Team Projects
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">Individual Views</h6></li>
-                            <div id="individualUserViews">
-                                <!-- Dynamic individual user views will be populated here -->
-                            </div>
-                            <!-- Admin-only options -->
-                            <div id="adminOnlyOptions" style="display: none;">
+
+                        <!-- Bugs -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-danger position-relative" type="button" id="bugDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bug me-1"></i>Bugs
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                                      id="myBugUpdatesBadge" style="display: none;">
+                                    0
+                                    <span class="visually-hidden">unread bug updates</span>
+                                </span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Bug Reports</h6></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#" onclick="openUserManagement()">
-                                    <i class="fas fa-users-cog me-2"></i>Manage Team Members
+                                <li><a class="dropdown-item" href="#" onclick="openBugReportModal()">
+                                    <i class="fas fa-plus-circle me-2 text-success"></i>Report a Bug
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="openMyBugReports()">
+                                    <i class="fas fa-list me-2 text-info"></i>My Bug Reports
+                                    <span class="badge bg-secondary ms-2" id="myBugsCountBadge">0</span>
+                                </a></li>
+                                <li class="admin-only-nav" style="display: none;">
+                                    <hr class="dropdown-divider">
+                                    <a class="dropdown-item text-danger" href="#" onclick="openBugDashboard()">
+                                        <i class="fas fa-shield-alt me-2"></i>Admin Dashboard
+                                        <span class="badge bg-danger ms-2" id="bugCountBadge">0</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- View Projects -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="viewToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-eye me-1"></i>My Projects
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Project Views</h6></li>
+                                <li><a class="dropdown-item" href="#" onclick="toggleProjectView('personal')">
+                                    <i class="fas fa-user me-2"></i>My Projects
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="toggleProjectView('all')">
+                                    <i class="fas fa-users me-2"></i>All Team Projects
                                 </a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" onclick="resetAllData()">
-                                    <i class="fas fa-trash me-2"></i>Reset All Data
+                                <li><h6 class="dropdown-header">Individual Users</h6></li>
+                                <div id="individualUserViews"></div>
+                            </ul>
+                        </div>
+
+                        <!-- New Project -->
+                        <button onclick="openProjectModal()" class="btn btn-danger">
+                            <i class="fas fa-plus me-1"></i>New Safety Project
+                        </button>
+
+                        <!-- Settings -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Settings & Tools</h6></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="openQuoteModal()">
+                                    <i class="fas fa-quote-left me-2 text-primary"></i>Safety Quotes
                                 </a></li>
-                            </div>
-                        </ul>
-                    </div>
-                    <button class="btn btn-safety btn-enhanced btn-press hover-lift" onclick="openProjectModal()" 
-                            aria-label="Create a new safety project">
-                        <i class="fas fa-plus me-2" aria-hidden="true"></i>New Safety Project
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm ms-2" onclick="logout()" title="Logout" aria-label="Logout">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
+                                <li><a class="dropdown-item" href="#" onclick="openReleaseNotes()">
+                                    <i class="fas fa-clipboard-list me-2 text-info"></i>Release Notes
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="admin-only-nav" style="display: none;">
+                                    <a class="dropdown-item" href="#" onclick="openUserManagement()">
+                                        <i class="fas fa-users me-2 text-success"></i>Manage Users
+                                    </a>
+                                </li>
+                                <li class="admin-only-nav" style="display: none;">
+                                    <a class="dropdown-item" href="#" onclick="openCategoryModal()">
+                                        <i class="fas fa-folder me-2 text-warning"></i>Manage Categories
+                                    </a>
+                                </li>
+                                <li class="admin-only-nav" style="display: none;">
+                                    <a class="dropdown-item" href="#" onclick="openRoleModal()">
+                                        <i class="fas fa-user-tag me-2 text-info"></i>Manage Roles
+                                    </a>
+                                </li>
+                                <li class="admin-only-nav" style="display: none;">
+                                    <a class="dropdown-item" href="#" onclick="openDepartmentModal()">
+                                        <i class="fas fa-building me-2 text-primary"></i>Manage Departments
+                                    </a>
+                                </li>
+                                <li class="admin-only-nav" id="adminOnlyOptions" style="display: none;">
+                                    <hr class="dropdown-divider">
+                                    <a class="dropdown-item text-warning" href="#" onclick="resetAllData()">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Reset All Data
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="syncData()" id="syncButton">
+                                    <i class="fas fa-sync me-2 text-success"></i>Sync Data
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="logout()">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1893,14 +1902,150 @@
                 </div>
                 
                 <div id="releaseNotesContainer">
+                    <!-- Version 1.2.4 -->
+                    <div class="release-version">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-primary fs-6">v1.2.4</span>
+                                <span class="text-muted ms-2">October 8, 2025</span>
+                            </div>
+                            <span class="badge bg-success">Current</span>
+                        </div>
+                        
+                        <!-- New Features -->
+                        <div class="release-category">
+                            <h6 class="text-success">
+                                <i class="fas fa-star me-2"></i>New Features
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Individual Notification Delete:</strong> Users can now delete individual read notifications with proper validation to prevent accidental deletion of unread items</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Individual Notification Delete', 'Users can now delete individual read notifications with proper validation to prevent accidental deletion of unread items')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Mark All as Read Function:</strong> Bulk operation to mark all notifications as read with automatic badge update</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Mark All as Read Function', 'Bulk operation to mark all notifications as read with automatic badge update')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Clear All Notifications:</strong> Complete notification history management with confirmation dialog</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Clear All Notifications', 'Complete notification history management with confirmation dialog')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Improvements -->
+                        <div class="release-category">
+                            <h6 class="text-info">
+                                <i class="fas fa-cog me-2"></i>Improvements
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Enhanced Notification Badge:</strong> Improved visibility with custom styling, better positioning, and white border shadow for contrast</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Enhanced Notification Badge', 'Improved visibility with custom styling, better positioning, and white border shadow for contrast')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Perfect Badge Alignment:</strong> Flexbox-based centering with proper line-height and padding for pixel-perfect number display</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Perfect Badge Alignment', 'Flexbox-based centering with proper line-height and padding for pixel-perfect number display')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Filtered Pending Projects:</strong> Pending projects (awaiting approval) are now excluded from project counts and owner badges for accurate metrics</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Filtered Pending Projects', 'Pending projects (awaiting approval) are now excluded from project counts and owner badges for accurate metrics')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Personal View Filter Fix:</strong> Personal view now only shows projects assigned to the current user, not projects they created for others</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Personal View Filter Fix', 'Personal view now only shows projects assigned to the current user, not projects they created for others')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Bug Fixes -->
+                        <div class="release-category">
+                            <h6 class="text-danger">
+                                <i class="fas fa-bug me-2"></i>Bug Fixes
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Release Notes Delete Function:</strong> Fixed null reference error with proper null checks and nested validation</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'bug', 'Release Notes Delete Function', 'Fixed null reference error with proper null checks and nested validation')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Notification Badge Updates:</strong> Badge now updates correctly when marking notifications as read or deleting them</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'bug', 'Notification Badge Updates', 'Badge now updates correctly when marking notifications as read or deleting them')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
                     <!-- Version 1.2.3 -->
                     <div class="release-version">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
-                                <span class="badge bg-primary fs-6">v1.2.3</span>
+                                <span class="badge bg-secondary fs-6">v1.2.3</span>
                                 <span class="text-muted ms-2">October 7, 2025</span>
                             </div>
-                            <span class="badge bg-success">Current</span>
                         </div>
                         
                         <!-- New Features -->
@@ -2748,6 +2893,36 @@
     </div>
 </div>
 
+<!-- Notifications Modal -->
+<div class="modal fade" id="notificationsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-bell me-2"></i>Notifications
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="notificationsList">
+                    <!-- Notifications will be rendered here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary" onclick="projectManager.markAllAsRead()">
+                    <i class="fas fa-check-double me-1"></i>Mark All Read
+                </button>
+                <button type="button" class="btn btn-outline-danger" onclick="projectManager.clearAll()">
+                    <i class="fas fa-trash me-1"></i>Clear All
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
@@ -2757,53 +2932,6 @@
     <!-- Custom JS -->
     <script src="assets/js/app.js"></script>
 
-<!-- Notifications Modal -->
-<div class="modal fade" id="notificationsModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <div>
-                    <h5 class="modal-title">
-                        <i class="fas fa-bell me-2"></i>Project Assignment Notifications
-                    </h5>
-                    <p class="mb-0 small">Manage your project assignments and responses</p>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0">
-                <!-- Filter Tabs -->
-                <div class="d-flex gap-2 p-3 bg-light border-bottom">
-                    <button class="btn btn-sm btn-primary" onclick="filterNotifications('all')">
-                        All (<span id="allNotificationsCount">0</span>)
-                    </button>
-                    <button class="btn btn-sm btn-outline-warning" onclick="filterNotifications('pending')">
-                        Pending (<span id="pendingNotificationsCount">0</span>)
-                    </button>
-                    <button class="btn btn-sm btn-outline-success" onclick="filterNotifications('accepted')">
-                        Accepted (<span id="acceptedNotificationsCount">0</span>)
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="filterNotifications('declined')">
-                        Declined (<span id="declinedNotificationsCount">0</span>)
-                    </button>
-                </div>
-                
-                <!-- Notifications List -->
-                <div id="notificationsContainer" class="p-3">
-                    <div class="text-center text-muted py-5">
-                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-                        <p>No notifications yet.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-outline-danger" onclick="clearAllNotifications()">
-                    <i class="fas fa-trash me-1"></i>Clear All
-                </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 </body>
 </html>

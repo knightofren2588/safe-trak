@@ -10,6 +10,7 @@ class ProjectManager {
         this.departments = [];
         this.complianceItems = [];
         this.certifications = [];
+        this.notifications = [];
         this.currentUser = null; // Set to null to trigger user selection modal
         this.currentEditId = null;
         this.currentUserEditId = null;
@@ -71,9 +72,12 @@ class ProjectManager {
         this.projectViewMode = localStorage.getItem('safetrack_project_view_mode') || 'personal';
         
         
-        // User notifications system (disabled)
-        this.userNotifications = {};
-        // Notifications feature disabled: skip auto cleanup and interval
+        // Initialize bugs array
+        this.bugs = [];
+        this.bugScreenshots = {};
+        this.currentBugEditId = null;
+        
+        // DON'T load bugs in constructor - load them after init completes
         
         // Multi-user assignment system
         this.selectedAssignedUsers = [];
@@ -139,6 +143,20 @@ class ProjectManager {
         } else {
           // existing Firebase/cloud init
         }
+
+        // Initialize bugs array
+        this.bugs = [];
+        this.bugScreenshots = [];
+        
+        // Load bugs safely
+        setTimeout(async () => {
+            try {
+                await loadBugs();
+            } catch (error) {
+                console.error('[BUGS] Error during initial bug load:', error);
+                this.bugs = [];
+            }
+        }, 500);
 
         // Call this once after initial load finishes
         this.__signalReady?.();
@@ -267,16 +285,26 @@ class ProjectManager {
     
     showLoginError() {
         const errorDiv = document.getElementById('loginError');
-        errorDiv.classList.remove('d-none');
+        if (errorDiv) {
+            errorDiv.classList.remove('d-none');
+            
+            // Hide error after 5 seconds
+            setTimeout(() => {
+                if (errorDiv) {
+                    errorDiv.classList.add('d-none');
+                }
+            }, 5000);
+        }
         
         // Clear form
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('loginUsername').focus();
-        
-        // Hide error after 5 seconds
-        setTimeout(() => {
-            errorDiv.classList.add('d-none');
-        }, 5000);
+        const passwordField = document.getElementById('loginPassword');
+        const usernameField = document.getElementById('loginUsername');
+        if (passwordField) {
+            passwordField.value = '';
+        }
+        if (usernameField) {
+            usernameField.focus();
+        }
     }
     
     logout() {
@@ -465,37 +493,6 @@ async loadNoteCounts() {
         }
     }
 }
-    // ========================================
-    // USER NOTIFICATIONS SYSTEM
-    // ========================================
-    
-    async loadUserNotifications() { return {}; }
-    
-    async saveUserNotifications() { return; }
-    
-    addNotificationForProjectOwner() { return; }
-    
-    getUnreadNotificationCount() { return 0; }
-    
-    markNotificationAsRead() { return; }
-    
-    showUserNotifications() { return false; }
-    
-    showNotificationModal() { return false; }
-    
-    async markAllNotificationsRead() { return; }
-    
-    async clearReadNotifications() { return; }
-    
-    async clearAllNotifications() { return; }
-    
-    // Automatic cleanup - removes read notifications older than 7 days
-    async autoCleanupOldNotifications() { return; }
-    
-    updateNotificationBadge() {
-        const badge = document.getElementById('notificationBadge');
-        if (badge) badge.style.display = 'none';
-    }
 
     // ========================================
     // USER COLOR CODING SYSTEM
@@ -560,10 +557,13 @@ async loadNoteCounts() {
             const user = this.users.find(u => u.id === userId);
             const userName = user ? user.name : userId;
             const userColor = this.getUserColor(userId);
-            const projectCount = this.projects.filter(p => {
+            // ✅ Only count active projects (not pending)
+            const userProjects = this.projects.filter(p => {
+                if (p.status === 'pending') return false; // Don't count pending
                 const assignedUsers = Array.isArray(p.assignedTo) ? p.assignedTo : [p.assignedTo].filter(Boolean);
                 return assignedUsers.includes(userId);
-            }).length;
+            });
+            const projectCount = userProjects.length;
             
             return `
                 <div class="legend-item d-flex align-items-center me-4 mb-2">
@@ -652,7 +652,10 @@ async loadNoteCounts() {
     }
     showAdminPasswordModal(actionName) {
         // Clear any previous error
-        document.getElementById('adminPasswordError').classList.add('d-none');
+        const errorElement = document.getElementById('adminPasswordError');
+        if (errorElement) {
+            errorElement.classList.add('d-none');
+        }
         document.getElementById('adminPassword').value = '';
         
         // Show modal
@@ -696,16 +699,23 @@ async loadNoteCounts() {
     
     showAdminPasswordError() {
         const errorDiv = document.getElementById('adminPasswordError');
-        errorDiv.classList.remove('d-none');
+        if (errorDiv) {
+            errorDiv.classList.remove('d-none');
+            
+            // Hide error after 5 seconds
+            setTimeout(() => {
+                if (errorDiv) {
+                    errorDiv.classList.add('d-none');
+                }
+            }, 5000);
+        }
         
         // Clear password field
-        document.getElementById('adminPassword').value = '';
-        document.getElementById('adminPassword').focus();
-        
-        // Hide error after 5 seconds
-        setTimeout(() => {
-            errorDiv.classList.add('d-none');
-        }, 5000);
+        const passwordField = document.getElementById('adminPassword');
+        if (passwordField) {
+            passwordField.value = '';
+            passwordField.focus();
+        }
     }
     
     showUserSelectionModal() {
@@ -779,16 +789,10 @@ async loadNoteCounts() {
         this.currentUser = userId;
         this.saveCurrentUser();
         
-        // DISABLED: Sync notes from cloud when switching users (causes note deletion issues)
-        // await this.syncProjectNotesFromCloud();
-        
         // Update UI
         this.updateUserInterface();
         this.updateViewModeInterface();
         this.render();
-        // TEMPORARILY DISABLED: Certification features
-        // this.renderCertificationTable();
-        // this.updateCertificationStats();
         
         // Hide modal
         this.hideUserSelectionModal();
@@ -798,9 +802,13 @@ async loadNoteCounts() {
         const userName = user ? user.name : 'User';
         this.showNotification(`Welcome to SafeTrack, ${userName}!`, 'success');
         
-        // ✅ LOAD NOTIFICATIONS FOR THIS USER
-        console.log('[NOTIFICATIONS] Loading notifications for user:', userId);
-        await loadNotifications();
+        // ✅ Update bug badges for this user (bugs already loaded in loadAllData)
+        this.loadSeenReplies();
+        this.updateBugBadges();
+        this.updateMyBugCounts();
+        
+        // ✅ ADD THIS ONE LINE at the very end, right before the closing }
+        await this.loadNotifications();
     }
     
     hideUserSelectionModal() {
@@ -1546,7 +1554,6 @@ END:VCALENDAR`;
         await this.loadAllData();
         
         // Always show user selection modal on login
-        // Make sure we have at least one user before showing the modal
         if (this.users.length === 0) {
             this.loadDefaultUsers();
         }
@@ -1555,26 +1562,6 @@ END:VCALENDAR`;
         localStorage.removeItem('safetrack_current_user');
         this.currentUser = null;
         this.showUserSelectionModal();
-        
-        // Archived cleanup removed
-        
-        // Load user notifications from cloud
-        this.userNotifications = await this.loadUserNotifications();
-        
-        
-        // TEMPORARILY DISABLED: Compliance and Certification loading
-        // this.complianceItems = this.loadComplianceItems();
-        // this.certifications = this.loadCertifications();
-        
-        // Don't load sample data - start with empty state
-        // if (this.projects.length === 0 && !this.hasUserInteracted) {
-        //     this.loadSampleData();
-        // }
-        
-        // Don't load sample users - users should be added manually
-        // if (this.users.length === 0 && !this.hasUserInteracted) {
-        //     this.loadSampleUsers();
-        // }
         
         this.render();
         this.setupEventListeners();
@@ -1585,17 +1572,11 @@ END:VCALENDAR`;
         this.populateDepartmentDropdowns();
         this.displayDailySafetyQuote();
         
-        // TEMPORARILY DISABLED: Compliance and Certification features
-        // this.renderComplianceTable();
-        // this.updateComplianceStats();
-        // this.renderCertificationTable();
-        // this.updateCertificationStats();
-        
         // Show connection status
         this.showConnectionStatus();
 
-        // Load bugs
-        await loadBugs();
+        // ❌ DON'T load bugs here - wait until user is selected
+        // await this.loadBugs();
 
         // Call this once after initial load finishes
         this.__signalReady?.();
@@ -2831,12 +2812,13 @@ END:VCALENDAR`;
             console.log('🔍 DIAGNOSTIC: Cloud storage connected:', this.cloudStorage.isConnected);
             
             // Load all data in parallel
-            const [projects, users, categories, roles, departments, currentUser] = await Promise.all([
+            const [projects, users, categories, roles, departments, bugs, currentUser] = await Promise.all([
                 this.cloudStorage.loadProjects(),
                 this.cloudStorage.loadUsers(),
                 this.cloudStorage.loadCategories(),
                 this.cloudStorage.loadRoles(),
                 this.cloudStorage.loadDepartments(),
+                this.cloudStorage.getBugReports(), // ✅ Load bugs here
                 this.cloudStorage.loadCurrentUser()
             ]);
             
@@ -2846,6 +2828,7 @@ END:VCALENDAR`;
                 categories: categories.length,
                 roles: roles.length,
                 departments: departments.length,
+                bugs: bugs.length, // ✅ Log bug count
                 currentUser: currentUser
             });
             
@@ -2854,6 +2837,7 @@ END:VCALENDAR`;
             this.categories = categories;
             this.roles = roles;
             this.departments = departments;
+            this.bugs = bugs; // ✅ Store bugs
             this.currentUser = currentUser;
             
             // Initialize default categories if none exist
@@ -2865,10 +2849,9 @@ END:VCALENDAR`;
                 categories: this.categories.length,
                 roles: this.roles.length,
                 departments: this.departments.length,
+                bugs: this.bugs.length, // ✅ Log final bug count
                 currentUser: this.currentUser
             });
-            
-        // Archived buckets removed
             
             // Update connection status after successful data load
             this.showConnectionStatus();
@@ -2887,6 +2870,7 @@ END:VCALENDAR`;
         this.categories = this.loadCategoriesLocal();
         this.roles = this.loadRolesLocal();
         this.departments = this.loadDepartmentsLocal();
+        this.bugs = this.loadBugsLocal(); // ✅ Add this line
         this.currentUser = this.loadCurrentUserLocal();
         
         // Initialize default categories if none exist
@@ -2898,11 +2882,9 @@ END:VCALENDAR`;
             categories: this.categories.length,
             roles: this.roles.length,
             departments: this.departments.length,
+            bugs: this.bugs.length, // ✅ Log bug count
             currentUser: this.currentUser
         });
-        
-        // Archived buckets removed
-        // Archived buckets removed
     }
 
     loadProjects() {
@@ -3045,6 +3027,12 @@ END:VCALENDAR`;
         const stored = localStorage.getItem('safetrack_departments');
         return stored ? JSON.parse(stored) : [];
     }
+
+    loadBugsLocal() {
+        const stored = localStorage.getItem('safetrack_bug_reports');
+        return stored ? JSON.parse(stored) : [];
+    }
+
     loadCurrentUserLocal() {
         const stored = localStorage.getItem('safetrack_current_user');
         // Return null to trigger user selection modal instead of defaulting to 'all'
@@ -3440,12 +3428,20 @@ END:VCALENDAR`;
         if (!Array.isArray(assignedUsers)) {
             assignedUsers = assignedUsers ? [assignedUsers] : [creatorId];
         }
+        
         console.log('[PROJECT] Assigned users:', assignedUsers);
+        
+        // ✅ Check if assigning to self only OR to others
+        const isForSelfOnly = assignedUsers.length === 1 && assignedUsers[0] === creatorId;
+        const othersAssigned = assignedUsers.filter(userId => userId !== creatorId);
+        
+        console.log('[PROJECT] For self only?', isForSelfOnly);
+        console.log('[PROJECT] Others assigned:', othersAssigned);
         
         const project = {
             id: this.generateId(),
             ...projectData,
-            status: 'active',
+            status: isForSelfOnly ? 'active' : 'pending', // ✅ Active if for self, pending if for others
             progress: 0,
             createdBy: creatorId,
             assignedTo: assignedUsers,
@@ -3457,25 +3453,25 @@ END:VCALENDAR`;
         this.projects.unshift(project);
         await this.saveProjects();
         
-        console.log('[PROJECT] Project saved, now creating notifications...');
+        console.log('[PROJECT] Project saved...');
         
-        // ✅ CREATE NOTIFICATIONS FOR ASSIGNED USERS
-        for (const userId of assignedUsers) {
-            console.log('[PROJECT] Checking user:', userId, 'vs creator:', creatorId);
-            if (userId !== creatorId) { // Don't notify if assigning to yourself
-                console.log('[PROJECT] ✅ Creating notification for user:', userId);
-                try {
-                    await createAssignmentNotification(project.id, project.name, userId, creatorId);
-                    console.log('[PROJECT] ✅ Notification created successfully for:', userId);
-                } catch (error) {
-                    console.error('[PROJECT] ❌ Error creating notification:', error);
-                }
-            } else {
-                console.log('[PROJECT] ⏭️ Skipping notification (user assigned to themselves)');
-            }
+        // ✅ Send notifications ONLY to others (not creator)
+        if (othersAssigned.length > 0) {
+            const creatorName = this.users.find(u => u.id === creatorId)?.name || 'Unknown';
+            othersAssigned.forEach(userId => {
+                console.log('[NOTIFICATIONS] Creating notification for:', userId);
+                this.addNotification({
+                    userId: userId,
+                    projectId: project.id,
+                    projectName: project.name,
+                    message: `${creatorName} assigned you to project: ${project.name}`,
+                    type: 'assignment',
+                    status: 'pending'
+                });
+            });
         }
         
-        console.log('[PROJECT] All notifications created, rendering...');
+        console.log('[PROJECT] Rendering...');
         
         this.render();
         
@@ -3487,16 +3483,17 @@ END:VCALENDAR`;
         }, 200);
         
         this.closeModal();
-        this.showNotification(`Safety project "${project.name}" created successfully!`, 'success');
+        
+        const message = isForSelfOnly 
+            ? `Safety project "${project.name}" created successfully!`
+            : `Safety project "${project.name}" created and sent for approval!`;
+        
+        this.showNotification(message, 'success');
     }
 
     async editProject(id, projectData) {
         const index = this.projects.findIndex(p => p.id === id);
         if (index !== -1) {
-            const oldProject = this.projects[index];
-            const oldAssignedUsers = Array.isArray(oldProject.assignedTo) ? oldProject.assignedTo : [oldProject.assignedTo].filter(Boolean);
-            const newAssignedUsers = Array.isArray(projectData.assignedTo) ? projectData.assignedTo : [projectData.assignedTo].filter(Boolean);
-            
             this.projects[index] = { 
                 ...this.projects[index], 
                 ...projectData,
@@ -3504,15 +3501,6 @@ END:VCALENDAR`;
             };
             
             await this.saveProjects();
-            
-            // ✅ CREATE NOTIFICATIONS FOR NEWLY ASSIGNED USERS
-            console.log('[NOTIFICATIONS] Checking for new assignments...');
-            for (const userId of newAssignedUsers) {
-                if (!oldAssignedUsers.includes(userId) && userId !== this.currentUser) {
-                    console.log('[NOTIFICATIONS] Creating notification for newly assigned user:', userId);
-                    await createAssignmentNotification(id, projectData.name, userId, this.currentUser);
-                }
-            }
             
             this.render();
             this.closeModal();
@@ -4313,31 +4301,29 @@ END:VCALENDAR`;
     renderProjectTable(projectsToRender = null) {
         const tbody = document.getElementById('projectTableBody');
         
-        // If no specific projects provided, filter based on view mode
         let projects = projectsToRender;
         if (!projects) {
-            // Single-list model: all projects are in this.projects
-            const activeProjects = this.projects;
+            let allProjects = this.projects;
+            
+            // Hide pending projects (waiting for approval)
+            allProjects = allProjects.filter(p => p.status !== 'pending');
             
             if (this.projectViewMode === 'all') {
-                // Show all active projects (read-only view for non-owners)
-                projects = activeProjects;
+                projects = allProjects;
             } else if (this.projectViewMode === 'personal') {
-                // Show only active projects created by or assigned to current user
-                projects = activeProjects.filter(project => {
+                // ✅ FIX: Only show if assigned to current user
+                projects = allProjects.filter(project => {
                     const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-                    return project.createdBy === this.currentUser || assignedUsers.includes(this.currentUser);
+                    return assignedUsers.includes(this.currentUser);
                 });
             } else {
-                // Individual user view - show active projects where user is assigned
-                projects = activeProjects.filter(project => {
+                projects = allProjects.filter(project => {
                     const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
                     return assignedUsers.includes(this.projectViewMode);
                 });
             }
         } else {
-            // Single-list model: no filtering
-            // projects = projects;
+            projects = projects.filter(p => p.status !== 'pending');
         }
         
         // Update table title based on current user
@@ -4644,7 +4630,11 @@ END:VCALENDAR`;
         // Clear form
         document.getElementById('ownerChangeReason').value = '';
         document.getElementById('ownerChangeAdminPassword').value = '';
-        document.getElementById('ownerChangeError').classList.add('d-none');
+        
+        const errorElement = document.getElementById('ownerChangeError');
+        if (errorElement) {
+            errorElement.classList.add('d-none');
+        }
         
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('changeOwnerModal'));
@@ -4675,7 +4665,10 @@ END:VCALENDAR`;
         // Verify admin password
         const correctAdminPassword = 'AdminSafe2025!';
         if (adminPassword !== correctAdminPassword) {
-            document.getElementById('ownerChangeError').classList.remove('d-none');
+            const errorElement = document.getElementById('ownerChangeError');
+            if (errorElement) {
+                errorElement.classList.remove('d-none');
+            }
             document.getElementById('ownerChangeAdminPassword').value = '';
             return;
         }
@@ -5027,36 +5020,49 @@ END:VCALENDAR`;
         this.render(); // Re-render projects with new view mode
     }
     updateUserInterface() {
-        const welcomeUsername = document.getElementById('welcomeUsername');
-        const welcomeUserRole = document.getElementById('welcomeUserRole');
+        const currentUser = this.users.find(u => u.id === this.currentUser);
         
-        // Always show the current actual user (no more 'all' user switching)
-        const user = this.users.find(u => u.id === this.currentUser);
-        const userName = user ? user.name : 'Admin User';
-        const userRole = user ? (user.role || 'Team Member') : 'Administrator';
-        
-        // Update welcome banner
-        if (welcomeUsername) welcomeUsername.textContent = userName;
-        if (welcomeUserRole) welcomeUserRole.textContent = userRole;
-        
-        // Show/hide admin-only options
-        const adminOptions = document.getElementById('adminOnlyOptions');
-        if (adminOptions) {
-            if (this.currentUser === 'admin') {
-                adminOptions.style.display = 'block';
-            } else {
-                adminOptions.style.display = 'none';
+        if (currentUser) {
+            // Safely update welcome username
+            const welcomeUsername = document.getElementById('welcomeUsername');
+            if (welcomeUsername) {
+                welcomeUsername.textContent = currentUser.name;
             }
-        }
-        
-        // Show/hide admin-only navigation button
-        const adminNavButton = document.querySelector('.admin-only-nav');
-        if (adminNavButton) {
-            if (this.currentUser === 'admin') {
-                adminNavButton.style.display = 'block';
-            } else {
-                adminNavButton.style.display = 'none';
+            
+            // Safely update user role
+            const welcomeUserRole = document.getElementById('welcomeUserRole');
+            if (welcomeUserRole) {
+                welcomeUserRole.textContent = currentUser.role || 'Team Member';
             }
+            
+            // Safely update avatar letter
+            const userAvatarLetter = document.getElementById('userAvatarLetter');
+            if (userAvatarLetter) {
+                userAvatarLetter.textContent = currentUser.name.charAt(0).toUpperCase();
+            }
+            
+            // Safely update user avatar in project modal
+            const userAvatar = document.getElementById('userAvatar');
+            if (userAvatar) {
+                userAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
+            }
+            
+            // Safely update current user name display
+            const currentUserName = document.getElementById('currentUserName');
+            if (currentUserName) {
+                currentUserName.textContent = currentUser.name;
+            }
+            
+            // Update admin-only elements visibility
+            const isAdmin = this.currentUser === 'admin';
+            const adminElements = document.querySelectorAll('.admin-only, .admin-only-nav');
+            adminElements.forEach(el => {
+                el.style.display = isAdmin ? '' : 'none';
+            });
+            
+            console.log('[UI] User interface updated for:', currentUser.name);
+        } else {
+            console.warn('[UI] Current user not found:', this.currentUser);
         }
         
         // Populate individual user views in dropdown
@@ -5064,9 +5070,6 @@ END:VCALENDAR`;
         
         // Populate filter dropdowns
         this.populateFilterDropdowns();
-        
-        // Update notification badge
-        this.updateNotificationBadge();
     }
 
     populateFilterDropdowns() {
@@ -5103,20 +5106,39 @@ END:VCALENDAR`;
     }
     
     updateViewModeInterface() {
-        const currentViewMode = document.getElementById('currentViewMode');
+        const viewModeElement = document.getElementById('currentViewMode');
+        const viewToggleButton = document.getElementById('viewToggle');
+        
+        let displayText = 'My Projects';
+        
         if (this.projectViewMode === 'all') {
-            currentViewMode.textContent = 'All Team Projects';
+            displayText = 'All Team Projects';
         } else if (this.projectViewMode === 'personal') {
-            currentViewMode.textContent = 'My Projects';
+            displayText = 'My Projects';
         } else {
             // Individual user view
-            const user = this.users.find(u => u.id === this.projectViewMode);
-            if (user) {
-                currentViewMode.textContent = `${user.name}'s Projects`;
-            } else {
-                currentViewMode.textContent = 'User Projects';
+            const viewUser = this.users.find(u => u.id === this.projectViewMode);
+            if (viewUser) {
+                displayText = `${viewUser.name}'s Projects`;
             }
         }
+        
+        // Safely update view mode text
+        if (viewModeElement) {
+            viewModeElement.textContent = displayText;
+        }
+        
+        // Safely update button text
+        if (viewToggleButton) {
+            const buttonText = viewToggleButton.querySelector('.btn-text') || viewToggleButton;
+            if (buttonText) {
+                // Update just the text part, preserving the icon
+                const icon = '<i class="fas fa-eye me-1"></i>';
+                viewToggleButton.innerHTML = icon + displayText;
+            }
+        }
+        
+        console.log('[UI] View mode updated to:', displayText);
     }
 
     updateUserDropdown() {
@@ -5852,12 +5874,22 @@ END:VCALENDAR`;
     showImportStep(step) {
         // Hide all steps
         for (let i = 1; i <= 3; i++) {
-            document.getElementById(`importStep${i}`).classList.add('d-none');
+            const stepElement = document.getElementById(`importStep${i}`);
+            if (stepElement) {
+                stepElement.classList.add('d-none');
+            }
         }
-        document.getElementById('importProgress').classList.add('d-none');
+        
+        const progressElement = document.getElementById('importProgress');
+        if (progressElement) {
+            progressElement.classList.add('d-none');
+        }
         
         // Show current step
-        document.getElementById(`importStep${step}`).classList.remove('d-none');
+        const currentStepElement = document.getElementById(`importStep${step}`);
+        if (currentStepElement) {
+            currentStepElement.classList.remove('d-none');
+        }
         this.importStep = step;
         
         // Update buttons
@@ -6141,10 +6173,13 @@ END:VCALENDAR`;
         document.getElementById('validProjectsCount').textContent = validCount;
         document.getElementById('errorCount').textContent = errorCount;
         
-        if (errorCount > 0) {
-            document.getElementById('errorAlert').classList.remove('d-none');
-        } else {
-            document.getElementById('errorAlert').classList.add('d-none');
+        const errorAlertElement = document.getElementById('errorAlert');
+        if (errorAlertElement) {
+            if (errorCount > 0) {
+                errorAlertElement.classList.remove('d-none');
+            } else {
+                errorAlertElement.classList.add('d-none');
+            }
         }
         
         this.renderPreviewTable();
@@ -6199,8 +6234,15 @@ END:VCALENDAR`;
         }
         
         // Show progress
-        document.getElementById('importStep3').classList.add('d-none');
-        document.getElementById('importProgress').classList.remove('d-none');
+        const step3Element = document.getElementById('importStep3');
+        if (step3Element) {
+            step3Element.classList.add('d-none');
+        }
+        
+        const progressElement = document.getElementById('importProgress');
+        if (progressElement) {
+            progressElement.classList.remove('d-none');
+        }
         
         const progressBar = document.getElementById('importProgressBar');
         const progressText = document.getElementById('importProgressText');
@@ -6335,6 +6377,1091 @@ END:VCALENDAR`;
         console.log('🔄 User selection reset - will show user selection modal on next login');
         this.showNotification('User selection reset. Please refresh and login again.', 'success');
     }
+
+    // ==========================================
+    // BUG REPORTING SYSTEM - INSIDE ProjectManager CLASS
+    // ==========================================
+
+    async loadBugs() {
+        console.log('[BUGS] Loading bug reports...');
+        try {
+            // Load from cloud storage (which falls back to localStorage automatically)
+            this.bugs = await this.cloudStorage.getBugReports();
+            console.log('[BUGS] Loaded', this.bugs.length, 'bugs');
+            
+            // Load seen replies and update badges
+            this.loadSeenReplies();
+            this.updateBugBadges();
+            this.updateMyBugCounts();
+        } catch (error) {
+            console.error('[BUGS] Error loading bug reports:', error);
+            // Fallback to localStorage
+            const localBugs = localStorage.getItem('safetrack_bug_reports');
+            this.bugs = localBugs ? JSON.parse(localBugs) : [];
+            console.log('[BUGS] Loaded', this.bugs.length, 'bugs from fallback');
+            this.updateBugBadges();
+        }
+    }
+
+    async saveBugs() {
+        try {
+            console.log('[BUGS] Saving', this.bugs.length, 'bug reports');
+            
+            // Save to cloud storage (which also saves to localStorage)
+            await this.cloudStorage.saveBugReports(this.bugs);
+            
+            console.log('[BUGS] Bugs saved successfully');
+        } catch (error) {
+            console.error('[BUGS] Error saving bugs:', error);
+            // Fallback: save to localStorage directly
+            try {
+                localStorage.setItem('safetrack_bug_reports', JSON.stringify(this.bugs));
+                console.log('[BUGS] Saved to localStorage as fallback');
+            } catch (localError) {
+                console.error('[BUGS] Failed to save to localStorage:', localError);
+            }
+        }
+        
+        this.updateBugBadges();
+        this.updateMyBugCounts();
+    }
+
+    updateBugBadges() {
+        try {
+            console.log('[BUGS] Updating bug badges...');
+            console.log('[BUGS] Total bugs:', this.bugs.length);
+            console.log('[BUGS] Current user:', this.currentUser);
+            
+            // Update admin bug count badge
+            const bugCountBadge = document.getElementById('bugCountBadge');
+            if (bugCountBadge) {
+                const totalBugs = this.bugs.length;
+                bugCountBadge.textContent = totalBugs;
+                if (totalBugs > 0) {
+                    bugCountBadge.style.display = 'inline-flex';
+                    bugCountBadge.classList.remove('d-none');
+                } else {
+                    bugCountBadge.style.display = 'none';
+                }
+                console.log('[BUGS] Admin badge updated:', totalBugs);
+            } else {
+                console.warn('[BUGS] bugCountBadge element not found');
+            }
+            
+            // Update navigation bug badge (admin only)
+            const navBugCountBadge = document.getElementById('navBugCountBadge');
+            if (navBugCountBadge) {
+                const totalBugs = this.bugs.length;
+                navBugCountBadge.textContent = totalBugs;
+                if (totalBugs > 0) {
+                    navBugCountBadge.style.display = 'inline-flex';
+                } else {
+                    navBugCountBadge.style.display = 'none';
+                }
+            }
+            
+            // Update user's bug updates badge
+            const myBugUpdatesBadge = document.getElementById('myBugUpdatesBadge');
+            if (myBugUpdatesBadge) {
+                if (!this.currentUser) {
+                    console.log('[BUGS] No current user, hiding badge');
+                    myBugUpdatesBadge.style.display = 'none';
+                    return;
+                }
+                
+                const myBugsWithUpdates = this.bugs.filter(bug => 
+                    bug.reportedBy === this.currentUser && 
+                    bug.replies && 
+                    bug.replies.length > 0 && 
+                    this.getUnreadRepliesCount(bug) > 0
+                ).length;
+                
+                myBugUpdatesBadge.textContent = myBugsWithUpdates;
+                if (myBugsWithUpdates > 0) {
+                    myBugUpdatesBadge.style.display = 'inline-flex';
+                    myBugUpdatesBadge.classList.remove('d-none');
+                } else {
+                    myBugUpdatesBadge.style.display = 'none';
+                }
+                console.log('[BUGS] User updates badge:', myBugsWithUpdates);
+            } else {
+                console.warn('[BUGS] myBugUpdatesBadge element not found');
+            }
+            
+            // Update "My Bug Reports" count badge
+            const myBugsCountBadge = document.getElementById('myBugsCountBadge');
+            if (myBugsCountBadge) {
+                const myBugsCount = this.currentUser ? this.bugs.filter(bug => bug.reportedBy === this.currentUser).length : 0;
+                myBugsCountBadge.textContent = myBugsCount;
+                console.log('[BUGS] My bugs count:', myBugsCount);
+            }
+            
+            // Update dashboard counts
+            const allBugs = this.bugs.length;
+            const pendingBugs = this.bugs.filter(b => b.status === 'pending').length;
+            const resolvedBugs = this.bugs.filter(b => b.status === 'resolved').length;
+            const closedBugs = this.bugs.filter(b => b.status === 'closed').length;
+            
+            const elements = {
+                'allBugsCount': allBugs,
+                'pendingBugsCount': pendingBugs,
+                'resolvedBugsCount': resolvedBugs,
+                'closedBugsCount': closedBugs
+            };
+            
+            Object.entries(elements).forEach(([id, count]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = count;
+                }
+            });
+            
+            console.log('[BUGS] All badges updated successfully');
+        } catch (error) {
+            console.error('[BUGS] Error updating bug badges:', error);
+        }
+    }
+
+    openBugReportModal() {
+        try {
+            const modal = document.getElementById('bugReportModal');
+            if (!modal) {
+                console.error('[BUGS] Bug report modal not found');
+                this.showNotification('Bug report modal not available', 'error');
+                return;
+            }
+            
+            // Reset form
+            const form = document.getElementById('bugReportForm');
+            if (form) form.reset();
+            
+            const previewContainer = document.getElementById('bugScreenshotPreview');
+            if (previewContainer) previewContainer.innerHTML = '';
+            
+            // Show modal
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        } catch (error) {
+            console.error('[BUGS] Error opening bug report modal:', error);
+            this.showNotification('Error opening bug report form', 'error');
+        }
+    }
+
+    async submitBugReport(bugData) {
+        const bug = {
+            id: Date.now(),
+            ...bugData,
+            reportedBy: this.currentUser,
+            reportedByName: this.users.find(u => u.id === this.currentUser)?.name || 'Unknown',
+            reportedAt: new Date().toISOString(),
+            status: 'pending',
+            replies: []
+        };
+        
+        this.bugs.unshift(bug);
+        await this.saveBugs();
+        
+        this.showNotification('Bug report submitted successfully! Our team will review it soon.', 'success');
+    }
+
+    openBugDashboard() {
+        try {
+            if (this.currentUser !== 'admin') {
+                alert('Access denied. Admin only.');
+                return;
+            }
+            
+            const modal = document.getElementById('bugDashboardModal');
+            if (!modal) {
+                console.error('[BUGS] Bug dashboard modal not found');
+                this.showNotification('Bug dashboard not available', 'error');
+                return;
+            }
+            
+            this.renderBugDashboard();
+            
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        } catch (error) {
+            console.error('[BUGS] Error opening bug dashboard:', error);
+            this.showNotification('Error opening bug dashboard', 'error');
+        }
+    }
+
+    renderBugDashboard() {
+        const container = document.getElementById('bugListContainer');
+        if (!container) {
+            console.warn('[BUGS] Bug dashboard container not found');
+            return;
+        }
+        
+        try {
+            if (this.bugs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5>No Bug Reports</h5>
+                        <p class="text-muted">All clear! No bugs have been reported yet.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort bugs: unresolved first, then by date
+            const sortedBugs = [...this.bugs].sort((a, b) => {
+                if (a.status !== b.status) {
+                    return a.status === 'pending' ? -1 : 1;
+                }
+                return new Date(b.reportedAt) - new Date(a.reportedAt);
+            });
+            
+            container.innerHTML = sortedBugs.map(bug => this.renderBugCard(bug)).join('');
+            console.log('[BUGS] Dashboard rendered with', sortedBugs.length, 'bugs');
+        } catch (error) {
+            console.error('[BUGS] Error rendering bug dashboard:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error loading bug reports. Please refresh the page.
+                </div>
+            `;
+        }
+    }
+
+    renderBugCard(bug) {
+        const reportedDate = new Date(bug.reportedAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const priorityColors = {
+            low: { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-400' },
+            medium: { bg: 'bg-yellow-200', text: 'text-yellow-800', border: 'border-yellow-400' },
+            high: { bg: 'bg-orange-200', text: 'text-orange-800', border: 'border-orange-400' },
+            critical: { bg: 'bg-red-200', text: 'text-red-800', border: 'border-red-400' }
+        };
+        
+        const statusColors = {
+            pending: { bg: 'bg-yellow-200', text: 'text-yellow-800', border: 'border-yellow-400' },
+            'in-progress': { bg: 'bg-blue-200', text: 'text-blue-800', border: 'border-blue-400' },
+            resolved: { bg: 'bg-green-200', text: 'text-green-800', border: 'border-green-400' },
+            closed: { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-400' }
+        };
+        
+        const categoryIcons = {
+            ui: 'fa-paint-brush',
+            functionality: 'fa-cog',
+            performance: 'fa-tachometer-alt',
+            data: 'fa-database',
+            other: 'fa-question-circle'
+        };
+        
+        const priority = priorityColors[bug.priority] || priorityColors.low;
+        const status = statusColors[bug.status] || statusColors.pending;
+        const categoryIcon = categoryIcons[bug.category] || 'fa-question-circle';
+        
+        return `
+            <div class="bg-white border-2 ${priority.border} rounded-lg shadow-md mb-4">
+                <div class="p-4 ${priority.bg}">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h6 class="text-lg font-bold text-gray-900 mb-2">
+                                <i class="fas ${categoryIcon} mr-2 ${priority.text}"></i>
+                                ${this.escapeHtml(bug.title)}
+                            </h6>
+                            <div class="flex gap-2 flex-wrap">
+                                <span class="px-3 py-1 text-xs font-bold rounded ${priority.bg} ${priority.text} border ${priority.border}">
+                                    ${bug.priority.toUpperCase()}
+                                </span>
+                                <span class="px-3 py-1 text-xs font-bold rounded ${status.bg} ${status.text} border ${status.border}">
+                                    ${bug.status.replace('-', ' ').toUpperCase()}
+                                </span>
+                                <small class="text-gray-900 font-semibold">
+                                    <i class="fas fa-user mr-1"></i>${this.escapeHtml(bug.reportedBy)}
+                                </small>
+                                <small class="text-gray-700 font-medium">
+                                    <i class="fas fa-clock mr-1"></i>${reportedDate}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-blue-600 rounded hover:bg-blue-700" 
+                                    onclick="projectManager.openBugReplyModal(${bug.id})" title="Reply to Bug">
+                                <i class="fas fa-reply mr-1"></i>Reply
+                            </button>
+                            <button class="px-3 py-2 text-sm font-semibold text-white bg-red-600 border border-red-600 rounded hover:bg-red-700" 
+                                    onclick="projectManager.deleteBug(${bug.id})" title="Delete Bug Report">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div class="mb-3">
+                        <h6 class="font-bold text-gray-900 mb-2">Description:</h6>
+                        <p class="text-gray-900 leading-relaxed">${this.escapeHtml(bug.description)}</p>
+                    </div>
+                    
+                    ${bug.steps ? `
+                        <div class="mb-3">
+                            <h6 class="font-bold text-gray-900 mb-2">Steps to Reproduce:</h6>
+                            <pre class="bg-gray-100 p-3 rounded text-gray-900 border border-gray-300 whitespace-pre-wrap">${this.escapeHtml(bug.steps)}</pre>
+                        </div>
+                    ` : ''}
+                    
+                    ${bug.screenshot ? `
+                        <div class="mb-3">
+                            <h6 class="font-bold text-gray-900 mb-2">Screenshot:</h6>
+                            <img src="${bug.screenshot}" alt="Bug screenshot" 
+                                 class="max-w-full h-auto rounded border border-gray-300 cursor-pointer"
+                                 style="max-height: 400px;" 
+                                 onclick="window.open(this.src, '_blank')">
+                        </div>
+                    ` : ''}
+                    
+                    ${bug.replies && bug.replies.length > 0 ? `
+                        <hr class="my-4 border-gray-300">
+                        <div class="mb-3">
+                            <h6 class="font-bold text-gray-900 mb-3">Replies (${bug.replies.length}):</h6>
+                            ${bug.replies.map(reply => {
+                                const replyDate = new Date(reply.repliedAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                });
+                                return `
+                                    <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-3 mb-2">
+                                        <div class="flex justify-between mb-2">
+                                            <strong class="text-gray-900 font-semibold">
+                                                <i class="fas fa-user-shield mr-1 text-blue-600"></i>
+                                                ${this.escapeHtml(reply.repliedBy)}
+                                            </strong>
+                                            <small class="text-gray-700">${replyDate}</small>
+                                        </div>
+                                        <p class="mb-0 text-gray-900 leading-relaxed">${this.escapeHtml(reply.text)}</p>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    openBugReplyModal(bugId) {
+        this.currentBugEditId = bugId;
+        const bug = this.bugs.find(b => b.id === bugId);
+        
+        if (bug) {
+            document.getElementById('replyBugTitle').value = bug.title;
+            document.getElementById('bugStatus').value = bug.status;
+            
+            const modal = new bootstrap.Modal(document.getElementById('bugReplyModal'));
+            modal.show();
+        }
+    }
+
+    async submitBugReply() {
+        const replyText = document.getElementById('bugReplyText').value.trim();
+        const status = document.getElementById('bugStatus').value;
+        
+        const bug = this.bugs.find(b => b.id === this.currentBugEditId);
+        if (bug) {
+            bug.replies.push({
+                text: replyText,
+                repliedBy: this.currentUser,
+                repliedByName: this.users.find(u => u.id === this.currentUser)?.name || 'Admin',
+                repliedAt: new Date().toISOString()
+            });
+            bug.status = status;
+            await this.saveBugs();
+            
+            // Refresh bug list
+            this.renderBugDashboard();
+            
+            // Close modal and reset form
+            const modal = bootstrap.Modal.getInstance(document.getElementById('bugReplyModal'));
+            if (modal) modal.hide();
+            document.getElementById('bugReplyForm').reset();
+            
+            this.showNotification('Reply sent successfully!', 'success');
+        }
+    }
+
+    async deleteBug(bugId) {
+        if (!confirm('Are you sure you want to delete this bug report?')) return;
+        
+        try {
+            console.log('[BUGS] Deleting bug:', bugId);
+            
+            // Remove from local array
+            this.bugs = this.bugs.filter(b => b.id !== bugId);
+            
+            // Save the updated array (this handles both cloud and local)
+            await this.saveBugs();
+            
+            // Also explicitly delete from cloud if connected
+            if (this.cloudStorage && this.cloudStorage.isConnected) {
+                await this.cloudStorage.deleteBugReport(bugId);
+            }
+            
+            // Re-render
+            this.renderBugDashboard();
+            
+            this.showNotification('Bug report deleted', 'success');
+            
+            console.log('[BUGS] Bug deleted successfully');
+        } catch (error) {
+            console.error('[BUGS] Error deleting bug:', error);
+            this.showNotification('Error deleting bug report', 'error');
+        }
+    }
+
+    loadSeenReplies() {
+        if (!this.currentUser) return;
+        
+        const saved = localStorage.getItem(`safetrack_seen_bug_replies_${this.currentUser}`);
+        if (saved) {
+            this.bugScreenshots = JSON.parse(saved);
+        } else {
+            this.bugScreenshots = {};
+        }
+    }
+
+    saveSeenReplies() {
+        if (!this.currentUser) return;
+        
+        localStorage.setItem(`safetrack_seen_bug_replies_${this.currentUser}`, JSON.stringify(this.bugScreenshots));
+    }
+
+    getUnreadRepliesCount(bug) {
+        if (!this.bugScreenshots[bug.id]) {
+            return bug.replies.length;
+        }
+        
+        const seenDates = this.bugScreenshots[bug.id];
+        return bug.replies.filter(r => !seenDates.includes(r.repliedAt)).length;
+    }
+
+    markBugRepliesAsRead(bugId) {
+        if (!this.bugScreenshots[bugId]) {
+            this.bugScreenshots[bugId] = [];
+        }
+        
+        const bug = this.bugs.find(b => b.id === bugId);
+        if (bug && bug.replies) {
+            this.bugScreenshots[bugId] = bug.replies.map(r => r.repliedAt);
+            this.saveSeenReplies();
+            this.updateMyBugCounts();
+            this.updateBugBadges();
+        }
+    }
+
+    updateMyBugCounts() {
+        if (!this.currentUser) return;
+        
+        const myBugs = this.bugs.filter(b => b.reportedBy === this.currentUser);
+        
+        const totalBugs = myBugs.length;
+        const pendingBugs = myBugs.filter(b => b.status === 'pending').length;
+        const resolvedBugs = myBugs.filter(b => b.status === 'resolved').length;
+        
+        // Count total unread replies
+        let unreadReplies = 0;
+        myBugs.forEach(bug => {
+            unreadReplies += this.getUnreadRepliesCount(bug);
+        });
+        
+        // Update badges
+        const myBugsCountBadge = document.getElementById('myBugsCountBadge');
+        if (myBugsCountBadge) {
+            myBugsCountBadge.textContent = totalBugs;
+        }
+        
+        const myBugUpdatesBadge = document.getElementById('myBugUpdatesBadge');
+        if (myBugUpdatesBadge) {
+            if (unreadReplies > 0) {
+                myBugUpdatesBadge.textContent = unreadReplies;
+                myBugUpdatesBadge.style.display = 'inline-block';
+            } else {
+                myBugUpdatesBadge.style.display = 'none';
+            }
+        }
+    }
+
+    openMyBugReports() {
+        try {
+            if (!this.currentUser) {
+                alert('Please log in to view your bug reports.');
+                return;
+            }
+            
+            const modal = document.getElementById('myBugReportsModal');
+            if (!modal) {
+                console.error('[BUGS] My bug reports modal not found');
+                this.showNotification('My bug reports not available', 'error');
+                return;
+            }
+            
+            this.renderMyBugList('all');
+            
+            const bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
+        } catch (error) {
+            console.error('[BUGS] Error opening my bug reports:', error);
+            this.showNotification('Error opening bug reports', 'error');
+        }
+    }
+
+    renderMyBugList(filter) {
+        const container = document.getElementById('myBugListContainer');
+        if (!container || !this.currentUser) return;
+        
+        let myBugs = this.bugs.filter(b => b.reportedBy === this.currentUser);
+        
+        if (filter !== 'all') {
+            myBugs = myBugs.filter(b => b.status === filter);
+        }
+        
+        if (myBugs.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-bug text-gray-400 mb-3" style="font-size: 3rem;"></i>
+                    <p class="text-gray-600 text-lg">No ${filter === 'all' ? '' : filter} bug reports found.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const priorityColors = {
+            low: { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-400' },
+            medium: { bg: 'bg-yellow-200', text: 'text-yellow-800', border: 'border-yellow-400' },
+            high: { bg: 'bg-orange-200', text: 'text-orange-800', border: 'border-orange-400' },
+            critical: { bg: 'bg-red-200', text: 'text-red-800', border: 'border-red-400' }
+        };
+        
+        const statusColors = {
+            pending: { bg: 'bg-yellow-200', text: 'text-yellow-800', border: 'border-yellow-400', icon: 'fa-clock' },
+            'in-progress': { bg: 'bg-blue-200', text: 'text-blue-800', border: 'border-blue-400', icon: 'fa-spinner' },
+            resolved: { bg: 'bg-green-200', text: 'text-green-800', border: 'border-green-400', icon: 'fa-check-circle' },
+            closed: { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-400', icon: 'fa-times-circle' }
+        };
+        
+        const categoryIcons = {
+            ui: 'fa-paint-brush',
+            functionality: 'fa-cog',
+            performance: 'fa-tachometer-alt',
+            data: 'fa-database',
+            other: 'fa-question-circle'
+        };
+        
+        container.innerHTML = myBugs.map(bug => {
+            const reportedDate = new Date(bug.reportedAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const unreadCount = this.getUnreadRepliesCount(bug);
+            const hasUnread = unreadCount > 0;
+            
+            const priority = priorityColors[bug.priority] || priorityColors.low;
+            const status = statusColors[bug.status] || statusColors.pending;
+            const categoryIcon = categoryIcons[bug.category] || 'fa-question-circle';
+            
+            return `
+                <div class="bg-white border-2 ${priority.border} ${hasUnread ? 'border-4 shadow-lg' : 'shadow-md'} rounded-lg mb-4">
+                    <div class="p-4 ${priority.bg}">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h6 class="text-lg font-bold text-gray-900 mb-2">
+                                    <i class="fas ${categoryIcon} mr-2 ${priority.text}"></i>
+                                    ${this.escapeHtml(bug.title)}
+                                    ${hasUnread ? `<span class="px-2 py-1 ml-2 text-xs font-bold text-white bg-red-600 rounded">${unreadCount} NEW</span>` : ''}
+                                </h6>
+                                <div class="flex gap-2 flex-wrap items-center">
+                                    <span class="px-3 py-1 text-xs font-bold rounded ${priority.bg} ${priority.text} border ${priority.border}">
+                                        ${bug.priority.toUpperCase()}
+                                    </span>
+                                    <span class="px-3 py-1 text-xs font-bold rounded ${status.bg} ${status.text} border ${status.border}">
+                                        <i class="fas ${status.icon} mr-1"></i>
+                                        ${bug.status.replace('-', ' ').toUpperCase()}
+                                    </span>
+                                    <small class="text-gray-900 font-semibold">
+                                        <i class="fas fa-clock mr-1"></i>${reportedDate}
+                                    </small>
+                                    ${bug.replies && bug.replies.length > 0 ? `
+                                        <small class="text-green-700 font-bold">
+                                            <i class="fas fa-comment-dots mr-1"></i>${bug.replies.length} ${bug.replies.length === 1 ? 'reply' : 'replies'}
+                                        </small>
+                                    ` : `
+                                        <small class="text-gray-700 font-medium">
+                                            <i class="fas fa-hourglass-half mr-1"></i>Awaiting response
+                                        </small>
+                                    `}
+                                </div>
+                            </div>
+                            ${hasUnread ? `
+                                <button class="px-3 py-2 text-sm font-semibold text-white bg-green-600 rounded hover:bg-green-700" 
+                                        onclick="projectManager.markBugRepliesAsRead(${bug.id}); projectManager.renderMyBugList('${filter}');">
+                                    <i class="fas fa-check mr-1"></i>Mark as Read
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="mb-3">
+                            <h6 class="font-bold text-gray-900 mb-2">Description:</h6>
+                            <p class="text-gray-900 leading-relaxed">${this.escapeHtml(bug.description)}</p>
+                        </div>
+                        
+                        ${bug.steps ? `
+                            <div class="mb-3">
+                                <h6 class="font-bold text-gray-900 mb-2">Steps to Reproduce:</h6>
+                                <pre class="bg-gray-100 p-3 rounded text-gray-900 border border-gray-300 whitespace-pre-wrap">${this.escapeHtml(bug.steps)}</pre>
+                            </div>
+                        ` : ''}
+                        
+                        ${bug.screenshot ? `
+                            <div class="mb-3">
+                                <h6 class="font-bold text-gray-900 mb-2">Screenshot:</h6>
+                                <img src="${bug.screenshot}" alt="Bug screenshot" 
+                                     class="max-w-full h-auto rounded border border-gray-300 cursor-pointer"
+                                     style="max-height: 300px;" 
+                                     onclick="window.open(this.src, '_blank')">
+                            </div>
+                        ` : ''}
+                        
+                        ${bug.replies && bug.replies.length > 0 ? `
+                            <hr class="my-3 border-gray-300">
+                            <div class="flex justify-between items-center mb-3">
+                                <h6 class="font-bold text-gray-900">Admin Responses (${bug.replies.length}):</h6>
+                                ${hasUnread ? '<span class="px-2 py-1 text-xs font-bold text-white bg-red-600 rounded">New</span>' : ''}
+                            </div>
+                            ${bug.replies.map((reply) => {
+                                const replyDate = new Date(reply.repliedAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                });
+                                const isUnread = !this.bugScreenshots[bug.id] || !this.bugScreenshots[bug.id].includes(reply.repliedAt);
+                                return `
+                                    <div class="${isUnread ? 'bg-green-50 border-green-400' : 'bg-blue-50 border-blue-300'} border-2 rounded-lg p-3 mb-2">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <i class="fas fa-user-shield ${isUnread ? 'text-green-600' : 'text-blue-600'}"></i>
+                                                <strong class="text-gray-900 font-semibold">${this.escapeHtml(reply.repliedBy)}</strong>
+                                                ${isUnread ? '<span class="px-2 py-1 text-xs font-bold text-white bg-green-600 rounded">NEW</span>' : ''}
+                                            </div>
+                                            <small class="text-gray-700">${replyDate}</small>
+                                        </div>
+                                        <p class="mb-0 text-gray-900 leading-relaxed">${this.escapeHtml(reply.text)}</p>
+                                    </div>
+                                `;
+                            }).join('')}
+                        ` : `
+                            <div class="p-3 bg-yellow-50 border-2 border-yellow-300 rounded-lg">
+                                <i class="fas fa-hourglass-half mr-2 text-yellow-700"></i>
+                                <strong class="text-yellow-800">No admin response yet.</strong> We'll notify you when there's an update!
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ==========================================
+    // NOTIFICATION SYSTEM - LOAD & SAVE ONLY
+    // ==========================================
+
+    async loadNotifications() {
+        if (!this.currentUser) {
+            console.log('[NOTIFICATIONS] No current user, skipping load');
+            return;
+        }
+        
+        console.log('[NOTIFICATIONS] Loading for user:', this.currentUser);
+        
+        // Try cloud first
+        if (this.cloudStorage && this.cloudStorage.isConnected) {
+            try {
+                this.notifications = await this.cloudStorage.getNotifications(this.currentUser) || [];
+                console.log('[NOTIFICATIONS] Loaded from cloud:', this.notifications.length);
+            } catch (error) {
+                console.error('[NOTIFICATIONS] Cloud load failed:', error);
+                // Fallback to local
+                const local = localStorage.getItem(`safetrack_notifications_${this.currentUser}`);
+                this.notifications = local ? JSON.parse(local) : [];
+                console.log('[NOTIFICATIONS] Loaded from local:', this.notifications.length);
+            }
+        } else {
+            // Use local storage
+            const local = localStorage.getItem(`safetrack_notifications_${this.currentUser}`);
+            this.notifications = local ? JSON.parse(local) : [];
+            console.log('[NOTIFICATIONS] Loaded from local:', this.notifications.length);
+        }
+        
+        // ✅ ADD THIS LINE at the very end:
+        this.updateNotificationBadge();
+    }
+
+    async saveNotifications() {
+        if (!this.currentUser) {
+            console.log('[NOTIFICATIONS] No current user, skipping save');
+            return;
+        }
+        
+        console.log('[NOTIFICATIONS] Saving:', this.notifications.length);
+        
+        // Always save to local as backup
+        localStorage.setItem(`safetrack_notifications_${this.currentUser}`, JSON.stringify(this.notifications));
+        console.log('[NOTIFICATIONS] Saved to local');
+        
+        // Try to save to cloud
+        if (this.cloudStorage && this.cloudStorage.isConnected) {
+            try {
+                await this.cloudStorage.saveNotifications(this.currentUser, this.notifications);
+                console.log('[NOTIFICATIONS] Saved to cloud');
+            } catch (error) {
+                console.error('[NOTIFICATIONS] Cloud save failed:', error);
+            }
+        }
+    }
+
+    addNotification(notification) {
+        if (!notification.userId) {
+            console.warn('[NOTIFICATIONS] No userId provided, skipping');
+            return;
+        }
+        
+        const newNotification = {
+            id: Date.now(),
+            ...notification,
+            createdAt: new Date().toISOString(),
+            read: false
+        };
+        
+        console.log('[NOTIFICATIONS] Creating for user:', notification.userId);
+        
+        // ✅ FIX: Load target user's notifications, add new one, save back
+        const targetUserId = notification.userId;
+        
+        // Get existing notifications for target user
+        let targetNotifications = [];
+        const localKey = `safetrack_notifications_${targetUserId}`;
+        const local = localStorage.getItem(localKey);
+        if (local) {
+            targetNotifications = JSON.parse(local);
+        }
+        
+        // Add new notification
+        targetNotifications.unshift(newNotification);
+        
+        // Save to target user's storage
+        localStorage.setItem(localKey, JSON.stringify(targetNotifications));
+        console.log('[NOTIFICATIONS] Saved to local for user:', targetUserId);
+        
+        // Try to save to cloud for target user
+        if (this.cloudStorage && this.cloudStorage.isConnected) {
+            this.cloudStorage.saveNotifications(targetUserId, targetNotifications)
+                .then(() => console.log('[NOTIFICATIONS] Saved to cloud for user:', targetUserId))
+                .catch(error => console.error('[NOTIFICATIONS] Cloud save failed:', error));
+        }
+        
+        console.log('[NOTIFICATIONS] Created for user:', targetUserId, 'Message:', notification.message);
+    }
+
+    updateNotificationBadge() {
+        const badge = document.getElementById('notificationBadge');
+        if (badge) {
+            const unreadCount = this.notifications.filter(n => !n.read).length;
+            badge.textContent = unreadCount;
+            badge.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+            console.log('[NOTIFICATIONS] Badge updated:', unreadCount);
+        } else {
+            console.warn('[NOTIFICATIONS] Badge element not found');
+        }
+    }
+
+    showNotifications() {
+        if (!this.currentUser) {
+            alert('Please log in to view notifications.');
+            return;
+        }
+        
+        console.log('[NOTIFICATIONS] Opening modal with', this.notifications.length, 'notifications');
+        
+        const modal = document.getElementById('notificationsModal');
+        if (!modal) {
+            console.error('[NOTIFICATIONS] Modal not found in HTML');
+            alert('Notification modal not available. Please check HTML.');
+            return;
+        }
+        
+        this.renderNotifications();
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+
+    renderNotifications() {
+        const container = document.getElementById('notificationsList');
+        if (!container) {
+            console.error('[NOTIFICATIONS] Container not found');
+            return;
+        }
+        
+        console.log('[NOTIFICATIONS] Rendering', this.notifications.length, 'notifications');
+        
+        if (this.notifications.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-16">
+                    <i class="fas fa-bell-slash text-gray-400 mb-3" style="font-size: 3rem;"></i>
+                    <h5 class="text-gray-800 text-xl font-bold mb-2">No Notifications</h5>
+                    <p class="text-gray-600">You're all caught up!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = this.notifications.map(n => {
+            const date = new Date(n.createdAt).toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+            
+            const isUnread = !n.read;
+            const bgClass = isUnread ? 'bg-blue-50 border-blue-400' : 'bg-gray-50 border-gray-300';
+            
+            // Show different UI based on notification type
+            if (n.type === 'assignment') {
+                return `
+                    <div class="bg-white border-2 ${bgClass} rounded-lg shadow-sm mb-3 p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-clipboard-check mr-2 text-blue-600"></i>
+                                    <strong class="text-gray-900 font-semibold">
+                                        ${isUnread ? '🔔 ' : ''}${this.escapeHtml(n.message)}
+                                    </strong>
+                                </div>
+                                <p class="text-gray-700 mb-2">
+                                    <span class="font-medium">Project:</span> ${this.escapeHtml(n.projectName)}
+                                </p>
+                                <small class="text-gray-600">${date}</small>
+                                
+                                ${n.status === 'pending' ? `
+                                    <div class="mt-3 flex gap-2">
+                                        <button class="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded hover:bg-green-700" 
+                                                onclick="projectManager.acceptProject(${n.projectId}, ${n.id})">
+                                            <i class="fas fa-check mr-1"></i>Accept
+                                        </button>
+                                        <button class="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded hover:bg-red-700" 
+                                                onclick="projectManager.declineProject(${n.projectId}, ${n.id})">
+                                            <i class="fas fa-times mr-1"></i>Decline
+                                        </button>
+                                    </div>
+                                ` : `
+                                    <div class="mt-2">
+                                        <span class="px-3 py-1 text-xs font-bold text-white ${n.status === 'accepted' ? 'bg-green-600' : 'bg-gray-600'} rounded">
+                                            ${n.status === 'accepted' ? '✓ You Accepted' : '✗ You Declined'}
+                                        </span>
+                                    </div>
+                                `}
+                            </div>
+                            <div class="flex gap-2 ml-3">
+                                ${isUnread ? `
+                                    <button class="text-blue-600 hover:text-blue-800" 
+                                            onclick="projectManager.markAsRead(${n.id})" 
+                                            title="Mark as read">
+                                        <i class="fas fa-check-circle text-xl"></i>
+                                    </button>
+                                ` : `
+                                    <button class="text-red-600 hover:text-red-800" 
+                                            onclick="projectManager.deleteNotification(${n.id})" 
+                                            title="Delete notification">
+                                        <i class="fas fa-trash text-lg"></i>
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (n.type === 'response') {
+                return `
+                    <div class="bg-white border-2 ${bgClass} rounded-lg shadow-sm mb-3 p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas ${n.status === 'accepted' ? 'fa-check-circle text-green-600' : 'fa-times-circle text-red-600'} mr-2"></i>
+                                    <strong class="text-gray-900 font-semibold">
+                                        ${isUnread ? '🔔 ' : ''}${this.escapeHtml(n.message)}
+                                    </strong>
+                                </div>
+                                <p class="text-gray-700 mb-2">
+                                    <span class="font-medium">Project:</span> ${this.escapeHtml(n.projectName)}
+                                </p>
+                                <small class="text-gray-600">${date}</small>
+                            </div>
+                            <div class="flex gap-2 ml-3">
+                                ${isUnread ? `
+                                    <button class="text-blue-600 hover:text-blue-800" 
+                                            onclick="projectManager.markAsRead(${n.id})" 
+                                            title="Mark as read">
+                                        <i class="fas fa-check-circle text-xl"></i>
+                                    </button>
+                                ` : `
+                                    <button class="text-red-600 hover:text-red-800" 
+                                            onclick="projectManager.deleteNotification(${n.id})" 
+                                            title="Delete notification">
+                                        <i class="fas fa-trash text-lg"></i>
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }).join('');
+    }
+
+    async acceptProject(projectId, notificationId) {
+        console.log('[NOTIFICATIONS] Accepting project:', projectId);
+        
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) {
+            this.showNotification('Project not found', 'error');
+            return;
+        }
+        
+        // Mark notification as handled
+        const notification = this.notifications.find(n => n.id === notificationId);
+        if (notification) {
+            notification.read = true;
+            notification.status = 'accepted';
+        }
+        
+        // Activate the project
+        project.status = 'active';
+        await this.saveProjects();
+        await this.saveNotifications();
+        
+        // Notify creator
+        const accepterName = this.users.find(u => u.id === this.currentUser)?.name || 'Someone';
+        this.addNotification({
+            userId: project.createdBy,
+            projectId: project.id,
+            projectName: project.name,
+            message: `${accepterName} accepted your project: ${project.name}`,
+            type: 'response',
+            status: 'accepted'
+        });
+        
+        // Close modal and refresh
+        const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
+        if (modal) modal.hide();
+        
+        this.showNotification(`You accepted "${project.name}"!`, 'success');
+        this.render();
+    }
+
+    async declineProject(projectId, notificationId) {
+        console.log('[NOTIFICATIONS] Declining project:', projectId);
+        
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) {
+            this.showNotification('Project not found', 'error');
+            return;
+        }
+        
+        if (!confirm(`Are you sure you want to decline "${project.name}"? It will be deleted.`)) {
+            return;
+        }
+        
+        // Mark notification as handled
+        const notification = this.notifications.find(n => n.id === notificationId);
+        if (notification) {
+            notification.read = true;
+            notification.status = 'declined';
+        }
+        
+        await this.saveNotifications();
+        
+        // Notify creator
+        const declinerName = this.users.find(u => u.id === this.currentUser)?.name || 'Someone';
+        this.addNotification({
+            userId: project.createdBy,
+            projectId: project.id,
+            projectName: project.name,
+            message: `${declinerName} declined your project: ${project.name}. It has been deleted.`,
+            type: 'response',
+            status: 'declined'
+        });
+        
+        // Delete the project
+        this.projects = this.projects.filter(p => p.id !== projectId);
+        await this.saveProjects();
+        
+        // Close modal and refresh
+        const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
+        if (modal) modal.hide();
+        
+        this.showNotification(`You declined "${project.name}". It has been deleted.`, 'info');
+        this.render();
+    }
+
+    markAsRead(notificationId) {
+        const notification = this.notifications.find(n => n.id === notificationId);
+        if (notification) {
+            notification.read = true;
+            this.saveNotifications();
+            this.renderNotifications();
+            this.updateNotificationBadge(); // ✅ ADD THIS LINE
+        }
+    }
+
+    markAllAsRead() {
+        this.notifications.forEach(n => n.read = true);
+        this.saveNotifications();
+        this.renderNotifications();
+        this.updateNotificationBadge(); // ✅ ADD THIS LINE
+    }
+
+    clearAll() {
+        if (!confirm('Clear all notifications?')) return;
+        
+        this.notifications = [];
+        this.saveNotifications();
+        this.renderNotifications();
+        this.updateNotificationBadge();
+        this.showNotification('All notifications cleared', 'success');
+    }
+
+    deleteNotification(notificationId) {
+        const notification = this.notifications.find(n => n.id === notificationId);
+        
+        // ✅ IMPORTANT: Must be read before deleting
+        if (notification && !notification.read) {
+            this.showNotification('Please mark the notification as read before deleting', 'warning');
+            return;
+        }
+        
+        if (!confirm('Delete this notification?')) return;
+        
+        this.notifications = this.notifications.filter(n => n.id !== notificationId);
+        this.saveNotifications();
+        this.renderNotifications();
+        this.updateNotificationBadge();
+        this.showNotification('Notification deleted', 'success');
+    }
+
 }
 
 // Modal functions
@@ -6436,7 +7563,12 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         // Add active class to clicked button and show content
         this.classList.add('active', 'border-safety-blue', 'text-safety-blue');
         this.classList.remove('border-transparent', 'text-gray-600');
-        document.getElementById(targetTab).classList.remove('d-none');
+        
+        // Safely show target tab content
+        const targetElement = document.getElementById(targetTab);
+        if (targetElement) {
+            targetElement.classList.remove('d-none');
+        }
     });
 });
 
@@ -6758,13 +7890,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Global notification functions
-    window.showUserNotifications = () => {
-        if (window.projectManager) {
-            window.projectManager.showUserNotifications();
-        }
-    };
-
     window.syncData = () => {
         if (window.projectManager) {
             window.projectManager.syncData();
@@ -6817,34 +7942,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    window.markAllNotificationsRead = () => {
-        if (window.projectManager) {
-            window.projectManager.markAllNotificationsRead();
-        }
-    };
-
-    window.clearReadNotifications = () => {
-        if (window.projectManager) {
-            window.projectManager.clearReadNotifications();
-        }
-    };
-
-    window.clearAllNotifications = () => {
-        if (window.projectManager) {
-            window.projectManager.clearAllNotifications();
-        }
-    };
-
     window.viewProjectFromNotification = (projectId, notificationId) => {
         if (window.projectManager) {
-            // Mark notification as read
-            window.projectManager.markNotificationAsRead(notificationId);
-            window.projectManager.updateNotificationBadge();
-            
-            // Close notifications modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
-            if (modal) modal.hide();
-            
             // Open project notes
             window.projectManager.openProjectNotes(projectId);
         }
@@ -7226,20 +8325,31 @@ window.editReleaseNote = (version, category, title, description) => {
 window.deleteReleaseNote = (button) => {
     if (confirm('Are you sure you want to delete this release note?')) {
         const li = button.closest('li');
+        if (!li) {
+            console.error('Could not find list item');
+            return;
+        }
+        
+        const categoryDiv = li.closest('.release-category');
+        const versionDiv = li.closest('.release-version');
+        
+        // Remove the list item
         li.remove();
         
         // Check if this was the last item in the category
-        const categoryDiv = li.closest('.release-category');
-        const remainingItems = categoryDiv.querySelectorAll('.release-list li');
-        if (remainingItems.length === 0) {
-            categoryDiv.remove();
-        }
-        
-        // Check if this was the last category in the version
-        const versionDiv = li.closest('.release-version');
-        const remainingCategories = versionDiv.querySelectorAll('.release-category');
-        if (remainingCategories.length === 0) {
-            versionDiv.remove();
+        if (categoryDiv) {
+            const remainingItems = categoryDiv.querySelectorAll('.release-list li');
+            if (remainingItems.length === 0) {
+                categoryDiv.remove();
+                
+                // Check if this was the last category in the version
+                if (versionDiv) {
+                    const remainingCategories = versionDiv.querySelectorAll('.release-category');
+                    if (remainingCategories.length === 0) {
+                        versionDiv.remove();
+                    }
+                }
+            }
         }
         
         // Save changes
@@ -7265,148 +8375,84 @@ window.deleteReleaseNote = (button) => {
   } catch (_) { /* ignore in older environments */ }
 })();
 
-// Bug Reporting System - Cloud Storage Version
-let bugReports = [];
-let currentBugId = null;
-let userSeenReplies = {};
+// ==========================================
+// WINDOW FUNCTION BINDINGS FOR BUG REPORTING
+// ==========================================
 
-// Load bugs from cloud storage with local fallback
-async function loadBugs() {
-    // Try cloud storage first
-    if (window.projectManager && window.projectManager.cloudStorage) {
-        try {
-            const cloudBugs = await window.projectManager.cloudStorage.getBugReports();
-            if (cloudBugs && cloudBugs.length > 0) {
-                bugReports = cloudBugs;
-                console.log('[BUGS] Loaded bugs from cloud:', bugReports.length);
-                // Save to local storage as backup
-                localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugReports));
-            } else {
-                // Cloud is empty, try local backup
-                const localBugs = localStorage.getItem('safetrack_bug_reports_backup');
-                if (localBugs) {
-                    bugReports = JSON.parse(localBugs);
-                    console.log('[BUGS] Loaded bugs from local backup:', bugReports.length);
-                } else {
-                    bugReports = [];
-                    console.log('[BUGS] No bugs found in cloud or local storage');
-                }
-            }
-        } catch (error) {
-            console.error('[BUGS] Error loading from cloud, trying local backup:', error);
-            // Fallback to local storage
-            const localBugs = localStorage.getItem('safetrack_bug_reports_backup');
-            if (localBugs) {
-                bugReports = JSON.parse(localBugs);
-                console.log('[BUGS] Loaded bugs from local backup after cloud error:', bugReports.length);
-            } else {
-                bugReports = [];
-                console.log('[BUGS] No local backup available');
-            }
-        }
-    } else {
-        // No cloud storage available, use local storage
-        const localBugs = localStorage.getItem('safetrack_bug_reports_backup');
-        if (localBugs) {
-            bugReports = JSON.parse(localBugs);
-            console.log('[BUGS] Loaded bugs from local storage (no cloud):', bugReports.length);
-        } else {
-            bugReports = [];
-            console.log('[BUGS] No bugs found in local storage');
-        }
-    }
-    
-    loadSeenReplies();
-    updateBugCounts();
-    updateMyBugCounts();
-}
-
-// Save bugs to cloud storage with local backup
-async function saveBugs() {
-    // Always save to local storage as backup first
-    try {
-        localStorage.setItem('safetrack_bug_reports_backup', JSON.stringify(bugReports));
-        console.log('[BUGS] Saved bugs to local backup');
-    } catch (error) {
-        console.error('[BUGS] Error saving to local backup:', error);
-    }
-    
-    // Try to save to cloud storage
-    if (window.projectManager && window.projectManager.cloudStorage) {
-        try {
-            await window.projectManager.cloudStorage.saveBugReports(bugReports);
-            console.log('[BUGS] Saved bugs to cloud');
-        } catch (error) {
-            console.error('[BUGS] Error saving to cloud (local backup available):', error);
-        }
-    } else {
-        console.log('[BUGS] Cloud storage not available, saved locally only');
-    }
-    
-    updateBugCounts();
-    updateMyBugCounts();
-}
-
-// Update bug count badges
-function updateBugCounts() {
-    const pendingBugs = bugReports.filter(b => b.status === 'pending').length;
-    const allBugs = bugReports.length;
-    const resolvedBugs = bugReports.filter(b => b.status === 'resolved').length;
-    const closedBugs = bugReports.filter(b => b.status === 'closed').length;
-    
-    // Update main bug count badge
-    const bugCountBadge = document.getElementById('bugCountBadge');
-    if (bugCountBadge) {
-        if (pendingBugs > 0) {
-            bugCountBadge.textContent = pendingBugs;
-            bugCountBadge.style.display = 'inline-block';
-        } else {
-            bugCountBadge.style.display = 'none';
-        }
-    }
-    
-    // Update navigation bug count badge
-    const navBugCountBadge = document.getElementById('navBugCountBadge');
-    if (navBugCountBadge) {
-        if (pendingBugs > 0) {
-            navBugCountBadge.textContent = pendingBugs;
-            navBugCountBadge.style.display = 'inline-block';
-        } else {
-            navBugCountBadge.style.display = 'none';
-        }
-    }
-    
-    // Update dashboard counts
-    if (document.getElementById('allBugsCount')) {
-        document.getElementById('allBugsCount').textContent = allBugs;
-    }
-    if (document.getElementById('pendingBugsCount')) {
-        document.getElementById('pendingBugsCount').textContent = pendingBugs;
-    }
-    if (document.getElementById('resolvedBugsCount')) {
-        document.getElementById('resolvedBugsCount').textContent = resolvedBugs;
-    }
-    if (document.getElementById('closedBugsCount')) {
-        document.getElementById('closedBugsCount').textContent = closedBugs;
-    }
-}
-
-// Open bug report modal
+// Bug reporting window functions
 window.openBugReportModal = () => {
-    const modal = new bootstrap.Modal(document.getElementById('bugReportModal'));
-    modal.show();
+    if (window.projectManager) {
+        window.projectManager.openBugReportModal();
+    }
 };
 
-// Handle bug report submission
+window.openBugDashboard = () => {
+    if (window.projectManager) {
+        window.projectManager.openBugDashboard();
+    }
+};
+
+window.filterBugs = (filter) => {
+    if (window.projectManager) {
+        window.projectManager.renderBugDashboard();
+    }
+};
+
+window.openMyBugReports = () => {
+    if (window.projectManager) {
+        window.projectManager.openMyBugReports();
+    }
+};
+
+window.filterMyBugs = (filter) => {
+    if (window.projectManager) {
+        window.projectManager.renderMyBugList(filter);
+    }
+};
+
+window.deleteBug = async (bugId) => {
+    if (window.projectManager) {
+        await window.projectManager.deleteBug(bugId);
+    }
+};
+
+window.openBugReplyModal = (bugId) => {
+    if (window.projectManager) {
+        window.projectManager.openBugReplyModal(bugId);
+    }
+};
+
+// Load bugs on page load
+window.loadBugs = async () => {
+    if (window.projectManager) {
+        await window.projectManager.loadBugs();
+    }
+};
+
+// Helper function to convert file to base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// Bug form event listeners
 document.addEventListener('DOMContentLoaded', () => {
-    // Load bugs on page load
-    loadBugs();
+    // Bugs will be loaded when user selects their profile
     
     // Bug report form
     const bugForm = document.getElementById('bugReportForm');
     if (bugForm) {
         bugForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            if (!window.projectManager) {
+                alert('System not ready. Please refresh the page.');
+                return;
+            }
             
             const title = document.getElementById('bugTitle').value.trim();
             const priority = document.getElementById('bugPriority').value;
@@ -7415,39 +8461,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const steps = document.getElementById('bugSteps').value.trim();
             const screenshotFile = document.getElementById('bugScreenshot').files[0];
             
-            let screenshot = null;
-            if (screenshotFile) {
-                screenshot = await fileToBase64(screenshotFile);
+            // Validate
+            if (!title || !description) {
+                alert('Please fill in title and description');
+                return;
             }
             
-            const bug = {
-                id: Date.now(),
+            let screenshot = null;
+            if (screenshotFile) {
+                try {
+                    screenshot = await fileToBase64(screenshotFile);
+                } catch (error) {
+                    console.error('Error reading screenshot:', error);
+                }
+            }
+            
+            const bugData = {
                 title,
                 priority,
                 category,
                 description,
                 steps,
-                screenshot,
-                reportedBy: window.projectManager ? window.projectManager.currentUser : 'Unknown',
-                reportedByName: window.projectManager ? (window.projectManager.users.find(u => u.id === window.projectManager.currentUser)?.name || 'Unknown') : 'Unknown',
-                reportedAt: new Date().toISOString(),
-                status: 'pending',
-                replies: []
+                screenshot
             };
             
-            bugReports.unshift(bug);
-            await saveBugs();
-            
-            // Close modal and reset form
-            const modal = bootstrap.Modal.getInstance(document.getElementById('bugReportModal'));
-            modal.hide();
-            bugForm.reset();
-            
-            // Show success message
-            if (window.projectManager) {
-                window.projectManager.showNotification('Bug report submitted successfully! Our team will review it soon.', 'success');
-            } else {
-                alert('Bug report submitted successfully!');
+            try {
+                await window.projectManager.submitBugReport(bugData);
+                
+                // Close modal and reset form
+                const modal = bootstrap.Modal.getInstance(document.getElementById('bugReportModal'));
+                if (modal) modal.hide();
+                bugForm.reset();
+            } catch (error) {
+                console.error('Error submitting bug report:', error);
+                alert('Failed to submit bug report. Please try again.');
             }
         });
     }
@@ -7458,1127 +8505,50 @@ document.addEventListener('DOMContentLoaded', () => {
         replyForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const replyText = document.getElementById('bugReplyText').value.trim();
-            const status = document.getElementById('bugStatus').value;
+            if (!window.projectManager) {
+                alert('System not ready. Please refresh the page.');
+                return;
+            }
             
-            const bug = bugReports.find(b => b.id === currentBugId);
-            if (bug) {
-                bug.replies.push({
-                    text: replyText,
-                    repliedBy: window.projectManager ? window.projectManager.currentUser : 'Admin',
-                    repliedByName: window.projectManager ? (window.projectManager.users.find(u => u.id === window.projectManager.currentUser)?.name || 'Admin') : 'Admin',
-                    repliedAt: new Date().toISOString()
-                });
-                bug.status = status;
-                await saveBugs();
-                
-                // Refresh bug list
-                renderBugList('all');
-                
-                // Close modal and reset form
-                const modal = bootstrap.Modal.getInstance(document.getElementById('bugReplyModal'));
-                modal.hide();
-                replyForm.reset();
-                
-                // Show success message
-                if (window.projectManager) {
-                    window.projectManager.showNotification('Reply sent successfully!', 'success');
-                }
+            try {
+                await window.projectManager.submitBugReply();
+            } catch (error) {
+                console.error('Error submitting reply:', error);
+                alert('Failed to submit reply. Please try again.');
             }
         });
     }
 });
 
-// Convert file to base64
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+// Test badge visibility
+window.testBugBadges = () => {
+    console.log('🧪 Testing bug badges...');
+    
+    const badges = {
+        bugCountBadge: document.getElementById('bugCountBadge'),
+        myBugUpdatesBadge: document.getElementById('myBugUpdatesBadge'),
+        myBugsCountBadge: document.getElementById('myBugsCountBadge'),
+        navBugCountBadge: document.getElementById('navBugCountBadge')
+    };
+    
+    Object.entries(badges).forEach(([name, element]) => {
+        if (element) {
+            console.log(`✅ ${name} found:`, {
+                text: element.textContent,
+                display: element.style.display,
+                classes: element.className
+            });
+        } else {
+            console.error(`❌ ${name} NOT FOUND`);
+        }
     });
-}
-
-// Open bug dashboard (admin only)
-window.openBugDashboard = () => {
-    if (window.projectManager && window.projectManager.currentUser !== 'admin') {
-        alert('Access denied. Admin only.');
-        return;
-    }
-    
-    const modal = new bootstrap.Modal(document.getElementById('bugDashboardModal'));
-    modal.show();
-    
-    renderBugList('all');
-};
-
-// Filter bugs
-window.filterBugs = (filter) => {
-    renderBugList(filter);
-};
-
-// Render bug list
-function renderBugList(filter) {
-    const container = document.getElementById('bugListContainer');
-    if (!container) return;
-    
-    let filteredBugs = bugReports;
-    
-    if (filter !== 'all') {
-        filteredBugs = bugReports.filter(b => b.status === filter);
-    }
-    
-    if (filteredBugs.length === 0) {
-        container.innerHTML = `
-            <div class="text-center text-muted py-5">
-                <i class="fas fa-bug fa-3x mb-3 d-block"></i>
-                <p>No ${filter === 'all' ? '' : filter} bug reports found.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    const priorityColors = {
-        low: 'secondary',
-        medium: 'warning',
-        high: 'orange',
-        critical: 'danger'
-    };
-    
-    const statusColors = {
-        pending: 'warning',
-        'in-progress': 'info',
-        resolved: 'success',
-        closed: 'secondary'
-    };
-    
-    const categoryIcons = {
-        ui: 'fa-paint-brush',
-        functionality: 'fa-cog',
-        performance: 'fa-tachometer-alt',
-        data: 'fa-database',
-        other: 'fa-question-circle'
-    };
-    
-    container.innerHTML = filteredBugs.map(bug => {
-        const reportedDate = new Date(bug.reportedAt).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        
-        return `
-            <div class="bg-white border-2 rounded-lg shadow-md mb-4 ${priorityColors[bug.priority] === 'warning' ? 'border-yellow-400' : priorityColors[bug.priority] === 'info' ? 'border-blue-400' : priorityColors[bug.priority] === 'success' ? 'border-green-400' : priorityColors[bug.priority] === 'secondary' ? 'border-gray-400' : 'border-orange-400'}">
-                <div class="p-4 ${priorityColors[bug.priority] === 'warning' ? 'bg-yellow-50' : priorityColors[bug.priority] === 'info' ? 'bg-blue-50' : priorityColors[bug.priority] === 'success' ? 'bg-green-50' : priorityColors[bug.priority] === 'secondary' ? 'bg-gray-50' : 'bg-orange-50'}">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <h6 class="text-lg font-semibold text-gray-900 mb-2">
-                                <i class="fas ${categoryIcons[bug.category]} mr-2 text-gray-700"></i>
-                                ${bug.title}
-                            </h6>
-                            <div class="flex gap-2 flex-wrap">
-                                <span class="px-2 py-1 text-xs font-semibold rounded ${priorityColors[bug.priority] === 'warning' ? 'text-yellow-800 bg-yellow-200 border border-yellow-400' : priorityColors[bug.priority] === 'info' ? 'text-blue-800 bg-blue-200 border border-blue-400' : priorityColors[bug.priority] === 'success' ? 'text-green-800 bg-green-200 border border-green-400' : priorityColors[bug.priority] === 'secondary' ? 'text-gray-800 bg-gray-200 border border-gray-400' : 'text-orange-800 bg-orange-200 border border-orange-400'}">${bug.priority.toUpperCase()}</span>
-                                <span class="px-2 py-1 text-xs font-semibold rounded ${statusColors[bug.status] === 'warning' ? 'text-yellow-800 bg-yellow-200 border border-yellow-400' : statusColors[bug.status] === 'info' ? 'text-blue-800 bg-blue-200 border border-blue-400' : statusColors[bug.status] === 'success' ? 'text-green-800 bg-green-200 border border-green-400' : 'text-gray-800 bg-gray-200 border border-gray-400'}">${bug.status.replace('-', ' ').toUpperCase()}</span>
-                                <small class="text-gray-600 text-sm font-medium">
-                                    <i class="fas fa-user mr-1"></i>${bug.reportedBy}
-                                </small>
-                                <small class="text-gray-600 text-sm font-medium">
-                                    <i class="fas fa-clock mr-1"></i>${reportedDate}
-                                </small>
-                            </div>
-                        </div>
-                        <div class="flex gap-1">
-                            <button class="px-3 py-1 text-sm font-semibold text-white bg-blue-600 border border-blue-600 rounded hover:bg-blue-700" onclick="openBugReplyModal(${bug.id})">
-                                <i class="fas fa-reply mr-1"></i>Reply
-                            </button>
-                            <button class="px-3 py-1 text-sm font-semibold text-white bg-red-600 border border-red-600 rounded hover:bg-red-700" onclick="deleteBug(${bug.id})" title="Delete Bug Report">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="p-4">
-                    <p class="mb-2 text-gray-900 font-semibold">Description:</p>
-                    <p class="mb-3 text-gray-800">${bug.description}</p>
-                    
-                    ${bug.steps ? `
-                        <p class="mb-2 text-gray-900 font-semibold">Steps to Reproduce:</p>
-                        <pre class="bg-gray-100 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">${bug.steps}</pre>
-                    ` : ''}
-                    
-                    ${bug.screenshot ? `
-                        <p class="mb-2 text-gray-900 font-semibold">Screenshot:</p>
-                        <img src="${bug.screenshot}" alt="Bug screenshot" class="w-full max-h-80 rounded border">
-                    ` : ''}
-                    
-                    ${bug.replies.length > 0 ? `
-                        <hr class="my-4 border-gray-300">
-                        <p class="mb-2 text-gray-900 font-semibold">Replies (${bug.replies.length}):</p>
-                        ${bug.replies.map(reply => {
-                            const replyDate = new Date(reply.repliedAt).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                            return `
-                                <div class="p-3 mb-2 bg-blue-50 border border-blue-300 rounded">
-                                    <div class="flex justify-between">
-                                        <strong class="text-gray-900">${reply.repliedBy}</strong>
-                                        <small class="text-gray-600">${replyDate}</small>
-                                    </div>
-                                    <p class="mt-2 text-gray-800">${reply.text}</p>
-                                </div>
-                            `;
-                        }).join('')}
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-// Open bug reply modal
-window.openBugReplyModal = (bugId) => {
-    currentBugId = bugId;
-    const bug = bugReports.find(b => b.id === bugId);
-    
-    if (bug) {
-        document.getElementById('replyBugTitle').value = bug.title;
-        document.getElementById('bugStatus').value = bug.status;
-        
-        const modal = new bootstrap.Modal(document.getElementById('bugReplyModal'));
-        modal.show();
-    }
-};
-
-// Delete bug (admin only)
-window.deleteBug = async (bugId) => {
-    if (!confirm('Are you sure you want to delete this bug report?')) return;
-    
-    bugReports = bugReports.filter(b => b.id !== bugId);
-    await saveBugs();
-    renderBugList('all');
     
     if (window.projectManager) {
-        window.projectManager.showNotification('Bug report deleted', 'success');
+        console.log('Total bugs:', window.projectManager.bugs.length);
+        console.log('Current user:', window.projectManager.currentUser);
     }
 };
-
-// Load seen replies from storage (this can stay localStorage since it's per-user preference)
-function loadSeenReplies() {
-    const currentUser = window.projectManager ? window.projectManager.currentUser : null;
-    if (!currentUser) return;
-    
-    const saved = localStorage.getItem(`safetrack_seen_bug_replies_${currentUser}`);
-    if (saved) {
-        userSeenReplies = JSON.parse(saved);
-    }
-}
-
-// Save seen replies to storage
-function saveSeenReplies() {
-    const currentUser = window.projectManager ? window.projectManager.currentUser : null;
-    if (!currentUser) return;
-    
-    localStorage.setItem(`safetrack_seen_bug_replies_${currentUser}`, JSON.stringify(userSeenReplies));
-}
-
-// Mark bug replies as read
-function markBugRepliesAsRead(bugId) {
-    if (!userSeenReplies[bugId]) {
-        userSeenReplies[bugId] = [];
-    }
-    
-    const bug = bugReports.find(b => b.id === bugId);
-    if (bug) {
-        userSeenReplies[bugId] = bug.replies.map(r => r.repliedAt);
-        saveSeenReplies();
-        updateMyBugCounts();
-    }
-}
-
-// Get unread replies count for a bug
-function getUnreadRepliesCount(bug) {
-    if (!userSeenReplies[bug.id]) {
-        return bug.replies.length;
-    }
-    
-    const seenDates = userSeenReplies[bug.id];
-    return bug.replies.filter(r => !seenDates.includes(r.repliedAt)).length;
-}
-
-// Update user's bug counts
-function updateMyBugCounts() {
-    if (!window.projectManager) return;
-    
-    const currentUser = window.projectManager.currentUser;
-    const myBugs = bugReports.filter(b => b.reportedBy === currentUser);
-    
-    const totalBugs = myBugs.length;
-    const pendingBugs = myBugs.filter(b => b.status === 'pending').length;
-    const resolvedBugs = myBugs.filter(b => b.status === 'resolved').length;
-    
-    // Count total unread replies
-    let unreadReplies = 0;
-    myBugs.forEach(bug => {
-        unreadReplies += getUnreadRepliesCount(bug);
-    });
-    
-    // Update my bugs count badge
-    const myBugsCountBadge = document.getElementById('myBugsCountBadge');
-    if (myBugsCountBadge) {
-        myBugsCountBadge.textContent = totalBugs;
-    }
-    
-    // Update unread badge
-    const myBugUpdatesBadge = document.getElementById('myBugUpdatesBadge');
-    if (myBugUpdatesBadge) {
-        if (unreadReplies > 0) {
-            myBugUpdatesBadge.textContent = unreadReplies;
-            myBugUpdatesBadge.style.display = 'inline-block';
-        } else {
-            myBugUpdatesBadge.style.display = 'none';
-        }
-    }
-    
-    // Update text
-    const myBugUpdatesText = document.getElementById('myBugUpdatesText');
-    if (myBugUpdatesText) {
-        if (unreadReplies > 0) {
-            myBugUpdatesText.textContent = `${unreadReplies} new ${unreadReplies === 1 ? 'reply' : 'replies'}!`;
-            myBugUpdatesText.classList.add('text-danger', 'fw-bold');
-            myBugUpdatesText.classList.remove('text-muted');
-        } else {
-            myBugUpdatesText.textContent = 'No new updates';
-            myBugUpdatesText.classList.remove('text-danger', 'fw-bold');
-            myBugUpdatesText.classList.add('text-muted');
-        }
-    }
-    
-    // Update modal stats
-    if (document.getElementById('myTotalBugs')) {
-        document.getElementById('myTotalBugs').textContent = totalBugs;
-    }
-    if (document.getElementById('myPendingBugs')) {
-        document.getElementById('myPendingBugs').textContent = pendingBugs;
-    }
-    if (document.getElementById('myResolvedBugs')) {
-        document.getElementById('myResolvedBugs').textContent = resolvedBugs;
-    }
-    if (document.getElementById('myUnreadReplies')) {
-        document.getElementById('myUnreadReplies').textContent = unreadReplies;
-    }
-}
-
-// Open my bug reports modal
-window.openMyBugReports = () => {
-    if (!window.projectManager) {
-        alert('Please log in to view your bug reports.');
-        return;
-    }
-    
-    const modal = new bootstrap.Modal(document.getElementById('myBugReportsModal'));
-    modal.show();
-    
-    renderMyBugList('all');
-};
-
-// Filter my bugs
-window.filterMyBugs = (filter) => {
-    renderMyBugList(filter);
-};
-
-// Render my bug list
-function renderMyBugList(filter) {
-    const container = document.getElementById('myBugListContainer');
-    if (!container || !window.projectManager) return;
-    
-    const currentUser = window.projectManager.currentUser;
-    let myBugs = bugReports.filter(b => b.reportedBy === currentUser);
-    
-    if (filter !== 'all') {
-        myBugs = myBugs.filter(b => b.status === filter);
-    }
-    
-    if (myBugs.length === 0) {
-        container.innerHTML = `
-            <div class="text-center text-muted py-5">
-                <i class="fas fa-bug fa-3x mb-3 d-block"></i>
-                <p>No ${filter === 'all' ? '' : filter} bug reports found.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    const priorityColors = {
-        low: 'secondary',
-        medium: 'warning',
-        high: 'orange',
-        critical: 'danger'
-    };
-    
-    const statusColors = {
-        pending: 'warning',
-        'in-progress': 'info',
-        resolved: 'success',
-        closed: 'secondary'
-    };
-    
-    const statusIcons = {
-        pending: 'fa-clock',
-        'in-progress': 'fa-spinner',
-        resolved: 'fa-check-circle',
-        closed: 'fa-times-circle'
-    };
-    
-    const categoryIcons = {
-        ui: 'fa-paint-brush',
-        functionality: 'fa-cog',
-        performance: 'fa-tachometer-alt',
-        data: 'fa-database',
-        other: 'fa-question-circle'
-    };
-    
-    container.innerHTML = myBugs.map(bug => {
-        const reportedDate = new Date(bug.reportedAt).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        
-        const unreadCount = getUnreadRepliesCount(bug);
-        const hasUnread = unreadCount > 0;
-        
-        return `
-            <div class="bg-white border-2 rounded-lg shadow-md mb-4 ${priorityColors[bug.priority] === 'warning' ? 'border-yellow-400' : priorityColors[bug.priority] === 'info' ? 'border-blue-400' : priorityColors[bug.priority] === 'success' ? 'border-green-400' : priorityColors[bug.priority] === 'secondary' ? 'border-gray-400' : 'border-orange-400'} ${hasUnread ? 'border-4' : ''}">
-                <div class="p-4 ${priorityColors[bug.priority] === 'warning' ? 'bg-yellow-50' : priorityColors[bug.priority] === 'info' ? 'bg-blue-50' : priorityColors[bug.priority] === 'success' ? 'bg-green-50' : priorityColors[bug.priority] === 'secondary' ? 'bg-gray-50' : 'bg-orange-50'}">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <h6 class="text-lg font-semibold text-gray-900 mb-2">
-                                <i class="fas ${categoryIcons[bug.category]} mr-2 text-gray-700"></i>
-                                ${bug.title}
-                                ${hasUnread ? `<span class="px-2 py-1 text-xs font-semibold text-white bg-red-600 border border-red-600 rounded ml-2">${unreadCount} new ${unreadCount === 1 ? 'reply' : 'replies'}</span>` : ''}
-                            </h6>
-                            <div class="flex gap-2 flex-wrap items-center">
-                                <span class="px-2 py-1 text-xs font-semibold rounded ${priorityColors[bug.priority] === 'warning' ? 'text-yellow-800 bg-yellow-200 border border-yellow-400' : priorityColors[bug.priority] === 'info' ? 'text-blue-800 bg-blue-200 border border-blue-400' : priorityColors[bug.priority] === 'success' ? 'text-green-800 bg-green-200 border border-green-400' : priorityColors[bug.priority] === 'secondary' ? 'text-gray-800 bg-gray-200 border border-gray-400' : 'text-orange-800 bg-orange-200 border border-orange-400'}">${bug.priority.toUpperCase()}</span>
-                                <span class="px-2 py-1 text-xs font-semibold rounded ${statusColors[bug.status] === 'warning' ? 'text-yellow-800 bg-yellow-200 border border-yellow-400' : statusColors[bug.status] === 'info' ? 'text-blue-800 bg-blue-200 border border-blue-400' : statusColors[bug.status] === 'success' ? 'text-green-800 bg-green-200 border border-green-400' : 'text-gray-800 bg-gray-200 border border-gray-400'}">
-                                    <i class="fas ${statusIcons[bug.status]} mr-1"></i>
-                                    ${bug.status.replace('-', ' ').toUpperCase()}
-                                </span>
-                                <small class="text-gray-700 text-sm font-medium">
-                                    <i class="fas fa-clock mr-1"></i>${reportedDate}
-                                </small>
-                                ${bug.replies.length > 0 ? `
-                                    <small class="text-green-700 text-sm font-medium">
-                                        <i class="fas fa-comment-dots mr-1"></i>${bug.replies.length} ${bug.replies.length === 1 ? 'reply' : 'replies'}
-                                    </small>
-                                ` : `
-                                    <small class="text-gray-700 text-sm font-medium">
-                                        <i class="fas fa-hourglass-half mr-1"></i>Awaiting response
-                                    </small>
-                                `}
-                            </div>
-                        </div>
-                        ${hasUnread ? `
-                            <button class="px-3 py-1 text-sm font-semibold text-white bg-green-600 border border-green-600 rounded hover:bg-green-700" onclick="markBugRepliesAsRead(${bug.id}); renderMyBugList('${filter}');">
-                                <i class="fas fa-check mr-1"></i>Mark as Read
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-                <div class="p-4">
-                    <p class="mb-2 text-gray-900 font-semibold">Description:</p>
-                    <p class="mb-3 text-gray-800">${bug.description}</p>
-                    
-                    ${bug.steps ? `
-                        <p class="mb-2 text-gray-900 font-semibold">Steps to Reproduce:</p>
-                        <pre class="bg-gray-100 p-3 rounded text-sm text-gray-800 whitespace-pre-wrap">${bug.steps}</pre>
-                    ` : ''}
-                    
-                    ${bug.screenshot ? `
-                        <p class="mb-2 text-gray-900 font-semibold">Screenshot:</p>
-                        <img src="${bug.screenshot}" alt="Bug screenshot" class="w-full max-h-80 rounded border cursor-pointer" onclick="window.open(this.src)">
-                    ` : ''}
-                    
-                    ${bug.replies.length > 0 ? `
-                        <hr class="my-4 border-gray-300">
-                        <div class="flex justify-between items-center mb-2">
-                            <p class="text-gray-900 font-semibold">Admin Responses (${bug.replies.length}):</p>
-                            ${hasUnread ? '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-600 border border-red-600 rounded">New</span>' : ''}
-                        </div>
-                        ${bug.replies.map((reply, index) => {
-                            const replyDate = new Date(reply.repliedAt).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                            const isUnread = !userSeenReplies[bug.id] || !userSeenReplies[bug.id].includes(reply.repliedAt);
-                            return `
-                                <div class="p-3 mb-2 rounded border-2 ${isUnread ? 'bg-green-50 border-green-300' : 'bg-blue-50 border-blue-300'}">
-                                    <div class="flex justify-between items-center">
-                                        <div class="flex items-center gap-2">
-                                            <i class="fas fa-user-shield text-gray-700"></i>
-                                            <strong class="text-gray-900">${reply.repliedBy}</strong>
-                                            ${isUnread ? '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-600 border border-green-600 rounded">NEW</span>' : ''}
-                                        </div>
-                                        <small class="text-gray-600">${replyDate}</small>
-                                    </div>
-                                    <p class="mt-2 text-gray-800">${reply.text}</p>
-                                </div>
-                            `;
-                        }).join('')}
-                    ` : `
-                        <div class="p-3 bg-yellow-50 border border-yellow-300 rounded">
-                            <i class="fas fa-hourglass-half mr-2 text-yellow-700"></i>
-                            <span class="text-yellow-800 font-medium">No admin response yet. We'll notify you when there's an update!</span>
-                        </div>
-                    `}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
 
 // ==========================================
-// PROJECT ASSIGNMENT NOTIFICATION SYSTEM
+// END OF FILE
 // ==========================================
-
-let userNotifications = [];
-
-// Load notifications from cloud with local backup
-async function loadNotifications() {
-    if (!window.projectManager) return;
-    
-    const currentUser = window.projectManager.currentUser;
-    if (!currentUser) return;
-    
-    // Try cloud storage first
-    if (window.projectManager.cloudStorage) {
-        try {
-            const cloudNotifications = await window.projectManager.cloudStorage.getNotifications(currentUser);
-            if (cloudNotifications && cloudNotifications.length >= 0) {
-                userNotifications = cloudNotifications;
-                console.log('[NOTIFICATIONS] Loaded from cloud:', userNotifications.length);
-                // Backup to local storage
-                localStorage.setItem(`safetrack_notifications_${currentUser}`, JSON.stringify(userNotifications));
-            } else {
-                // Cloud is empty, try local backup
-                const localNotifications = localStorage.getItem(`safetrack_notifications_${currentUser}`);
-                if (localNotifications) {
-                    userNotifications = JSON.parse(localNotifications);
-                    console.log('[NOTIFICATIONS] Loaded from local backup:', userNotifications.length);
-                } else {
-                    userNotifications = [];
-                }
-            }
-        } catch (error) {
-            console.error('[NOTIFICATIONS] Error loading from cloud, trying local backup:', error);
-            const localNotifications = localStorage.getItem(`safetrack_notifications_${currentUser}`);
-            if (localNotifications) {
-                userNotifications = JSON.parse(localNotifications);
-                console.log('[NOTIFICATIONS] Loaded from local backup after cloud error:', userNotifications.length);
-            } else {
-                userNotifications = [];
-            }
-        }
-    } else {
-        // No cloud storage available, use local storage
-        const localNotifications = localStorage.getItem(`safetrack_notifications_${currentUser}`);
-        if (localNotifications) {
-            userNotifications = JSON.parse(localNotifications);
-            console.log('[NOTIFICATIONS] Loaded from local storage (no cloud):', userNotifications.length);
-        } else {
-            userNotifications = [];
-        }
-    }
-    
-    updateNotificationBadges();
-    renderNotificationDropdown();
-}
-
-// Save notifications to cloud with local backup
-async function saveNotifications() {
-    if (!window.projectManager) return;
-    
-    const currentUser = window.projectManager.currentUser;
-    if (!currentUser) return;
-    
-    // Always save to local storage as backup first
-    try {
-        localStorage.setItem(`safetrack_notifications_${currentUser}`, JSON.stringify(userNotifications));
-        console.log('[NOTIFICATIONS] Saved to local backup');
-    } catch (error) {
-        console.error('[NOTIFICATIONS] Error saving to local backup:', error);
-    }
-    
-    // Try to save to cloud storage
-    if (window.projectManager.cloudStorage) {
-        try {
-            await window.projectManager.cloudStorage.saveNotifications(currentUser, userNotifications);
-            console.log('[NOTIFICATIONS] Saved to cloud');
-        } catch (error) {
-            console.error('[NOTIFICATIONS] Error saving to cloud (local backup available):', error);
-        }
-    }
-    
-    updateNotificationBadges();
-    renderNotificationDropdown();
-}
-
-// Create notification when user is assigned to a project
-async function createAssignmentNotification(projectId, projectName, assignedToUserId, assignedByUserId) {
-    console.log('[NOTIFICATIONS] createAssignmentNotification called', {
-        projectId,
-        projectName,
-        assignedToUserId,
-        assignedByUserId
-    });
-    
-    if (!window.projectManager) {
-        console.error('[NOTIFICATIONS] ProjectManager not available');
-        return;
-    }
-    
-    // Don't create notification if assigning to yourself
-    if (assignedToUserId === assignedByUserId) {
-        console.log('[NOTIFICATIONS] Skipping - user assigning to themselves');
-        return;
-    }
-    
-    const assignedByUser = window.projectManager.users.find(u => u.id === assignedByUserId);
-    const assignedByName = assignedByUser ? assignedByUser.name : 'Unknown';
-    
-    console.log('[NOTIFICATIONS] Assigned by:', assignedByName);
-    
-    // Load the user's notifications
-    const assignedUserNotifications = await loadUserNotifications(assignedToUserId);
-    console.log('[NOTIFICATIONS] Current notifications for user:', assignedUserNotifications.length);
-    
-    // Check if notification already exists for this project
-    const existingNotification = assignedUserNotifications.find(n => 
-        n.projectId === projectId && 
-        n.assignedTo === assignedToUserId && 
-        n.type === 'project_assignment' &&
-        n.status === 'pending'
-    );
-    
-    if (existingNotification) {
-        console.log('[NOTIFICATIONS] Assignment notification already exists for this project');
-        return;
-    }
-    
-    const notification = {
-        id: Date.now(),
-        type: 'project_assignment',
-        projectId: projectId,
-        projectName: projectName,
-        assignedTo: assignedToUserId,
-        assignedBy: assignedByUserId,
-        assignedByName: assignedByName,
-        createdAt: new Date().toISOString(),
-        status: 'pending', // pending, accepted, declined
-        read: false,
-        response: null,
-        responseAt: null
-    };
-    
-    assignedUserNotifications.unshift(notification);
-    await saveUserNotifications(assignedToUserId, assignedUserNotifications);
-    
-    console.log('[NOTIFICATIONS] ✅ Created assignment notification for user:', assignedToUserId);
-    console.log('[NOTIFICATIONS] Total notifications now:', assignedUserNotifications.length);
-}
-
-// Create response notification for project creator
-async function createResponseNotification(projectId, projectName, respondedByUserId, creatorId, response) {
-    if (!window.projectManager) return;
-    
-    const respondedByUser = window.projectManager.users.find(u => u.id === respondedByUserId);
-    const respondedByName = respondedByUser ? respondedByUser.name : 'Unknown';
-    
-    // Load creator's notifications
-    const creatorNotifications = await loadUserNotifications(creatorId);
-    
-    const notification = {
-        id: Date.now(),
-        type: 'assignment_response',
-        projectId: projectId,
-        projectName: projectName,
-        respondedBy: respondedByUserId,
-        respondedByName: respondedByName,
-        response: response, // 'accepted' or 'declined'
-        createdAt: new Date().toISOString(),
-        read: false
-    };
-    
-    creatorNotifications.unshift(notification);
-    await saveUserNotifications(creatorId, creatorNotifications);
-    
-    console.log('[NOTIFICATIONS] Created response notification for creator:', creatorId);
-}
-
-// Load notifications for a specific user
-async function loadUserNotifications(userId) {
-    if (!window.projectManager) return [];
-    
-    if (window.projectManager.cloudStorage) {
-        try {
-            const cloudNotifications = await window.projectManager.cloudStorage.getNotifications(userId);
-            return cloudNotifications || [];
-        } catch (error) {
-            console.error('[NOTIFICATIONS] Error loading user notifications from cloud:', error);
-            // Fallback to local storage
-            const localNotifications = localStorage.getItem(`safetrack_notifications_${userId}`);
-            return localNotifications ? JSON.parse(localNotifications) : [];
-        }
-    } else {
-        // No cloud storage, use local
-        const localNotifications = localStorage.getItem(`safetrack_notifications_${userId}`);
-        return localNotifications ? JSON.parse(localNotifications) : [];
-    }
-}
-
-// Save notifications for a specific user
-async function saveUserNotifications(userId, notifications) {
-    if (!window.projectManager) return;
-    
-    // Always save to local storage as backup
-    try {
-        localStorage.setItem(`safetrack_notifications_${userId}`, JSON.stringify(notifications));
-    } catch (error) {
-        console.error('[NOTIFICATIONS] Error saving to local backup:', error);
-    }
-    
-    // Try to save to cloud
-    if (window.projectManager.cloudStorage) {
-        try {
-            await window.projectManager.cloudStorage.saveNotifications(userId, notifications);
-        } catch (error) {
-            console.error('[NOTIFICATIONS] Error saving to cloud (local backup available):', error);
-        }
-    }
-}
-
-// Update notification count badges
-function updateNotificationBadges() {
-    const pendingCount = userNotifications.filter(n => n.status === 'pending' && n.type === 'project_assignment').length;
-    const unreadResponseCount = userNotifications.filter(n => !n.read && n.type === 'assignment_response').length;
-    const totalUnread = pendingCount + unreadResponseCount;
-    
-    const badge = document.getElementById('notificationCountBadge');
-    if (badge) {
-        if (totalUnread > 0) {
-            badge.textContent = totalUnread;
-            badge.style.display = 'inline-block';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
-    
-    // Update modal counts
-    updateModalCounts();
-}
-
-// Update modal notification counts
-function updateModalCounts() {
-    const allCount = userNotifications.length;
-    const pendingCount = userNotifications.filter(n => n.status === 'pending').length;
-    const acceptedCount = userNotifications.filter(n => n.status === 'accepted').length;
-    const declinedCount = userNotifications.filter(n => n.status === 'declined').length;
-    
-    const allCountElement = document.getElementById('allNotificationsCount');
-    const pendingCountElement = document.getElementById('pendingNotificationsCount');
-    const acceptedCountElement = document.getElementById('acceptedNotificationsCount');
-    const declinedCountElement = document.getElementById('declinedNotificationsCount');
-    
-    if (allCountElement) allCountElement.textContent = allCount;
-    if (pendingCountElement) pendingCountElement.textContent = pendingCount;
-    if (acceptedCountElement) acceptedCountElement.textContent = acceptedCount;
-    if (declinedCountElement) declinedCountElement.textContent = declinedCount;
-}
-
-// Render notification dropdown (only pending)
-function renderNotificationDropdown() {
-    const container = document.getElementById('notificationsList');
-    if (!container) return;
-    
-    const pendingNotifications = userNotifications.filter(n => 
-        n.type === 'project_assignment' && n.status === 'pending'
-    ).slice(0, 5); // Show max 5 in dropdown
-    
-    const unreadResponses = userNotifications.filter(n => 
-        n.type === 'assignment_response' && !n.read
-    ).slice(0, 3); // Show max 3 responses
-    
-    const allNotifications = [...pendingNotifications, ...unreadResponses];
-    
-    if (allNotifications.length === 0) {
-        container.innerHTML = `
-            <div class="text-center text-muted py-4">
-                <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
-                <small>No new notifications</small>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = allNotifications.map(notification => {
-        if (notification.type === 'project_assignment') {
-            return `
-                <li>
-                    <div class="dropdown-item-text border-start border-warning border-4" style="background-color: #fff9e6;">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-tasks text-warning me-2 fs-5"></i>
-                                <strong class="text-warning">New Assignment</strong>
-                            </div>
-                            <small class="text-muted">${formatNotificationTime(notification.createdAt)}</small>
-                        </div>
-                        <p class="mb-1 fw-bold text-dark">${notification.projectName}</p>
-                        <p class="mb-3 small text-muted">
-                            <i class="fas fa-user me-1"></i>Assigned by ${notification.assignedByName}
-                        </p>
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-success btn-sm" onclick="respondToAssignment(${notification.id}, 'accepted')">
-                                <i class="fas fa-check me-1"></i>Accept Assignment
-                            </button>
-                            <button class="btn btn-outline-danger btn-sm" onclick="respondToAssignment(${notification.id}, 'declined')">
-                                <i class="fas fa-times me-1"></i>Decline
-                            </button>
-                        </div>
-                    </div>
-                </li>
-                <li><hr class="dropdown-divider my-0"></li>
-            `;
-        } else {
-            // assignment_response
-            const isAccepted = notification.response === 'accepted';
-            const icon = isAccepted ? 'fa-check-circle text-success' : 'fa-times-circle text-danger';
-            const bgColor = isAccepted ? '#e8f5e9' : '#ffebee';
-            const borderColor = isAccepted ? 'success' : 'danger';
-            
-            return `
-                <li>
-                    <div class="dropdown-item-text border-start border-${borderColor} border-4" style="background-color: ${bgColor};">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-reply text-${borderColor} me-2 fs-5"></i>
-                                <strong class="text-${borderColor}">Response Received</strong>
-                            </div>
-                            <small class="text-muted">${formatNotificationTime(notification.createdAt)}</small>
-                        </div>
-                        <p class="mb-1 small">
-                            <strong>${notification.respondedByName}</strong> ${notification.response} the assignment
-                        </p>
-                        <p class="mb-2 small text-muted fw-bold">${notification.projectName}</p>
-                        <button class="btn btn-outline-${borderColor} btn-sm w-100" onclick="markResponseAsRead(${notification.id})">
-                            <i class="fas fa-check me-1"></i>Mark as Read
-                        </button>
-                    </div>
-                </li>
-                <li><hr class="dropdown-divider my-0"></li>
-            `;
-        }
-    }).join('');
-}
-
-// Format notification time (relative)
-function formatNotificationTime(timestamp) {
-    const now = new Date();
-    const notificationDate = new Date(timestamp);
-    const diffMs = now - notificationDate;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return notificationDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-// Respond to assignment notification
-window.respondToAssignment = async (notificationId, response) => {
-    const notification = userNotifications.find(n => n.id === notificationId);
-    if (!notification) return;
-    
-    console.log('[NOTIFICATIONS] User responding to assignment:', response, 'for project:', notification.projectId);
-    
-    // Update notification status
-    notification.status = response;
-    notification.response = response;
-    notification.responseAt = new Date().toISOString();
-    notification.read = true;
-    
-    await saveNotifications();
-    
-    // ✅ IF DECLINED, REMOVE USER FROM PROJECT ASSIGNMENT
-    if (response === 'declined' && window.projectManager) {
-        const project = window.projectManager.projects.find(p => p.id === notification.projectId);
-        
-        if (project) {
-            console.log('[NOTIFICATIONS] User declined - removing from project assignment');
-            
-            // Get current assigned users
-            let assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-            
-            // Remove current user from assigned users
-            assignedUsers = assignedUsers.filter(userId => userId !== window.projectManager.currentUser);
-            
-            // Update project
-            project.assignedTo = assignedUsers;
-            
-            // Save project changes
-            await window.projectManager.saveProjects();
-            
-            // Re-render to update the project list
-            window.projectManager.render();
-            
-            console.log('[NOTIFICATIONS] User removed from project. Remaining assigned users:', assignedUsers);
-        }
-    }
-    
-    // Create response notification for project creator
-    await createResponseNotification(
-        notification.projectId,
-        notification.projectName,
-        window.projectManager.currentUser,
-        notification.assignedBy,
-        response
-    );
-    
-    // Show success message
-    const message = response === 'accepted' ? 
-        `You accepted the assignment for "${notification.projectName}"` :
-        `You declined the assignment for "${notification.projectName}" and have been removed from the project`;
-    
-    if (window.projectManager) {
-        window.projectManager.showNotification(message, response === 'accepted' ? 'success' : 'info');
-    }
-    
-    renderNotificationDropdown();
-    renderNotificationsModal('all');
-};
-
-// Mark response as read
-window.markResponseAsRead = async (notificationId) => {
-    const notification = userNotifications.find(n => n.id === notificationId);
-    if (!notification) return;
-    
-    notification.read = true;
-    await saveNotifications();
-    
-    if (window.projectManager) {
-        window.projectManager.showNotification('Notification marked as read', 'info');
-    }
-    
-    renderNotificationDropdown();
-    renderNotificationsModal('all');
-};
-
-// Open notifications modal
-window.openNotificationsModal = () => {
-    const modal = new bootstrap.Modal(document.getElementById('notificationsModal'));
-    modal.show();
-    
-    renderNotificationsModal('all');
-};
-
-// Filter notifications in modal
-window.filterNotifications = (filter) => {
-    renderNotificationsModal(filter);
-};
-
-// Render notifications modal
-function renderNotificationsModal(filter) {
-    const container = document.getElementById('notificationsContainer');
-    if (!container) return;
-    
-    let filteredNotifications = userNotifications;
-    
-    if (filter !== 'all') {
-        filteredNotifications = userNotifications.filter(n => n.status === filter || (filter === 'pending' && n.type === 'assignment_response' && !n.read));
-    }
-    
-    if (filteredNotifications.length === 0) {
-        container.innerHTML = `
-            <div class="text-center text-muted py-5">
-                <i class="fas fa-inbox fa-3x mb-3 d-block opacity-50"></i>
-                <p class="fs-5">No ${filter === 'all' ? '' : filter} notifications.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = filteredNotifications.map(notification => {
-        if (notification.type === 'project_assignment') {
-            const statusInfo = {
-                pending: { badge: 'warning', icon: 'fa-clock', text: 'Pending Response' },
-                accepted: { badge: 'success', icon: 'fa-check', text: 'Accepted' },
-                declined: { badge: 'danger', icon: 'fa-times', text: 'Declined' }
-            };
-            const status = statusInfo[notification.status];
-            
-            return `
-                <div class="card mb-3 shadow-sm border-${status.badge} border-2 ${notification.status === 'pending' ? 'notification-card-unread' : ''}">
-                    <div class="card-header bg-${status.badge} bg-opacity-10 border-bottom border-${status.badge}">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fas fa-tasks text-${status.badge} me-2 fs-5"></i>
-                                    <h6 class="mb-0 fw-bold">Project Assignment</h6>
-                                </div>
-                                <p class="mb-1 fs-5 text-dark fw-bold">${notification.projectName}</p>
-                                <p class="mb-0 small text-muted">
-                                    <i class="fas fa-user me-1"></i>Assigned by <strong>${notification.assignedByName}</strong>
-                                </p>
-                            </div>
-                            <div class="text-end">
-                                <span class="badge bg-${status.badge} mb-1">
-                                    <i class="fas ${status.icon} me-1"></i>${status.text}
-                                </span>
-                                <br>
-                                <small class="text-muted">${formatNotificationTime(notification.createdAt)}</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        ${notification.status === 'pending' ? `
-                            <div class="alert alert-warning border-warning" role="alert">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                <strong>Action Required:</strong> You have been assigned to work on this project. Please accept or decline this assignment.
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-success flex-grow-1" onclick="respondToAssignment(${notification.id}, 'accepted')">
-                                    <i class="fas fa-check me-1"></i>Accept Assignment
-                                </button>
-                                <button class="btn btn-danger flex-grow-1" onclick="respondToAssignment(${notification.id}, 'declined')">
-                                    <i class="fas fa-times me-1"></i>Decline Assignment
-                                </button>
-                            </div>
-                        ` : `
-                            <div class="alert alert-${status.badge}" role="alert">
-                                <i class="fas ${status.icon} me-2"></i>
-                                You <strong>${notification.status}</strong> this assignment
-                                ${notification.responseAt ? ' on ' + new Date(notification.responseAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                            </div>
-                        `}
-                    </div>
-                </div>
-            `;
-        } else {
-            // assignment_response
-            const isAccepted = notification.response === 'accepted';
-            const icon = isAccepted ? 'fa-check-circle' : 'fa-times-circle';
-            const bgColor = isAccepted ? 'success' : 'danger';
-            
-            return `
-                <div class="card mb-3 shadow-sm border-info ${!notification.read ? 'border-3 notification-card-unread' : 'border-2'}">
-                    <div class="card-header bg-info bg-opacity-10 border-bottom border-info">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="fas fa-reply text-info me-2 fs-5"></i>
-                                    <h6 class="mb-0 fw-bold">Assignment Response</h6>
-                                    ${!notification.read ? '<span class="badge bg-info ms-2">New</span>' : ''}
-                                </div>
-                                <p class="mb-1 fs-5 text-dark fw-bold">${notification.projectName}</p>
-                                <p class="mb-0 small text-muted">
-                                    <i class="fas fa-user me-1"></i>Response from <strong>${notification.respondedByName}</strong>
-                                </p>
-                            </div>
-                            <div class="text-end">
-                                <small class="text-muted">${formatNotificationTime(notification.createdAt)}</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-${bgColor} border-${bgColor}" role="alert">
-                            <i class="fas ${icon} me-2"></i>
-                            <strong>${notification.respondedByName}</strong> has <strong>${notification.response}</strong> the assignment for <strong>${notification.projectName}</strong>
-                        </div>
-                        ${!notification.read ? `
-                            <button class="btn btn-info w-100" onclick="markResponseAsRead(${notification.id})">
-                                <i class="fas fa-check me-1"></i>Mark as Read
-                            </button>
-                        ` : `
-                            <p class="text-muted text-center mb-0 small">
-                                <i class="fas fa-check-double me-1"></i>Read
-                            </p>
-                        `}
-                    </div>
-                </div>
-            `;
-        }
-    }).join('');
-}
-
-// Clear all notifications
-window.clearAllNotifications = async () => {
-    if (!confirm('Are you sure you want to clear all notifications?')) return;
-    
-    userNotifications = [];
-    await saveNotifications();
-    
-    if (window.projectManager) {
-        window.projectManager.showNotification('All notifications cleared', 'success');
-    }
-    
-    renderNotificationsModal('all');
-};
-
-// Load notifications when user logs in
-document.addEventListener('DOMContentLoaded', () => {
-    // Delay notification loading until ProjectManager is ready
-    setTimeout(async () => {
-        if (window.projectManager && window.projectManager.currentUser) {
-            await loadNotifications();
-        }
-    }, 1000);
-});
-
-// Auto-refresh notifications every 30 seconds to catch new assignments
-setInterval(async () => {
-    if (window.projectManager && window.projectManager.currentUser) {
-        console.log('[NOTIFICATIONS] Auto-refreshing notifications...');
-        await loadNotifications();
-    }
-}, 30000); // 30 seconds
-
-// Manual refresh for testing
-window.refreshNotifications = async () => {
-    console.log('[NOTIFICATIONS] Manual refresh triggered');
-    if (window.projectManager && window.projectManager.currentUser) {
-        await loadNotifications();
-        console.log('[NOTIFICATIONS] Notifications refreshed. Count:', userNotifications.length);
-        alert(`Notifications refreshed! You have ${userNotifications.length} total notifications.`);
-    } else {
-        alert('No user logged in');
-    }
-};
-
-// Test notification system
-window.testNotification = async () => {
-    console.log('🧪 Testing notification system...');
-    console.log('Current user:', window.projectManager.currentUser);
-    console.log('Users:', window.projectManager.users.map(u => u.id));
-    
-    // Create a test notification for Marcena
-    await createAssignmentNotification(
-        999, // test project ID
-        'TEST PROJECT - Notification Test',
-        'marcenacud', // Marcena's user ID (from your console log)
-        window.projectManager.currentUser // Mike's ID
-    );
-    
-    console.log('✅ Test notification created!');
-    console.log('Now logout and login as Marcena to see it');
-};
