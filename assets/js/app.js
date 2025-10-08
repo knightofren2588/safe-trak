@@ -1573,6 +1573,7 @@ END:VCALENDAR`;
         this.populateCategoryDropdowns();
         this.populateRoleDropdowns();
         this.populateDepartmentDropdowns();
+        this.populateUserFilterDropdown(); // ✅ ADD THIS LINE
         this.displayDailySafetyQuote();
         
         // Show connection status
@@ -2731,6 +2732,7 @@ END:VCALENDAR`;
     // Manual function to force update dropdown (for debugging)
     forceUpdateDropdown() {
         this.populateUserDropdowns();
+        this.populateUserFilterDropdown();
     }
 
     // Emergency function to completely clear everything
@@ -3699,18 +3701,22 @@ END:VCALENDAR`;
         
         let filteredProjects = this.projects;
         
-        // Apply view mode filtering first
-        if (this.projectViewMode === 'personal') {
-            filteredProjects = filteredProjects.filter(project => {
-                const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-                return project.createdBy === this.currentUser || assignedUsers.includes(this.currentUser);
-            });
-        } else if (this.projectViewMode !== 'all') {
-            // Individual user view - only show projects where user is assigned
-            filteredProjects = filteredProjects.filter(project => {
-                const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
-                return assignedUsers.includes(this.projectViewMode);
-            });
+        // ✅ FIX: Check if user filter is active first
+        // If user filter is active, skip view mode filtering (user filter takes priority)
+        if (!userFilter) {
+            // Apply view mode filtering only if no user filter is active
+            if (this.projectViewMode === 'personal') {
+                filteredProjects = filteredProjects.filter(project => {
+                    const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+                    return project.createdBy === this.currentUser || assignedUsers.includes(this.currentUser);
+                });
+            } else if (this.projectViewMode !== 'all') {
+                // Individual user view - only show projects where user is assigned
+                filteredProjects = filteredProjects.filter(project => {
+                    const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+                    return assignedUsers.includes(this.projectViewMode);
+                });
+            }
         }
         
         // Search filter
@@ -3831,6 +3837,36 @@ END:VCALENDAR`;
         
         this.renderProjectTable(filteredProjects);
         this.updateFilterStats(filteredProjects);
+    }
+
+    clearAllFilters() {
+        // Reset all filter dropdowns to default values
+        const filters = {
+            'searchInput': '',
+            'statusFilter': '',
+            'userFilter': '',
+            'dateFilter': '',
+            'priorityFilter': '',
+            'categoryFilter': '',
+            'progressFilter': '',
+            'startDateFilter': '',
+            'endDateFilter': '',
+            'sortBy': ''
+        };
+        
+        Object.entries(filters).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value;
+            }
+        });
+        
+        // Re-render with no filters
+        this.filterProjects();
+        
+        this.showNotification('All filters cleared', 'success');
+        
+        console.log('✅ All filters cleared');
     }
     
     sortProjects(projects, sortBy) {
@@ -4228,6 +4264,7 @@ END:VCALENDAR`;
         this.renderRecentProjects();
         this.renderProjectTable();
         this.populateUserDropdowns(); // Update user dropdowns when rendering
+        this.populateUserFilterDropdown(); // Update user filter dropdown when rendering
         this.populateCategoryDropdowns(); // Update category dropdowns when rendering
     }
 
@@ -4328,6 +4365,13 @@ END:VCALENDAR`;
         } else {
             projects = projects.filter(p => p.status !== 'pending');
         }
+        
+        // ✅ Sort projects by creation date (newest first)
+        projects = projects.sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA; // Descending order (newest first)
+        });
         
         // Update table title based on current user
         this.updateProjectTableTitle();
@@ -5147,6 +5191,7 @@ END:VCALENDAR`;
     updateUserDropdown() {
         // Update the project assigned to dropdown
         this.populateUserDropdowns();
+        this.populateUserFilterDropdown();
         
         // Update the user management table if it's open
         this.renderUserManagementTable();
@@ -5279,6 +5324,24 @@ END:VCALENDAR`;
             </a>`;
             existingDivider.parentNode.insertBefore(li, existingDivider);
         });
+    }
+
+    populateUserFilterDropdown() {
+        const userFilter = document.getElementById('userFilter');
+        if (!userFilter) return;
+        
+        // Keep "All Users" option, add all users below it
+        userFilter.innerHTML = '<option value="">All Users</option>';
+        
+        // Add each user
+        this.users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.name;
+            userFilter.appendChild(option);
+        });
+        
+        console.log('✅ User filter populated with', this.users.length, 'users');
     }
 
     handleScreenshotUpload() {
@@ -7677,6 +7740,13 @@ document.addEventListener('DOMContentLoaded', function() {
     window.printReport = () => {
         if (window.projectManager) {
             window.projectManager.printReport();
+        }
+    };
+
+    // Global filter functions
+    window.clearAllFilters = () => {
+        if (window.projectManager) {
+            window.projectManager.clearAllFilters();
         }
     };
 
