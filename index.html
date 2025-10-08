@@ -164,7 +164,25 @@
                     <span class="badge bg-success me-2" id="connectionIndicator">
                         <i class="fas fa-cloud me-1"></i>Cloud Connected
                     </span>
-                    <span class="badge bg-warning text-dark">v1.2.4</span>
+                    <button class="btn btn-warning text-dark fw-bold position-relative" 
+                            onclick="openReleaseNotes()" 
+                            style="padding: 0.5rem 1rem; font-size: 0.9rem; border: none; cursor: pointer;"
+                            title="View Release Notes">
+                        v1.2.4
+                        <span class="badge bg-danger text-white position-absolute" 
+                              id="releaseNotesBadge" 
+                              style="display: none;
+                                     top: -8px;
+                                     right: -8px;
+                                     font-size: 0.65rem;
+                                     padding: 0.3rem 0.45rem;
+                                     min-width: 1.2rem;
+                                     border-radius: 10px;
+                                     font-weight: bold;
+                                     box-shadow: 0 0 0 2px white;">
+                            0
+                        </span>
+                    </button>
                 </div>
             </div>
 
@@ -293,6 +311,11 @@
                                 <li class="admin-only-nav" style="display: none;">
                                     <a class="dropdown-item" href="#" onclick="openDepartmentModal()">
                                         <i class="fas fa-building me-2 text-primary"></i>Manage Departments
+                                    </a>
+                                </li>
+                                <li class="admin-only-nav" style="display: none;">
+                                    <a class="dropdown-item" href="#" onclick="openReleaseNotesTimeframeModal()">
+                                        <i class="fas fa-clock me-2 text-info"></i>Release Notes Timeframe
                                     </a>
                                 </li>
                                 <li class="admin-only-nav" id="adminOnlyOptions" style="display: none;">
@@ -1409,11 +1432,60 @@
         </div>
     </div>
 
+    <!-- Release Notes Timeframe Modal -->
+    <div class="modal fade" id="releaseNotesTimeframeModal" tabindex="-1" aria-labelledby="releaseNotesTimeframeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="releaseNotesTimeframeModalLabel">
+                        <i class="fas fa-clock me-2"></i>Release Notes Timeframe
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Release Notes "New" Badge Timeframe -->
+                    <div class="mb-4 p-3 border rounded bg-light">
+                        <h6 class="fw-bold text-primary mb-3">
+                            <i class="fas fa-bell me-2"></i>Release Notes Badge Settings
+                        </h6>
+                        
+                        <div class="mb-3">
+                            <label for="releaseNotesTimeframe" class="form-label">
+                                <i class="fas fa-clock me-2"></i>"New" Badge Timeframe
+                            </label>
+                            <div class="input-group">
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="releaseNotesTimeframe" 
+                                       min="1" 
+                                       max="168" 
+                                       value="24"
+                                       placeholder="24">
+                                <span class="input-group-text">hours</span>
+                            </div>
+                            <small class="form-text text-muted d-block mt-1">
+                                Release notes added within this timeframe will show a "new" count badge on the version button. 
+                                Valid range: 1-168 hours (1 hour to 7 days). Default: 24 hours.
+                            </small>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="saveReleaseNotesTimeframe()">
+                            <i class="fas fa-save me-2"></i>Save Timeframe Setting
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-        import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
         // Your web app's Firebase configuration
@@ -1442,6 +1514,7 @@
             collection,
             doc,
             getDocs,
+            getDoc,
             setDoc,
             deleteDoc,
             onSnapshot
@@ -1909,7 +1982,6 @@
                                 <span class="badge bg-primary fs-6">v1.2.4</span>
                                 <span class="text-muted ms-2">October 8, 2025</span>
                             </div>
-                            <span class="badge bg-success">Current</span>
                         </div>
                         
                         <!-- New Features -->
@@ -1919,9 +1991,9 @@
                             </h6>
                             <ul class="release-list">
                                 <li class="d-flex justify-content-between align-items-center">
-                                    <span><strong>Individual Notification Delete:</strong> Users can now delete individual read notifications with proper validation to prevent accidental deletion of unread items</span>
+                                    <span><strong>Clickable Version Badge:</strong> The version badge is now clickable and opens the release notes modal for easy access to what's new</span>
                                     <div class="admin-controls" style="display: none;">
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Individual Notification Delete', 'Users can now delete individual read notifications with proper validation to prevent accidental deletion of unread items')">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Clickable Version Badge', 'The version badge is now clickable and opens the release notes modal for easy access to what\'s new')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
@@ -1930,9 +2002,9 @@
                                     </div>
                                 </li>
                                 <li class="d-flex justify-content-between align-items-center">
-                                    <span><strong>Mark All as Read Function:</strong> Bulk operation to mark all notifications as read with automatic badge update</span>
+                                    <span><strong>"New" Release Notes Badge:</strong> Version button now shows a red counter badge indicating how many release notes were added in the last 24 hours (configurable)</span>
                                     <div class="admin-controls" style="display: none;">
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Mark All as Read Function', 'Bulk operation to mark all notifications as read with automatic badge update')">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'New Release Notes Badge', 'Version button now shows a red counter badge indicating how many release notes were added in the last 24 hours (configurable)')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
@@ -1941,9 +2013,42 @@
                                     </div>
                                 </li>
                                 <li class="d-flex justify-content-between align-items-center">
-                                    <span><strong>Clear All Notifications:</strong> Complete notification history management with confirmation dialog</span>
+                                    <span><strong>Release Notes Timestamps:</strong> All new release notes are automatically timestamped for accurate tracking and counting</span>
                                     <div class="admin-controls" style="display: none;">
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Clear All Notifications', 'Complete notification history management with confirmation dialog')">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Release Notes Timestamps', 'All new release notes are automatically timestamped for accurate tracking and counting')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Admin Timeframe Settings:</strong> Admins can now customize the timeframe for "new" release notes badge (1-168 hours, default 24 hours)</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Admin Timeframe Settings', 'Admins can now customize the timeframe for new release notes badge (1-168 hours, default 24 hours)')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Individual Notification Delete:</strong> Users can now delete individual notifications after marking them as read</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Individual Notification Delete', 'Users can now delete individual notifications after marking them as read')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Clear All Notifications:</strong> New "Clear All" button to remove all notifications at once with confirmation</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'feature', 'Clear All Notifications', 'New Clear All button to remove all notifications at once with confirmation')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
@@ -1961,9 +2066,9 @@
                             </h6>
                             <ul class="release-list">
                                 <li class="d-flex justify-content-between align-items-center">
-                                    <span><strong>Enhanced Notification Badge:</strong> Improved visibility with custom styling, better positioning, and white border shadow for contrast</span>
+                                    <span><strong>Hybrid Cloud/Local Storage:</strong> Release notes timeframe settings now sync across devices via Firebase with offline support</span>
                                     <div class="admin-controls" style="display: none;">
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Enhanced Notification Badge', 'Improved visibility with custom styling, better positioning, and white border shadow for contrast')">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Hybrid Cloud/Local Storage', 'Release notes timeframe settings now sync across devices via Firebase with offline support')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
@@ -1972,9 +2077,9 @@
                                     </div>
                                 </li>
                                 <li class="d-flex justify-content-between align-items-center">
-                                    <span><strong>Perfect Badge Alignment:</strong> Flexbox-based centering with proper line-height and padding for pixel-perfect number display</span>
+                                    <span><strong>Enhanced Notification Badge:</strong> Improved styling and positioning for better visibility and alignment with UI</span>
                                     <div class="admin-controls" style="display: none;">
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Perfect Badge Alignment', 'Flexbox-based centering with proper line-height and padding for pixel-perfect number display')">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Enhanced Notification Badge', 'Improved styling and positioning for better visibility and alignment with UI')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
@@ -1983,9 +2088,9 @@
                                     </div>
                                 </li>
                                 <li class="d-flex justify-content-between align-items-center">
-                                    <span><strong>Filtered Pending Projects:</strong> Pending projects (awaiting approval) are now excluded from project counts and owner badges for accurate metrics</span>
+                                    <span><strong>Filtered Pending Projects:</strong> Pending projects (awaiting approval) no longer appear in project counts and user badges</span>
                                     <div class="admin-controls" style="display: none;">
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Filtered Pending Projects', 'Pending projects (awaiting approval) are now excluded from project counts and owner badges for accurate metrics')">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Filtered Pending Projects', 'Pending projects (awaiting approval) no longer appear in project counts and user badges')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
@@ -1994,9 +2099,9 @@
                                     </div>
                                 </li>
                                 <li class="d-flex justify-content-between align-items-center">
-                                    <span><strong>Personal View Filter Fix:</strong> Personal view now only shows projects assigned to the current user, not projects they created for others</span>
+                                    <span><strong>Single Source of Truth:</strong> Version number now managed centrally via APP_VERSION constant for consistency across the application</span>
                                     <div class="admin-controls" style="display: none;">
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Personal View Filter Fix', 'Personal view now only shows projects assigned to the current user, not projects they created for others')">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'improvement', 'Single Source of Truth', 'Version number now managed centrally via APP_VERSION constant for consistency across the application')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
@@ -2009,14 +2114,14 @@
                         
                         <!-- Bug Fixes -->
                         <div class="release-category">
-                            <h6 class="text-danger">
+                            <h6 class="text-warning">
                                 <i class="fas fa-bug me-2"></i>Bug Fixes
                             </h6>
                             <ul class="release-list">
                                 <li class="d-flex justify-content-between align-items-center">
-                                    <span><strong>Release Notes Delete Function:</strong> Fixed null reference error with proper null checks and nested validation</span>
+                                    <span><strong>Release Notes Delete Function:</strong> Fixed null reference errors when deleting release notes with proper null checks</span>
                                     <div class="admin-controls" style="display: none;">
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'bug', 'Release Notes Delete Function', 'Fixed null reference error with proper null checks and nested validation')">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'fix', 'Release Notes Delete Function', 'Fixed null reference errors when deleting release notes with proper null checks')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
@@ -2025,9 +2130,20 @@
                                     </div>
                                 </li>
                                 <li class="d-flex justify-content-between align-items-center">
-                                    <span><strong>Notification Badge Updates:</strong> Badge now updates correctly when marking notifications as read or deleting them</span>
+                                    <span><strong>Notification Badge Updates:</strong> Badge now updates correctly when marking notifications as read or clearing all</span>
                                     <div class="admin-controls" style="display: none;">
-                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'bug', 'Notification Badge Updates', 'Badge now updates correctly when marking notifications as read or deleting them')">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'fix', 'Notification Badge Updates', 'Badge now updates correctly when marking notifications as read or clearing all')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Personal View Filter:</strong> Fixed "Personal" view to only show projects assigned to the current user, not projects they created for others</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.2.4', 'fix', 'Personal View Filter', 'Fixed Personal view to only show projects assigned to the current user, not projects they created for others')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">

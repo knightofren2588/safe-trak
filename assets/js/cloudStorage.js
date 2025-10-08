@@ -847,6 +847,59 @@ deleteNoteLocal(noteId) {
             console.log('[CloudStorage] Saved notifications to localStorage as fallback');
         }
     }
+
+    // Release Notes Timeframe Setting
+    async getReleaseNotesTimeframe() {
+        if (!this.isConnected) {
+            console.log('[CloudStorage] Not connected, using local storage for timeframe');
+            const local = localStorage.getItem('safetrack_release_notes_timeframe');
+            return local ? parseInt(local) : 24;
+        }
+        
+        try {
+            const docRef = this.functions.doc(this.db, 'settings', 'releaseNotesTimeframe');
+            const docSnap = await this.functions.getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const hours = docSnap.data().hours || 24;
+                console.log('[CloudStorage] Loaded timeframe from cloud:', hours);
+                // Backup to local
+                localStorage.setItem('safetrack_release_notes_timeframe', hours);
+                return hours;
+            } else {
+                console.log('[CloudStorage] No timeframe in cloud, using default');
+                return 24;
+            }
+        } catch (error) {
+            console.error('[CloudStorage] Error loading timeframe:', error);
+            // Fallback to local
+            const local = localStorage.getItem('safetrack_release_notes_timeframe');
+            return local ? parseInt(local) : 24;
+        }
+    }
+
+    async saveReleaseNotesTimeframe(hours) {
+        // Always save to local first
+        localStorage.setItem('safetrack_release_notes_timeframe', hours);
+        console.log('[CloudStorage] Saved timeframe to local:', hours);
+        
+        if (!this.isConnected) {
+            console.log('[CloudStorage] Not connected, timeframe saved locally only');
+            return;
+        }
+        
+        try {
+            const docRef = this.functions.doc(this.db, 'settings', 'releaseNotesTimeframe');
+            await this.functions.setDoc(docRef, {
+                hours: hours,
+                updatedAt: new Date().toISOString(),
+                updatedBy: 'admin'
+            });
+            console.log('[CloudStorage] Saved timeframe to cloud:', hours);
+        } catch (error) {
+            console.error('[CloudStorage] Error saving timeframe to cloud:', error);
+        }
+    }
 }
 
 // Make it available globally

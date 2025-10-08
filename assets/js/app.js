@@ -1,3 +1,6 @@
+// Single source of truth for app version
+const APP_VERSION = 'v1.2.4';
+
 // Project data management
 class ProjectManager {
     constructor() {
@@ -7636,6 +7639,21 @@ document.addEventListener('DOMContentLoaded', function() {
     window.forceDropdownUpdate = () => {
         window.projectManager.forceUpdateDropdown();
     };
+    
+    // ✅ Set version number dynamically
+    const versionButton = document.querySelector('button[onclick="openReleaseNotes()"]');
+    if (versionButton) {
+        // Update version text while keeping the badge
+        const textNode = Array.from(versionButton.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+        if (textNode) {
+            textNode.textContent = APP_VERSION;
+        }
+    }
+    
+    // ✅ Update release notes badge on page load
+    if (typeof updateReleaseNotesBadge === 'function') {
+        updateReleaseNotesBadge();
+    }
 
     // Global export functions
     window.exportToExcel = () => {
@@ -8180,9 +8198,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // Create new release note entry
+            const timestamp = new Date().toISOString(); // ✅ ADD THIS LINE
+
             const newEntry = `
-                <li class="d-flex justify-content-between align-items-center">
+                <li class="d-flex justify-content-between align-items-center" data-timestamp="${timestamp}">
                     <span><strong>${title}:</strong> ${description}</span>
                     <div class="admin-controls" style="display: none;">
                         <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('${version}', '${category}', '${title}', '${description}')">
@@ -8291,12 +8310,124 @@ function saveReleaseNotesToStorage() {
     }
 }
 
+// Count new release notes from last 24 hours
+async function updateReleaseNotesBadge() {
+    // ✅ Get timeframe using hybrid approach
+    let hoursToCheck = 24;
+    
+    if (window.projectManager && window.projectManager.cloudStorage) {
+        hoursToCheck = await window.projectManager.cloudStorage.getReleaseNotesTimeframe();
+    } else {
+        const saved = localStorage.getItem('safetrack_release_notes_timeframe');
+        hoursToCheck = saved ? parseInt(saved) : 24;
+    }
+    
+    const now = new Date();
+    const cutoffTime = new Date(now.getTime() - (hoursToCheck * 60 * 60 * 1000));
+    
+    const releaseItems = document.querySelectorAll('.release-list li[data-timestamp]');
+    let newCount = 0;
+    
+    releaseItems.forEach(item => {
+        const timestamp = item.getAttribute('data-timestamp');
+        if (timestamp) {
+            const itemDate = new Date(timestamp);
+            if (itemDate > cutoffTime) {
+                newCount++;
+            }
+        }
+    });
+    
+    console.log('[RELEASE NOTES] New items in last', hoursToCheck, 'hours:', newCount);
+    
+    const badge = document.getElementById('releaseNotesBadge');
+    if (badge) {
+        badge.textContent = newCount;
+        if (newCount > 0) {
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    
+    return newCount;
+}
+
+// Save release notes timeframe setting
+async function saveReleaseNotesTimeframe() {
+    const input = document.getElementById('releaseNotesTimeframe');
+    if (!input) return;
+    
+    let hours = parseInt(input.value);
+    
+    // Validate
+    if (isNaN(hours) || hours < 1 || hours > 168) {
+        alert('Please enter a valid timeframe between 1 and 168 hours (7 days)');
+        return;
+    }
+    
+    // ✅ Save using hybrid approach
+    if (window.projectManager && window.projectManager.cloudStorage) {
+        await window.projectManager.cloudStorage.saveReleaseNotesTimeframe(hours);
+    } else {
+        // Fallback to local only
+        localStorage.setItem('safetrack_release_notes_timeframe', hours);
+    }
+    
+    console.log('[SETTINGS] Release notes timeframe saved:', hours, 'hours');
+    
+    // Update badge immediately
+    updateReleaseNotesBadge();
+    
+    // Show success message
+    if (window.projectManager) {
+        window.projectManager.showNotification(`Release notes timeframe updated to ${hours} hours`, 'success');
+    } else {
+        alert(`Release notes timeframe updated to ${hours} hours`);
+    }
+}
+
+// Load release notes timeframe setting
+async function loadReleaseNotesTimeframe() {
+    let hours = 24; // Default
+    
+    // ✅ Load using hybrid approach
+    if (window.projectManager && window.projectManager.cloudStorage) {
+        hours = await window.projectManager.cloudStorage.getReleaseNotesTimeframe();
+    } else {
+        // Fallback to local only
+        const saved = localStorage.getItem('safetrack_release_notes_timeframe');
+        hours = saved ? parseInt(saved) : 24;
+    }
+    
+    const input = document.getElementById('releaseNotesTimeframe');
+    if (input) {
+        input.value = hours;
+    }
+    
+    console.log('[SETTINGS] Loaded timeframe:', hours, 'hours');
+    return hours;
+}
+
+// Open release notes timeframe modal
+function openReleaseNotesTimeframeModal() {
+    // Load current setting
+    loadReleaseNotesTimeframe();
+    
+    // Open modal
+    const modal = new bootstrap.Modal(document.getElementById('releaseNotesTimeframeModal'));
+    modal.show();
+}
+
 // Auto-update version numbers on homepage and modal header
-function updateVersionNumbers(version) {
-    // Update homepage version badge
-    const homeVersionBadge = document.querySelector('.badge.bg-warning.text-dark');
-    if (homeVersionBadge) {
-        homeVersionBadge.textContent = version;
+function updateVersionNumbers(version = APP_VERSION) {
+    // Update version button
+    const versionButton = document.querySelector('button[onclick="openReleaseNotes()"]');
+    if (versionButton) {
+        const textNode = Array.from(versionButton.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+        if (textNode) {
+            textNode.textContent = version;
+        }
     }
     
     // Update release notes modal header
@@ -8305,7 +8436,7 @@ function updateVersionNumbers(version) {
         modalVersionBadge.textContent = version;
     }
     
-    console.log(`[VERSION] Updated to ${version} on homepage and modal`);
+    console.log(`[VERSION] Updated to ${version} on version button and modal`);
 }
 
 // Load release notes from localStorage on page load
@@ -8313,10 +8444,26 @@ window.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('releaseNotesContainer');
     const saved = localStorage.getItem('safetrack_release_notes');
     
-    if (saved && container) {
+    // Only load from localStorage if it contains V1.2.4 or newer
+    // This prevents old cached release notes from overriding new HTML content
+    if (saved && container && saved.includes('v1.2.4')) {
+        console.log('[RELEASE NOTES] Loading from localStorage (contains v1.2.4)');
         container.innerHTML = saved;
+    } else if (saved && container) {
+        console.log('[RELEASE NOTES] localStorage exists but missing v1.2.4, keeping HTML content');
+        // Save current HTML content to localStorage to update it
+        localStorage.setItem('safetrack_release_notes', container.innerHTML);
+    } else {
+        console.log('[RELEASE NOTES] No localStorage found, using HTML content');
     }
 });
+
+// Helper function to force refresh release notes (clears localStorage cache)
+window.forceRefreshReleaseNotes = () => {
+    localStorage.removeItem('safetrack_release_notes');
+    console.log('[RELEASE NOTES] Cleared localStorage cache, reloading page...');
+    window.location.reload();
+};
 
 // Edit release note function
 window.editReleaseNote = (version, category, title, description) => {
