@@ -8274,6 +8274,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Save to localStorage
             saveReleaseNotesToStorage();
+            
+            // Auto-update version numbers if this is marked as current
+            if (isCurrent) {
+                updateVersionNumbers(version);
+            }
         });
     }
 });
@@ -8284,6 +8289,23 @@ function saveReleaseNotesToStorage() {
     if (container) {
         localStorage.setItem('safetrack_release_notes', container.innerHTML);
     }
+}
+
+// Auto-update version numbers on homepage and modal header
+function updateVersionNumbers(version) {
+    // Update homepage version badge
+    const homeVersionBadge = document.querySelector('.badge.bg-warning.text-dark');
+    if (homeVersionBadge) {
+        homeVersionBadge.textContent = version;
+    }
+    
+    // Update release notes modal header
+    const modalVersionBadge = document.querySelector('#releaseNotesModal .badge.bg-light.text-dark');
+    if (modalVersionBadge) {
+        modalVersionBadge.textContent = version;
+    }
+    
+    console.log(`[VERSION] Updated to ${version} on homepage and modal`);
 }
 
 // Load release notes from localStorage on page load
