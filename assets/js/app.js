@@ -1,5 +1,5 @@
 // Single source of truth for app version
-const APP_VERSION = 'v1.2.4';
+const APP_VERSION = 'v1.3';
 
 // Project data management
 class ProjectManager {
@@ -7372,9 +7372,15 @@ END:VCALENDAR`;
                                     </strong>
                                 </div>
                                 <p class="text-gray-700 mb-2">
-                                    <span class="font-medium">Project:</span> ${this.escapeHtml(n.projectName)}
-                                </p>
-                                <small class="text-gray-600">${date}</small>
+    <span class="font-medium">Project:</span> ${this.escapeHtml(n.projectName)}
+</p>
+${n.reason ? `
+    <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+        <strong class="text-red-800">Reason for declining:</strong>
+        <p class="text-red-700 mb-0 mt-1">${this.escapeHtml(n.reason)}</p>
+    </div>
+` : ''}
+<small class="text-gray-600">${date}</small>
                             </div>
                             <div class="flex gap-2 ml-3">
                                 ${isUnread ? `
@@ -7439,7 +7445,7 @@ END:VCALENDAR`;
     }
 
     async declineProject(projectId, notificationId) {
-        console.log('[NOTIFICATIONS] Declining project:', projectId);
+        console.log('[NOTIFICATIONS] Opening decline reason modal for project:', projectId);
         
         const project = this.projects.find(p => p.id === projectId);
         if (!project) {
@@ -7447,7 +7453,37 @@ END:VCALENDAR`;
             return;
         }
         
-        if (!confirm(`Are you sure you want to decline "${project.name}"? It will be deleted.`)) {
+        // Store the project and notification IDs for later use
+        this.currentDeclineProjectId = projectId;
+        this.currentDeclineNotificationId = notificationId;
+        
+        // Set project name in modal
+        document.getElementById('declineProjectName').textContent = project.name;
+        
+        // Clear previous reason
+        document.getElementById('declineReason').value = '';
+        
+        // Show decline reason modal
+        const declineModal = new bootstrap.Modal(document.getElementById('declineReasonModal'));
+        declineModal.show();
+    }
+    
+    async confirmDeclineProject() {
+        const reason = document.getElementById('declineReason').value.trim();
+        
+        if (!reason) {
+            alert('Please provide a reason for declining this project');
+            return;
+        }
+        
+        const projectId = this.currentDeclineProjectId;
+        const notificationId = this.currentDeclineNotificationId;
+        
+        console.log('[NOTIFICATIONS] Declining project:', projectId, 'with reason:', reason);
+        
+        const project = this.projects.find(p => p.id === projectId);
+        if (!project) {
+            this.showNotification('Project not found', 'error');
             return;
         }
         
@@ -7460,27 +7496,37 @@ END:VCALENDAR`;
         
         await this.saveNotifications();
         
-        // Notify creator
+        // Remove user from assigned list (don't delete the project)
+        const assignedUsers = Array.isArray(project.assignedTo) ? project.assignedTo : [project.assignedTo].filter(Boolean);
+        project.assignedTo = assignedUsers.filter(userId => userId !== this.currentUser);
+        
+        await this.saveProjects();
+        
+        // Notify creator with reason
         const declinerName = this.users.find(u => u.id === this.currentUser)?.name || 'Someone';
         this.addNotification({
             userId: project.createdBy,
             projectId: project.id,
             projectName: project.name,
-            message: `${declinerName} declined your project: ${project.name}. It has been deleted.`,
+            message: `${declinerName} declined your project: ${project.name}`,
+            reason: reason,
             type: 'response',
             status: 'declined'
         });
         
-        // Delete the project
-        this.projects = this.projects.filter(p => p.id !== projectId);
-        await this.saveProjects();
+        // Close both modals
+        const declineModal = bootstrap.Modal.getInstance(document.getElementById('declineReasonModal'));
+        if (declineModal) declineModal.hide();
         
-        // Close modal and refresh
-        const modal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
-        if (modal) modal.hide();
+        const notificationsModal = bootstrap.Modal.getInstance(document.getElementById('notificationsModal'));
+        if (notificationsModal) notificationsModal.hide();
         
-        this.showNotification(`You declined "${project.name}". It has been deleted.`, 'info');
+        this.showNotification(`You declined "${project.name}". The creator has been notified.`, 'info');
         this.render();
+        
+        // Clear stored IDs
+        this.currentDeclineProjectId = null;
+        this.currentDeclineNotificationId = null;
     }
 
     markAsRead(notificationId) {
@@ -8514,13 +8560,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('releaseNotesContainer');
     const saved = localStorage.getItem('safetrack_release_notes');
     
-    // Only load from localStorage if it contains V1.2.4 or newer
+    // Only load from localStorage if it contains V1.3 or newer
     // This prevents old cached release notes from overriding new HTML content
-    if (saved && container && saved.includes('v1.2.4')) {
-        console.log('[RELEASE NOTES] Loading from localStorage (contains v1.2.4)');
+    if (saved && container && saved.includes('v1.3')) {
+        console.log('[RELEASE NOTES] Loading from localStorage (contains v1.3)');
         container.innerHTML = saved;
     } else if (saved && container) {
-        console.log('[RELEASE NOTES] localStorage exists but missing v1.2.4, keeping HTML content');
+        console.log('[RELEASE NOTES] localStorage exists but missing v1.3, keeping HTML content');
         // Save current HTML content to localStorage to update it
         localStorage.setItem('safetrack_release_notes', container.innerHTML);
     } else {
@@ -8787,6 +8833,25 @@ window.testBugBadges = () => {
         console.log('Current user:', window.projectManager.currentUser);
     }
 };
+
+// Add to your app.js file - Detection for scroll shadow
+document.addEventListener('DOMContentLoaded', function() {
+    const tableResponsive = document.querySelector('.table-responsive');
+    
+    if (tableResponsive) {
+        tableResponsive.addEventListener('scroll', function() {
+            const maxScroll = this.scrollWidth - this.clientWidth;
+            const currentScroll = this.scrollLeft;
+            
+            // Remove shadow when scrolled to end
+            if (currentScroll >= maxScroll - 10) {
+                this.classList.add('scrolled-end');
+            } else {
+                this.classList.remove('scrolled-end');
+            }
+        });
+    }
+});
 
 // ==========================================
 // END OF FILE

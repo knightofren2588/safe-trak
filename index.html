@@ -143,232 +143,223 @@
         </div>
     </div>
 
-    <!-- Safety-Themed Professional Header -->
-    <header class="safety-header">
-        <div class="container-fluid">
-            <!-- Top Bar -->
-            <div class="row align-items-center py-2 border-bottom" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
-                <div class="col-auto">
-                    <div class="d-flex align-items-center">
-                        <div class="logo-shield">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                        <div class="ms-3">
-                            <h3 class="mb-0 text-white fw-bold">SafeTrack</h3>
-                            <small class="text-white-50">Advanced Safety Project Management</small>
-                        </div>
+ <!-- Safety-Themed Professional Header -->
+<header class="safety-header">
+    <div class="container-fluid">
+        <!-- Top Bar -->
+        <div class="row align-items-center py-1 border-bottom" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+            <div class="col-auto">
+                <div class="d-flex align-items-center">
+                    <div class="logo-shield">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h3 class="mb-0 text-white fw-bold">SafeTrack</h3>
+                        <small class="text-white-50">Advanced Safety Project Management</small>
                     </div>
                 </div>
-                
-                <div class="col text-end">
-                    <span class="badge bg-success me-2" id="connectionIndicator">
-                        <i class="fas fa-cloud me-1"></i>Cloud Connected
-                    </span>
-                    <button class="btn btn-warning text-dark fw-bold position-relative" 
-                            onclick="openReleaseNotes()" 
-                            style="padding: 0.5rem 1rem; font-size: 0.9rem; border: none; cursor: pointer;"
-                            title="View Release Notes">
-                        v1.2.4
-                        <span class="badge bg-danger text-white position-absolute" 
-                              id="releaseNotesBadge" 
-                              style="display: none;
-                                     top: -8px;
-                                     right: -8px;
-                                     font-size: 0.65rem;
-                                     padding: 0.3rem 0.45rem;
-                                     min-width: 1.2rem;
-                                     border-radius: 10px;
-                                     font-weight: bold;
-                                     box-shadow: 0 0 0 2px white;">
-                            0
-                        </span>
+            </div>
+            
+            <!-- ✅ QUOTE IN RED HEADER -->
+            <div class="col text-center">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="fas fa-quote-left text-white-50 me-2" style="font-size: 0.8rem;"></i>
+                    <span class="fst-italic text-white" id="dailySafetyQuote" style="font-size: 0.85rem;">"Safety first is safety always."</span>
+                    <button class="btn btn-link btn-sm p-0 ms-2 text-white" onclick="getNewQuote()" title="Get new quote">
+                        <i class="fas fa-sync-alt" style="font-size: 0.75rem;"></i>
                     </button>
                 </div>
             </div>
+            
+            <div class="col-auto text-end">
+                <span class="badge bg-success me-2" id="connectionIndicator">
+                    <i class="fas fa-cloud me-1"></i>Cloud Connected
+                </span>
+                <button class="btn btn-warning text-dark fw-bold position-relative" 
+                        onclick="openReleaseNotes()" 
+                        style="padding: 0.5rem 1rem; font-size: 0.9rem; border: none; cursor: pointer;"
+                        title="View Release Notes">
+                    v1.3
+                    <span class="badge bg-danger text-white position-absolute" 
+                          id="releaseNotesBadge" 
+                          style="display: none;
+                                 top: -8px;
+                                 right: -8px;
+                                 font-size: 0.65rem;
+                                 padding: 0.3rem 0.45rem;
+                                 min-width: 1.2rem;
+                                 border-radius: 10px;
+                                 font-weight: bold;
+                                 box-shadow: 0 0 0 2px white;">
+                        0
+                    </span>
+                </button>
+            </div>
+        </div>
 
-            <!-- Welcome Bar -->
-            <div class="row align-items-center py-3" style="background: linear-gradient(to right, #ffffff 0%, #f8f9fa 100%);">
-                <div class="col-md-4">
-                    <div class="d-flex align-items-center">
-                        <div class="user-avatar-large me-3" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
-                            <span id="userAvatarLetter">M</span>
-                        </div>
-                        <div>
-                            <small class="text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 1px;">Welcome Back</small>
-                            <h5 class="mb-0 fw-bold text-danger" id="welcomeUsername">Marcena Cudzilo</h5>
-                            <span class="badge" style="background: #ffc107; color: #000;" id="welcomeUserRole">Safety Liaison</span>
-                        </div>
+        <!-- Welcome Bar -->
+        <div class="row align-items-center py-2" style="background: linear-gradient(to right, #ffffff 0%, #f8f9fa 100%);">
+            <div class="col-md-4">
+                <div class="d-flex align-items-center">
+                    <div class="user-avatar-large me-3" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                        <span id="userAvatarLetter">M</span>
+                    </div>
+                    <div>
+                        <small class="text-muted text-uppercase" style="font-size: 0.7rem; letter-spacing: 1px;">Welcome Back</small>
+                        <h5 class="mb-0 fw-bold text-danger" id="welcomeUsername">Mike Butcher</h5>
+                        <span class="badge" style="background: #ffc107; color: #000;" id="welcomeUserRole">Safety Liaison</span>
                     </div>
                 </div>
+            </div>
 
-                <div class="col-md-4 text-center d-none d-md-block">
-                    <div class="safety-quote-compact">
-                        <i class="fas fa-quote-left text-danger me-2"></i>
-                        <span class="fst-italic text-muted" id="dailySafetyQuote" style="font-size: 0.9rem;">"Safety first is safety always."</span>
-                        <button class="btn btn-link btn-sm p-0 ms-2 text-danger" onclick="getNewQuote()" title="Get new quote">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </div>
-                </div>
+            <div class="col-md-8">
+                <div class="d-flex justify-content-end gap-2 flex-wrap">
+                    <!-- Notifications Button -->
+                    <button class="btn btn-outline-primary position-relative" onclick="projectManager.showNotifications()">
+                        <i class="fas fa-bell me-1"></i>Notifications
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
+                              id="notificationBadge" 
+                              style="display: none;">
+                            0
+                        </span>
+                    </button>
 
-                <div class="col-md-4">
-                    <div class="d-flex justify-content-end gap-2 flex-wrap">
-
-                        <!-- Notifications Button -->
-                        <button class="btn btn-outline-primary position-relative" onclick="projectManager.showNotifications()">
-                            <i class="fas fa-bell me-1"></i>Notifications
+                    <!-- Bugs -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-danger position-relative" type="button" id="bugDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-bug me-1"></i>Bugs
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
-                                  id="notificationBadge" 
-                                  style="display: none;">
+                                  id="myBugUpdatesBadge" style="display: none;">
                                 0
+                                <span class="visually-hidden">unread bug updates</span>
                             </span>
                         </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header">Bug Reports</h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="openBugReportModal()">
+                                <i class="fas fa-plus-circle me-2 text-success"></i>Report a Bug
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="openMyBugReports()">
+                                <i class="fas fa-list me-2 text-info"></i>My Bug Reports
+                                <span class="badge bg-secondary ms-2" id="myBugsCountBadge">0</span>
+                            </a></li>
+                            <li class="admin-only-nav" style="display: none;">
+                                <hr class="dropdown-divider">
+                                <a class="dropdown-item text-danger" href="#" onclick="openBugDashboard()">
+                                    <i class="fas fa-shield-alt me-2"></i>Admin Dashboard
+                                    <span class="badge bg-danger ms-2" id="bugCountBadge">0</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
 
-                        <!-- Bugs -->
-                        <div class="dropdown">
-                            <button class="btn btn-outline-danger position-relative" type="button" id="bugDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-bug me-1"></i>Bugs
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
-                                      id="myBugUpdatesBadge" style="display: none;">
-                                    0
-                                    <span class="visually-hidden">unread bug updates</span>
-                                </span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><h6 class="dropdown-header">Bug Reports</h6></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#" onclick="openBugReportModal()">
-                                    <i class="fas fa-plus-circle me-2 text-success"></i>Report a Bug
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" onclick="openMyBugReports()">
-                                    <i class="fas fa-list me-2 text-info"></i>My Bug Reports
-                                    <span class="badge bg-secondary ms-2" id="myBugsCountBadge">0</span>
-                                </a></li>
-                                <li class="admin-only-nav" style="display: none;">
-                                    <hr class="dropdown-divider">
-                                    <a class="dropdown-item text-danger" href="#" onclick="openBugDashboard()">
-                                        <i class="fas fa-shield-alt me-2"></i>Admin Dashboard
-                                        <span class="badge bg-danger ms-2" id="bugCountBadge">0</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <!-- View Projects -->
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="viewToggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-eye me-1"></i>My Projects
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><h6 class="dropdown-header">Project Views</h6></li>
-                                <li><a class="dropdown-item" href="#" onclick="toggleProjectView('personal')">
-                                    <i class="fas fa-user me-2"></i>My Projects
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" onclick="toggleProjectView('all')">
-                                    <i class="fas fa-users me-2"></i>All Team Projects
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header">Individual Users</h6></li>
-                                <div id="individualUserViews"></div>
-                            </ul>
-                        </div>
-
-                        <!-- New Project -->
-                        <button onclick="openProjectModal()" class="btn btn-danger">
-                            <i class="fas fa-plus me-1"></i>New Safety Project
+                    <!-- View Projects -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="viewToggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-eye me-1"></i>My Projects
                         </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header">Project Views</h6></li>
+                            <li><a class="dropdown-item" href="#" onclick="toggleProjectView('personal')">
+                                <i class="fas fa-user me-2"></i>My Projects
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="toggleProjectView('all')">
+                                <i class="fas fa-users me-2"></i>All Team Projects
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header">Individual Users</h6></li>
+                            <div id="individualUserViews"></div>
+                        </ul>
+                    </div>
 
-                        <!-- Settings -->
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-cog"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><h6 class="dropdown-header">Settings & Tools</h6></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#" onclick="openQuoteModal()">
-                                    <i class="fas fa-quote-left me-2 text-primary"></i>Safety Quotes
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" onclick="openReleaseNotes()">
-                                    <i class="fas fa-clipboard-list me-2 text-info"></i>Release Notes
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li class="admin-only-nav" style="display: none;">
-                                    <a class="dropdown-item" href="#" onclick="openUserManagement()">
-                                        <i class="fas fa-users me-2 text-success"></i>Manage Users
-                                    </a>
-                                </li>
-                                <li class="admin-only-nav" style="display: none;">
-                                    <a class="dropdown-item" href="#" onclick="openCategoryModal()">
-                                        <i class="fas fa-folder me-2 text-warning"></i>Manage Categories
-                                    </a>
-                                </li>
-                                <li class="admin-only-nav" style="display: none;">
-                                    <a class="dropdown-item" href="#" onclick="openRoleModal()">
-                                        <i class="fas fa-user-tag me-2 text-info"></i>Manage Roles
-                                    </a>
-                                </li>
-                                <li class="admin-only-nav" style="display: none;">
-                                    <a class="dropdown-item" href="#" onclick="openDepartmentModal()">
-                                        <i class="fas fa-building me-2 text-primary"></i>Manage Departments
-                                    </a>
-                                </li>
-                                <li class="admin-only-nav" style="display: none;">
-                                    <a class="dropdown-item" href="#" onclick="openReleaseNotesTimeframeModal()">
-                                        <i class="fas fa-clock me-2 text-info"></i>Release Notes Timeframe
-                                    </a>
-                                </li>
-                                <li class="admin-only-nav" id="adminOnlyOptions" style="display: none;">
-                                    <hr class="dropdown-divider">
-                                    <a class="dropdown-item text-warning" href="#" onclick="resetAllData()">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>Reset All Data
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="#" onclick="syncData()" id="syncButton">
-                                    <i class="fas fa-sync me-2 text-success"></i>Sync Data
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="#" onclick="logout()">
-                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
-                                </a></li>
-                            </ul>
-                        </div>
+                    <!-- New Project -->
+                    <button onclick="openProjectModal()" class="btn btn-danger">
+                        <i class="fas fa-plus me-1"></i>New Safety Project
+                    </button>
+
+                    <!-- Settings -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><h6 class="dropdown-header">Settings & Tools</h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="openQuoteModal()">
+                                <i class="fas fa-quote-left me-2 text-primary"></i>Safety Quotes
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="openReleaseNotes()">
+                                <i class="fas fa-clipboard-list me-2 text-info"></i>Release Notes
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li class="admin-only-nav" style="display: none;">
+                                <a class="dropdown-item" href="#" onclick="openUserManagement()">
+                                    <i class="fas fa-users me-2 text-success"></i>Manage Users
+                                </a>
+                            </li>
+                            <li class="admin-only-nav" style="display: none;">
+                                <a class="dropdown-item" href="#" onclick="openCategoryModal()">
+                                    <i class="fas fa-folder me-2 text-warning"></i>Manage Categories
+                                </a>
+                            </li>
+                            <li class="admin-only-nav" style="display: none;">
+                                <a class="dropdown-item" href="#" onclick="openRoleModal()">
+                                    <i class="fas fa-user-tag me-2 text-info"></i>Manage Roles
+                                </a>
+                            </li>
+                            <li class="admin-only-nav" style="display: none;">
+                                <a class="dropdown-item" href="#" onclick="openDepartmentModal()">
+                                    <i class="fas fa-building me-2 text-primary"></i>Manage Departments
+                                </a>
+                            </li>
+                            <li class="admin-only-nav" style="display: none;">
+                                <a class="dropdown-item" href="#" onclick="openReleaseNotesTimeframeModal()">
+                                    <i class="fas fa-clock me-2 text-info"></i>Release Notes Timeframe
+                                </a>
+                            </li>
+                            <li class="admin-only-nav" id="adminOnlyOptions" style="display: none;">
+                                <hr class="dropdown-divider">
+                                <a class="dropdown-item text-warning" href="#" onclick="resetAllData()">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Reset All Data
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="syncData()" id="syncButton">
+                                <i class="fas fa-sync me-2 text-success"></i>Sync Data
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="logout()">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a></li>
+                        </ul>
                     </div>
                 </div>
             </div>
         </div>
-    </header>
+    </div>
+</header>
 
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b">
-        <div class="pl-4 pr-6">
-            <div class="flex space-x-8">
-                <button class="tab-btn active py-4 px-2 border-b-2 font-medium" style="border-color: var(--safety-red); color: var(--safety-red);" data-tab="projects">
-                    <i class="fas fa-project-diagram mr-2"></i>Safety Projects
-                </button>
-                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" data-tab="dashboard">
-                    <i class="fas fa-shield-alt mr-2"></i>Safety Dashboard
-                </button>
-                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600 admin-only-nav" onclick="openBugDashboard()" style="display: none;">
-                    <i class="fas fa-bug mr-2"></i>Bug Reports
-                    <span class="badge bg-danger ms-2" id="navBugCountBadge" style="display: none;">0</span>
-                </button>
-                <!-- TEMPORARILY HIDDEN: Compliance and Certifications tabs -->
-                <!-- 
-                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" data-tab="compliance">
-                    <i class="fas fa-clipboard-check mr-2"></i>Safety Compliance
-                </button>
-                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" data-tab="certifications">
-                    <i class="fas fa-certificate mr-2"></i>Certifications
-                </button>
-                -->
-                <button class="tab-btn py-4 px-2 border-b-2 border-transparent text-gray-600" data-tab="reports">
-                    <i class="fas fa-chart-line mr-2"></i>Safety Reports
-                </button>
-            </div>
+<!-- Navigation -->
+<nav class="bg-white shadow-sm border-b">
+    <div class="pl-4 pr-6">
+        <div class="flex space-x-8">
+            <button class="tab-btn active py-2 px-2 border-b-2 font-medium" style="border-color: var(--safety-red); color: var(--safety-red);" data-tab="projects">
+                <i class="fas fa-project-diagram mr-2"></i>Safety Projects
+            </button>
+            <button class="tab-btn py-2 px-2 border-b-2 border-transparent text-gray-600" data-tab="dashboard">
+                <i class="fas fa-shield-alt mr-2"></i>Safety Dashboard
+            </button>
+            <button class="tab-btn py-2 px-2 border-b-2 border-transparent text-gray-600 admin-only-nav" onclick="openBugDashboard()" style="display: none;">
+                <i class="fas fa-bug mr-2"></i>Bug Reports
+                <span class="badge bg-danger ms-2" id="navBugCountBadge" style="display: none;">0</span>
+            </button>
+            <button class="tab-btn py-2 px-2 border-b-2 border-transparent text-gray-600" data-tab="reports">
+                <i class="fas fa-chart-line mr-2"></i>Safety Reports
+            </button>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <!-- Main Content -->
     <main class="main-container animate-fade-in">
@@ -1956,7 +1947,7 @@
                     <h5 class="modal-title">
                         <i class="fas fa-rocket me-2"></i>SafeTrack Release Notes
                     </h5>
-                    <p class="mb-0 small">Current Version: <span class="badge bg-light text-dark">v1.2.4</span></p>
+                    <p class="mb-0 small">Current Version: <span class="badge bg-light text-dark">v1.3</span></p>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -1975,6 +1966,175 @@
                 </div>
                 
                 <div id="releaseNotesContainer">
+                    <!-- Version 1.3 -->
+                    <div class="release-version">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-primary fs-6">v1.3</span>
+                                <span class="text-muted ms-2">October 16, 2025</span>
+                            </div>
+                        </div>
+                        
+                        <!-- New Features -->
+                        <div class="release-category">
+                            <h6 class="text-success">
+                                <i class="fas fa-star me-2"></i>New Features
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Decline Reason System:</strong> Users must now provide a reason when declining project assignments. The reason is displayed to the project creator with visual highlighting</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'feature', 'Decline Reason System', 'Users must now provide a reason when declining project assignments. The reason is displayed to the project creator with visual highlighting')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Enhanced Table Scrolling:</strong> Comprehensive mobile-responsive horizontal scrolling with custom styled scrollbars, scroll indicators, and visual hints for better table navigation</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'feature', 'Enhanced Table Scrolling', 'Comprehensive mobile-responsive horizontal scrolling with custom styled scrollbars, scroll indicators, and visual hints for better table navigation')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Sticky First Column:</strong> Project name column now stays fixed while scrolling horizontally through the table for easier reference</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'feature', 'Sticky First Column', 'Project name column now stays fixed while scrolling horizontally through the table for easier reference')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Decline Reason Modal:</strong> New modal dialog that requires users to explain why they're declining a project before confirmation</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'feature', 'Decline Reason Modal', 'New modal dialog that requires users to explain why they are declining a project before confirmation')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Improvements -->
+                        <div class="release-category">
+                            <h6 class="text-info">
+                                <i class="fas fa-cog me-2"></i>Improvements
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Header Layout Optimization:</strong> Moved safety quote to the red header bar for better visibility and cleaner design</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'improvement', 'Header Layout Optimization', 'Moved safety quote to the red header bar for better visibility and cleaner design')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Scrollbar Visibility:</strong> Custom gradient scrollbars (red to orange theme) are now always visible for better discoverability</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'improvement', 'Scrollbar Visibility', 'Custom gradient scrollbars (red to orange theme) are now always visible for better discoverability')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Mobile Touch Optimization:</strong> Larger scrollbars (16-18px) on touch devices for easier interaction on phones and tablets</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'improvement', 'Mobile Touch Optimization', 'Larger scrollbars (16-18px) on touch devices for easier interaction on phones and tablets')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Table Header Styling:</strong> Updated table headers with red gradient background for consistent safety theme throughout the interface</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'improvement', 'Table Header Styling', 'Updated table headers with red gradient background for consistent safety theme throughout the interface')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Scroll Shadow Indicator:</strong> Visual gradient shadow on table edge indicates more content is available when not scrolled to end</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'improvement', 'Scroll Shadow Indicator', 'Visual gradient shadow on table edge indicates more content is available when not scrolled to end')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Compact Navigation:</strong> Reduced padding on navigation tabs and welcome bar for more efficient use of screen space</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'improvement', 'Compact Navigation', 'Reduced padding on navigation tabs and welcome bar for more efficient use of screen space')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Bug Fixes -->
+                        <div class="release-category">
+                            <h6 class="text-warning">
+                                <i class="fas fa-bug me-2"></i>Bug Fixes
+                            </h6>
+                            <ul class="release-list">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Decline Project Behavior:</strong> Declining a project now only removes the user from assignment instead of deleting the entire project</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'fix', 'Decline Project Behavior', 'Declining a project now only removes the user from assignment instead of deleting the entire project')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span><strong>Notification Display:</strong> Decline reasons now display in a styled red box within notifications for better visibility</span>
+                                    <div class="admin-controls" style="display: none;">
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editReleaseNote('v1.3', 'fix', 'Notification Display', 'Decline reasons now display in a styled red box within notifications for better visibility')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteReleaseNote(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
                     <!-- Version 1.2.4 -->
                     <div class="release-version">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -3033,6 +3193,46 @@
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Decline Reason Modal -->
+<div class="modal fade" id="declineReasonModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-times-circle me-2"></i>Decline Project Assignment
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    You are declining: <strong id="declineProjectName"></strong>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="declineReason" class="form-label">
+                        <strong>Please explain why you're declining this project: *</strong>
+                    </label>
+                    <textarea 
+                        class="form-control" 
+                        id="declineReason" 
+                        rows="4" 
+                        placeholder="Example: I don't have the expertise for this task, I'm already overloaded with other projects, etc."
+                        required></textarea>
+                    <small class="text-muted">The project creator will receive this explanation.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-arrow-left me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="projectManager.confirmDeclineProject()">
+                    <i class="fas fa-times-circle me-1"></i>Decline Project
                 </button>
             </div>
         </div>
